@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9";
+        private const string VER = "7.9.1";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -463,10 +463,21 @@ namespace CustomLauncher
                     for (int y = Math.Max(0, _mtnFar[x]); y < HORIZON; y++) SP(x, y, (byte)(70 * bright), (byte)(58 * bright), (byte)(104 * bright));
                     for (int y = Math.Max(0, _mtnNear[x]); y < HORIZON; y++) SP(x, y, (byte)(40 * bright), (byte)(30 * bright), (byte)(66 * bright));
                 }
+                int gmonth = DateTime.Now.Month;
+                bool gWinter = gmonth == 12 || gmonth <= 2;
+                bool gAutumn = gmonth >= 9 && gmonth <= 11;
+                bool gSpring = gmonth >= 3 && gmonth <= 5;
+                double snowAmount = gWinter ? 1.0 : (_weather == Weather.Snow ? _wxIntensity : 0);
+
+                (int r, int g, int b) gDirt = gWinter ? (60, 70, 96) : gAutumn ? (92, 62, 38) : gSpring ? (66, 104, 54) : (58, 98, 48);
+                (int r, int g, int b) gFloor = gWinter ? (44, 52, 76) : gAutumn ? (54, 38, 26) : gSpring ? (38, 66, 38) : (34, 58, 34);
+
                 for (int y = HORIZON; y < SCN_H; y++)
-                    for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(18 * bright), (byte)(14 * bright), (byte)(28 * bright));
+                    for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(gDirt.r * bright), (byte)(gDirt.g * bright), (byte)(gDirt.b * bright));
                 for (int x = 0; x < SCN_W; x++)
-                    for (int y = Math.Max(HORIZON, _forest[x]); y < SCN_H; y++) SP(x, y, (byte)(8 * bright), (byte)(7 * bright), (byte)(16 * bright));
+                    for (int y = Math.Max(HORIZON, _forest[x]); y < SCN_H; y++) SP(x, y, (byte)(gFloor.r * bright), (byte)(gFloor.g * bright), (byte)(gFloor.b * bright));
+
+                DrawGroundDetail(gWinter, gAutumn, gSpring, bright, snowAmount);
 
                 bool badWeather = _weather == Weather.Rain || _weather == Weather.Snow;
                 if (!badWeather) DrawKite();
@@ -624,10 +635,15 @@ namespace CustomLauncher
                     if (_pY[i] >= SCN_H && _sceneRng.NextDouble() < 0.4) SpawnSplash((int)_pX[i]);
                     _pX[i] = _sceneRng.Next(SCN_W); _pY[i] = -2;
                 }
-                int x = (int)_pX[i], y = (int)_pY[i];
-                int len = 1 + (int)(_pV[i] * 2);
-                BP(x, y, 150, 190, 235, 0.75 * afade);
-                for (int k = 1; k <= len; k++) BP(x + 1, y - k, 150, 190, 235, (0.5 - k * 0.1) * afade);
+                int y = (int)_pY[i];
+                double slant = -1.6 / sp;
+                int len = 4 + (int)(_pV[i] * 3);
+                for (int k = 1; k <= len; k++)
+                {
+                    double f = 1.0 - (double)k / len;
+                    BPx(_pX[i] - slant * k, y - k, 158, 196, 236, (0.12 + 0.5 * f) * afade);
+                }
+                BPx(_pX[i], y, 206, 228, 255, 0.85 * afade);
             }
 
             UpdateSplashes(afade);
@@ -820,6 +836,86 @@ namespace CustomLauncher
             _sceneBuf[i + 1] = (byte)(_sceneBuf[i + 1] * (1 - a) + g * a);
             _sceneBuf[i + 2] = (byte)(_sceneBuf[i + 2] * (1 - a) + r * a);
             _sceneBuf[i + 3] = 255;
+        }
+
+        private void DrawGroundDetail(bool winter, bool autumn, bool spring, double bright, double snowAmount)
+        {
+            int gh = SCN_H - HORIZON;
+
+            for (int y = HORIZON; y < SCN_H; y++)
+            {
+                double front = (double)(y - HORIZON) / gh;
+                for (int x = 0; x < SCN_W; x++)
+                {
+                    double r = Hash2(x, y);
+                    if (autumn)
+                    {
+                        double dens = 0.08 + 0.22 * front;
+                        if (r < dens)
+                        {
+                            double pick = Hash2(x + 17, y + 7);
+                            (byte cr, byte cg, byte cb) = pick < 0.34 ? ((byte)206, (byte)104, (byte)40)
+                                                        : pick < 0.67 ? ((byte)176, (byte)64, (byte)44)
+                                                        :               ((byte)200, (byte)152, (byte)54);
+                            BP(x, y, (byte)(cr * bright), (byte)(cg * bright), (byte)(cb * bright), 0.9);
+                        }
+                    }
+                    else if (spring)
+                    {
+                        double dens = 0.015 + 0.022 * front;
+                        if (r < dens)
+                        {
+                            double pick = Hash2(x + 9, y + 3);
+                            (byte cr, byte cg, byte cb) = pick < 0.3 ? ((byte)244, (byte)180, (byte)210)
+                                                        : pick < 0.6 ? ((byte)246, (byte)238, (byte)150)
+                                                        : pick < 0.8 ? ((byte)236, (byte)240, (byte)246)
+                                                        :              ((byte)210, (byte)150, (byte)236);
+                            BP(x, y, cr, cg, cb, 0.85 * Math.Max(0.5, bright));
+                        }
+                        else if (r < dens + 0.10)
+                            BP(x, y, (byte)(86 * bright), (byte)(140 * bright), (byte)(70 * bright), 0.5);
+                    }
+                    else if (!winter)
+                    {
+                        if (r < 0.10) BP(x, y, (byte)(80 * bright), (byte)(132 * bright), (byte)(64 * bright), 0.5);
+                        else if (r > 0.94) BP(x, y, (byte)(44 * bright), (byte)(78 * bright), (byte)(40 * bright), 0.5);
+                    }
+                }
+            }
+
+            if (snowAmount > 0)
+            {
+                double sb = Math.Max(0.55, bright);
+                for (int y = HORIZON; y < SCN_H; y++)
+                {
+                    double front = (double)(y - HORIZON) / gh;
+                    double cov = snowAmount * (0.65 + 0.35 * front);
+                    for (int x = 0; x < SCN_W; x++)
+                    {
+                        BP(x, y, (byte)(236 * sb), (byte)(242 * sb), (byte)(252 * sb), cov);
+                        if (Hash2(x, y) < 0.012)
+                        {
+                            double tw = 0.4 + 0.6 * Math.Abs(Math.Sin(_frame * 0.1 + Hash2(x + 3, y) * 60));
+                            BP(x, y, 255, 255, 255, tw * snowAmount * 0.7);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void BPx(double fx, int y, byte r, byte g, byte b, double a)
+        {
+            int xi = (int)Math.Floor(fx);
+            double frac = fx - xi;
+            BP(xi, y, r, g, b, a * (1 - frac));
+            BP(xi + 1, y, r, g, b, a * frac);
+        }
+
+        private static double Hash2(int x, int y)
+        {
+            int h = x * 374761393 + y * 668265263;
+            h = (h ^ (h >> 13)) * 1274126177;
+            return ((h ^ (h >> 16)) & 0x7fff) / 32767.0;
         }
 
         private void DrawDisc(int cx, int cy, int rad, byte r, byte g, byte b, double a)
