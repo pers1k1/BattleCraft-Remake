@@ -241,6 +241,12 @@ namespace CustomLauncher.Core
                 new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
                 { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
 
+            double tipRad = t.Rot * Math.PI / 180;
+            double tipRx = t.Size * 0.65 * Math.Sin(tipRad);
+            double tipRy = -t.Size * 0.65 * Math.Cos(tipRad);
+            double tipWorldX = t.X + tipRx;
+            double tipWorldY = t.Y + tipRy;
+
             int finishedFrags = 0;
             for (int i = 0; i < frags.Count; i++)
             {
@@ -249,10 +255,17 @@ namespace CustomLauncher.Core
                 int fragDelay = baseDelay + (int)(tipFactor * totalSpan * 0.7) + _rng.Next(50);
                 int fragDur = 400 + _rng.Next(350);
 
-                double angle = Math.Atan2(f.LocalY, f.LocalX) + (_rng.NextDouble() - 0.5) * 0.8;
-                double drift = 12 + _rng.NextDouble() * 22 + tipFactor * 10;
-                double endX = f.Tr.X + Math.Cos(angle) * drift;
-                double endY = f.Tr.Y + Math.Sin(angle) * drift;
+                double dx = f.LocalX - tipRx;
+                double dy = f.LocalY - tipRy;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double angle = Math.Atan2(dy, dx) + (_rng.NextDouble() - 0.5) * 0.4;
+                double drift = dist + 15 + _rng.NextDouble() * 25;
+
+                f.Tr.X = tipWorldX;
+                f.Tr.Y = tipWorldY;
+
+                double endX = tipWorldX + Math.Cos(angle) * drift;
+                double endY = tipWorldY + Math.Sin(angle) * drift;
 
                 f.Dot.BeginAnimation(OpacityProperty,
                     new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(80))
@@ -315,17 +328,24 @@ namespace CustomLauncher.Core
             maskAnim.Completed += (s, e) => { t.Shape.OpacityMask = null; };
             maskStop2.BeginAnimation(GradientStop.OffsetProperty, maskAnim);
 
+            double tipRad = t.Rot * Math.PI / 180;
+            double tipRx = t.Size * 0.65 * Math.Sin(tipRad);
+            double tipRy = -t.Size * 0.65 * Math.Cos(tipRad);
+            double tipWorldX = tx + tipRx;
+            double tipWorldY = ty + tipRy;
+
             for (int i = 0; i < frags.Count; i++)
             {
                 var f = frags[i];
-                double baseFactor = f.TipDist;
-                int fragDelay = baseDelay + (int)((1.0 - baseFactor) * totalSpan * 0.7) + _rng.Next(50);
+                int fragDelay = baseDelay + (int)(f.TipDist * totalSpan * 0.7) + _rng.Next(50);
                 int fragDur = 400 + _rng.Next(300);
 
-                double angle = Math.Atan2(f.LocalY, f.LocalX) + (_rng.NextDouble() - 0.5) * 0.7;
-                double scatter = 18 + _rng.NextDouble() * 25;
-                double startX = f.Tr.X + Math.Cos(angle) * scatter;
-                double startY = f.Tr.Y + Math.Sin(angle) * scatter;
+                double dx = f.LocalX - tipRx;
+                double dy = f.LocalY - tipRy;
+                double toFragAngle = Math.Atan2(dy, dx) + (_rng.NextDouble() - 0.5) * 0.4;
+                double scatter = 15 + _rng.NextDouble() * 20;
+                double startX = tipWorldX + Math.Cos(toFragAngle) * scatter;
+                double startY = tipWorldY + Math.Sin(toFragAngle) * scatter;
                 double targetX = f.Tr.X;
                 double targetY = f.Tr.Y;
                 f.Tr.X = startX; f.Tr.Y = startY;
