@@ -14,11 +14,9 @@ namespace CustomLauncher.Core
         private const int Count = 30;
         private const double ConnDist = 180;
         private const double MouseDist = 220;
-        private const int FragCount = 20;
 
         private readonly List<Tri> _tris = new();
         private readonly List<Line> _lines = new();
-        private readonly List<UIElement> _debris = new();
         private readonly List<DispatcherTimer> _timers = new();
         private Point _mouse = new(-999, -999);
         private bool _active;
@@ -38,13 +36,6 @@ namespace CustomLauncher.Core
             public ScaleTransform Sc = null!;
             public bool Dissolved;
             public bool Fading;
-        }
-
-        private struct Frag
-        {
-            public Ellipse Dot;
-            public TranslateTransform Tr;
-            public double WorldX, WorldY, TipDist;
         }
 
         public ParticleBackground()
@@ -89,8 +80,6 @@ namespace CustomLauncher.Core
         private void CancelAll()
         {
             KillTimers();
-            foreach (var d in _debris) Children.Remove(d);
-            _debris.Clear();
             foreach (var t in _tris)
             {
                 t.Shape.BeginAnimation(OpacityProperty, null);
@@ -106,7 +95,7 @@ namespace CustomLauncher.Core
 
         private void Reinit()
         {
-            Children.Clear(); _tris.Clear(); _lines.Clear(); _debris.Clear();
+            Children.Clear(); _tris.Clear(); _lines.Clear();
             double w = ActualWidth > 10 ? ActualWidth : 1100;
             double h = ActualHeight > 10 ? ActualHeight : 650;
             Color accent = GetAccent();
@@ -168,61 +157,10 @@ namespace CustomLauncher.Core
             }
         }
 
-        private List<Frag> BuildFragments(double cx, double cy, double size, double rotDeg, Color accent)
-        {
-            var frags = new List<Frag>();
-            var v0 = new Point(0, -size * 0.65);
-            var v1 = new Point(-size * 0.56, size * 0.35);
-            var v2 = new Point(size * 0.56, size * 0.35);
-            double rad = rotDeg * Math.PI / 180;
-            double cos = Math.Cos(rad), sin = Math.Sin(rad);
-            double maxTipDist = 0;
-
-            for (int i = 0; i < FragCount; i++)
-            {
-                double u = _rng.NextDouble(), vv = _rng.NextDouble();
-                if (u + vv > 1) { u = 1 - u; vv = 1 - vv; }
-                double lx = (1 - u - vv) * v0.X + u * v1.X + vv * v2.X;
-                double ly = (1 - u - vv) * v0.Y + u * v1.Y + vv * v2.Y;
-                double tipDist = Math.Sqrt((lx - v0.X) * (lx - v0.X) + (ly - v0.Y) * (ly - v0.Y));
-                if (tipDist > maxTipDist) maxTipDist = tipDist;
-
-                double rx = lx * cos - ly * sin;
-                double ry = lx * sin + ly * cos;
-                double wx = cx + rx;
-                double wy = cy + ry;
-
-                double sz = 1.2 + _rng.NextDouble() * 1.8;
-                byte alpha = (byte)(90 + _rng.Next(100));
-                var dot = new Ellipse
-                {
-                    Width = sz, Height = sz,
-                    Fill = new SolidColorBrush(Color.FromArgb(alpha, accent.R, accent.G, accent.B)),
-                    IsHitTestVisible = false
-                };
-                var dotTr = new TranslateTransform(wx - sz / 2, wy - sz / 2);
-                dot.RenderTransform = dotTr;
-                frags.Add(new Frag { Dot = dot, Tr = dotTr, WorldX = wx, WorldY = wy, TipDist = tipDist });
-            }
-
-            if (maxTipDist > 0)
-                for (int i = 0; i < frags.Count; i++)
-                {
-                    var f = frags[i];
-                    f.TipDist /= maxTipDist;
-                    frags[i] = f;
-                }
-            return frags;
-        }
-
         private void Dissolve(Tri t, int baseDelay, Action? onDone)
         {
             if (t.Dissolved || t.Fading) { onDone?.Invoke(); return; }
             t.Fading = true;
-            Color accent = GetAccent();
-            var frags = BuildFragments(t.X, t.Y, t.Size, t.Rot, accent);
-
-            foreach (var f in frags) { Children.Add(f.Dot); _debris.Add(f.Dot); f.Dot.Opacity = 0; }
 
             int totalSpan = 900;
 
@@ -237,76 +175,35 @@ namespace CustomLauncher.Core
             maskStop1.BeginAnimation(GradientStop.OffsetProperty,
                 new DoubleAnimation(-0.2, 1.2, TimeSpan.FromMilliseconds(totalSpan))
                 { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
-            maskStop2.BeginAnimation(GradientStop.OffsetProperty,
-                new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
-                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
-
-            double tipRad = t.Rot * Math.PI / 180;
-            double tipX = t.X + t.Size * 0.65 * Math.Sin(tipRad);
-            double tipY = t.Y - t.Size * 0.65 * Math.Cos(tipRad);
-
-            int finishedFrags = 0;
-            for (int i = 0; i < frags.Count; i++)
+            var maskAnim2 = new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
+            { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase };
+            maskAnim2.Completed += (s, e) =>
             {
-                var f = frags[i];
-                double tipFactor = 1.0 - f.TipDist;
-                int fragDelay = baseDelay + (int)(tipFactor * totalSpan * 0.7) + _rng.Next(50);
-                int fragDur = 400 + _rng.Next(350);
+                t.Shape.OpacityMask = null;
+                t.Shape.Visibility = Visibility.Collapsed;
+                t.Dissolved = true; t.Fading = false;
+                onDone?.Invoke();
+            };
+            maskStop2.BeginAnimation(GradientStop.OffsetProperty, maskAnim2);
 
-                double dx = f.WorldX - tipX;
-                double dy = f.WorldY - tipY;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
-                if (dist < 1) dist = 1;
-                double angle = Math.Atan2(dy, dx) + (_rng.NextDouble() - 0.5) * 0.4;
-                double drift = dist + 15 + _rng.NextDouble() * 25;
-
-                double sz = f.Dot.Width;
-                f.Tr.X = tipX - sz / 2;
-                f.Tr.Y = tipY - sz / 2;
-
-                double endX = tipX - sz / 2 + Math.Cos(angle) * drift;
-                double endY = tipY - sz / 2 + Math.Sin(angle) * drift;
-
-                f.Dot.BeginAnimation(OpacityProperty,
-                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(80))
-                    { BeginTime = TimeSpan.FromMilliseconds(fragDelay) });
-
-                var moveEase = new QuadraticEase { EasingMode = EasingMode.EaseOut };
-                f.Tr.BeginAnimation(TranslateTransform.XProperty,
-                    new DoubleAnimation(endX, TimeSpan.FromMilliseconds(fragDur))
-                    { BeginTime = TimeSpan.FromMilliseconds(fragDelay), EasingFunction = moveEase });
-                f.Tr.BeginAnimation(TranslateTransform.YProperty,
-                    new DoubleAnimation(endY, TimeSpan.FromMilliseconds(fragDur))
-                    { BeginTime = TimeSpan.FromMilliseconds(fragDelay), EasingFunction = moveEase });
-
-                var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(fragDur * 0.5))
-                { BeginTime = TimeSpan.FromMilliseconds(fragDelay + fragDur * 0.5) };
-
-                Ellipse cd = f.Dot;
-                fadeOut.Completed += (s, e) =>
-                {
-                    Children.Remove(cd); _debris.Remove(cd);
-                    finishedFrags++;
-                    if (finishedFrags >= frags.Count)
-                    {
-                        t.Shape.OpacityMask = null;
-                        t.Shape.Visibility = Visibility.Collapsed;
-                        t.Dissolved = true; t.Fading = false;
-                        onDone?.Invoke();
-                    }
-                };
-                f.Dot.BeginAnimation(OpacityProperty, fadeOut);
-            }
+            t.Sc.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(1, 0.6, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
+            t.Sc.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(1, 0.6, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
         }
 
         private void Materialize(Tri t, double tx, double ty, int baseDelay, Action? onDone)
         {
-            Color accent = GetAccent();
             t.X = tx; t.Y = ty; t.Tr.X = tx; t.Tr.Y = ty;
             t.VX = t.BaseVX; t.VY = t.BaseVY; t.RotV = t.BaseRotV;
             t.Dissolved = true; t.Fading = true;
-            t.Shape.Opacity = 1; t.Sc.ScaleX = 1; t.Sc.ScaleY = 1;
             t.Shape.Visibility = Visibility.Visible;
+            t.Sc.ScaleX = 0.6; t.Sc.ScaleY = 0.6;
+            t.Shape.Opacity = 0;
+
+            int totalSpan = 900;
 
             var maskStop1 = new GradientStop(Colors.Black, -0.2);
             var maskStop2 = new GradientStop(Colors.Transparent, -0.05);
@@ -315,73 +212,30 @@ namespace CustomLauncher.Core
             { Center = new Point(0.5, 0.0), RadiusX = 0.9, RadiusY = 1.0, GradientOrigin = new Point(0.5, 0.0) };
             t.Shape.OpacityMask = mask;
 
-            var frags = BuildFragments(tx, ty, t.Size, t.Rot, accent);
-            int totalSpan = 900;
-            int finishedFrags = 0;
-
             var revealEase = new CubicEase { EasingMode = EasingMode.EaseOut };
             maskStop1.BeginAnimation(GradientStop.OffsetProperty,
                 new DoubleAnimation(-0.2, 1.2, TimeSpan.FromMilliseconds(totalSpan))
                 { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase });
             var maskAnim = new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
             { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase };
-            maskAnim.Completed += (s, e) => { t.Shape.OpacityMask = null; };
+            maskAnim.Completed += (s, e) =>
+            {
+                t.Shape.OpacityMask = null;
+                t.Shape.Opacity = 1; t.Sc.ScaleX = 1; t.Sc.ScaleY = 1;
+                t.Dissolved = false; t.Fading = false;
+                onDone?.Invoke();
+            };
             maskStop2.BeginAnimation(GradientStop.OffsetProperty, maskAnim);
 
-            double tipRad = t.Rot * Math.PI / 180;
-            double tipX = tx + t.Size * 0.65 * Math.Sin(tipRad);
-            double tipY = ty - t.Size * 0.65 * Math.Cos(tipRad);
-
-            for (int i = 0; i < frags.Count; i++)
-            {
-                var f = frags[i];
-                int fragDelay = baseDelay + (int)(f.TipDist * totalSpan * 0.7) + _rng.Next(50);
-                int fragDur = 400 + _rng.Next(300);
-
-                double sz = f.Dot.Width;
-                double dx = f.WorldX - tipX;
-                double dy = f.WorldY - tipY;
-                double toFragAngle = Math.Atan2(dy, dx) + (_rng.NextDouble() - 0.5) * 0.4;
-                double scatter = 15 + _rng.NextDouble() * 20;
-                double startX = tipX - sz / 2 + Math.Cos(toFragAngle) * scatter;
-                double startY = tipY - sz / 2 + Math.Sin(toFragAngle) * scatter;
-                double targetX = f.Tr.X;
-                double targetY = f.Tr.Y;
-                f.Tr.X = startX; f.Tr.Y = startY;
-
-                f.Dot.Opacity = 0;
-                Children.Add(f.Dot); _debris.Add(f.Dot);
-
-                f.Dot.BeginAnimation(OpacityProperty,
-                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(fragDur * 0.35))
-                    { BeginTime = TimeSpan.FromMilliseconds(fragDelay) });
-
-                var moveEase = new QuarticEase { EasingMode = EasingMode.EaseIn };
-                f.Tr.BeginAnimation(TranslateTransform.XProperty,
-                    new DoubleAnimation(targetX, TimeSpan.FromMilliseconds(fragDur))
-                    { BeginTime = TimeSpan.FromMilliseconds(fragDelay), EasingFunction = moveEase });
-                f.Tr.BeginAnimation(TranslateTransform.YProperty,
-                    new DoubleAnimation(targetY, TimeSpan.FromMilliseconds(fragDur))
-                    { BeginTime = TimeSpan.FromMilliseconds(fragDelay), EasingFunction = moveEase });
-
-                var fadeEnd = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(120))
-                { BeginTime = TimeSpan.FromMilliseconds(fragDelay + fragDur - 60) };
-
-                Ellipse cd = f.Dot;
-                fadeEnd.Completed += (s, e) =>
-                {
-                    Children.Remove(cd); _debris.Remove(cd);
-                    finishedFrags++;
-                    if (finishedFrags >= frags.Count)
-                    {
-                        t.Shape.OpacityMask = null;
-                        t.Shape.Opacity = 1; t.Sc.ScaleX = 1; t.Sc.ScaleY = 1;
-                        t.Dissolved = false; t.Fading = false;
-                        onDone?.Invoke();
-                    }
-                };
-                f.Dot.BeginAnimation(OpacityProperty, fadeEnd);
-            }
+            t.Shape.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase });
+            t.Sc.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(0.6, 1, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase });
+            t.Sc.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(0.6, 1, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase });
         }
 
         private void Tick(object? sender, EventArgs e)
