@@ -168,22 +168,14 @@ namespace CustomLauncher.Core
             }
         }
 
-        private void LocalToWorld(double lx, double ly, double cx, double cy, double size, double rotDeg, out double wx, out double wy)
-        {
-            double rad = rotDeg * Math.PI / 180;
-            double cos = Math.Cos(rad), sin = Math.Sin(rad);
-            double sx = lx + size * 0.56;
-            double sy = ly + size * 0.65;
-            wx = (sx * cos - sy * sin) - size * 0.56 + cx;
-            wy = (sx * sin + sy * cos) - size * 0.65 + cy;
-        }
-
         private List<Frag> BuildFragments(double cx, double cy, double size, double rotDeg, Color accent)
         {
             var frags = new List<Frag>();
             var v0 = new Point(0, -size * 0.65);
             var v1 = new Point(-size * 0.56, size * 0.35);
             var v2 = new Point(size * 0.56, size * 0.35);
+            double rad = rotDeg * Math.PI / 180;
+            double cos = Math.Cos(rad), sin = Math.Sin(rad);
             double maxTipDist = 0;
 
             for (int i = 0; i < FragCount; i++)
@@ -195,7 +187,10 @@ namespace CustomLauncher.Core
                 double tipDist = Math.Sqrt((lx - v0.X) * (lx - v0.X) + (ly - v0.Y) * (ly - v0.Y));
                 if (tipDist > maxTipDist) maxTipDist = tipDist;
 
-                LocalToWorld(lx, ly, cx, cy, size, rotDeg, out double wx, out double wy);
+                double rx = lx * cos - ly * sin;
+                double ry = lx * sin + ly * cos;
+                double wx = cx + rx;
+                double wy = cy + ry;
 
                 double sz = 1.2 + _rng.NextDouble() * 1.8;
                 byte alpha = (byte)(90 + _rng.Next(100));
@@ -246,7 +241,9 @@ namespace CustomLauncher.Core
                 new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
                 { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
 
-            LocalToWorld(0, -t.Size * 0.65, t.X, t.Y, t.Size, t.Rot, out double tipX, out double tipY);
+            double rad = t.Rot * Math.PI / 180;
+            double tipX = t.X + t.Size * 0.65 * Math.Sin(rad);
+            double tipY = t.Y - t.Size * 0.65 * Math.Cos(rad);
 
             int finishedFrags = 0;
             for (int i = 0; i < frags.Count; i++)
@@ -256,16 +253,16 @@ namespace CustomLauncher.Core
                 int fragDelay = baseDelay + (int)(tipFactor * totalSpan * 0.7) + _rng.Next(50);
                 int fragDur = 400 + _rng.Next(350);
 
+                double sz = f.Dot.Width;
+                f.Tr.X = f.WorldX - sz / 2;
+                f.Tr.Y = f.WorldY - sz / 2;
+
                 double dx = f.WorldX - tipX;
                 double dy = f.WorldY - tipY;
                 double dist = Math.Sqrt(dx * dx + dy * dy);
                 if (dist < 1) dist = 1;
                 double angle = Math.Atan2(dy, dx) + (_rng.NextDouble() - 0.5) * 0.4;
                 double drift = dist + 15 + _rng.NextDouble() * 25;
-
-                double sz = f.Dot.Width;
-                f.Tr.X = tipX - sz / 2;
-                f.Tr.Y = tipY - sz / 2;
 
                 double endX = tipX - sz / 2 + Math.Cos(angle) * drift;
                 double endY = tipY - sz / 2 + Math.Sin(angle) * drift;
@@ -331,7 +328,9 @@ namespace CustomLauncher.Core
             maskAnim.Completed += (s, e) => { t.Shape.OpacityMask = null; };
             maskStop2.BeginAnimation(GradientStop.OffsetProperty, maskAnim);
 
-            LocalToWorld(0, -t.Size * 0.65, tx, ty, t.Size, t.Rot, out double tipX, out double tipY);
+            double rad = t.Rot * Math.PI / 180;
+            double tipX = tx + t.Size * 0.65 * Math.Sin(rad);
+            double tipY = ty - t.Size * 0.65 * Math.Cos(rad);
 
             for (int i = 0; i < frags.Count; i++)
             {
@@ -346,8 +345,8 @@ namespace CustomLauncher.Core
                 double scatter = 15 + _rng.NextDouble() * 20;
                 double startX = tipX - sz / 2 + Math.Cos(toFragAngle) * scatter;
                 double startY = tipY - sz / 2 + Math.Sin(toFragAngle) * scatter;
-                double targetX = f.Tr.X;
-                double targetY = f.Tr.Y;
+                double targetX = f.WorldX - sz / 2;
+                double targetY = f.WorldY - sz / 2;
                 f.Tr.X = startX; f.Tr.Y = startY;
 
                 f.Dot.Opacity = 0;
