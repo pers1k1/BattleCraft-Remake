@@ -96,6 +96,7 @@ namespace CustomLauncher.Core
                 t.Shape.BeginAnimation(OpacityProperty, null);
                 t.Sc.BeginAnimation(ScaleTransform.ScaleXProperty, null);
                 t.Sc.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                t.Shape.OpacityMask = null;
                 t.Shape.Opacity = 1; t.Sc.ScaleX = 1; t.Sc.ScaleY = 1;
                 t.Shape.Visibility = Visibility.Visible; t.Dissolved = false; t.Fading = false;
             }
@@ -136,7 +137,7 @@ namespace CustomLauncher.Core
             {
                 Points = new PointCollection { new Point(0, -size * 0.65), new Point(-size * 0.56, size * 0.35), new Point(size * 0.56, size * 0.35) },
                 Fill = fill, Stroke = stroke, StrokeThickness = 1.0,
-                RenderTransform = tg, RenderTransformOrigin = new Point(0.5, 0.5), IsHitTestVisible = false
+                RenderTransform = tg, RenderTransformOrigin = new Point(0, 0), IsHitTestVisible = false
             };
             double vx = (_rng.NextDouble() - 0.5) * speed;
             double vy = (_rng.NextDouble() - 0.5) * speed;
@@ -223,27 +224,38 @@ namespace CustomLauncher.Core
 
             foreach (var f in frags) { Children.Add(f.Dot); _debris.Add(f.Dot); f.Dot.Opacity = 0; }
 
-            int totalSpan = 800;
+            int totalSpan = 900;
 
-            t.Shape.BeginAnimation(OpacityProperty,
-                new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(totalSpan))
-                { BeginTime = TimeSpan.FromMilliseconds(baseDelay),
-                  EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn } });
+            var maskStop1 = new GradientStop(Colors.Transparent, -0.2);
+            var maskStop2 = new GradientStop(Colors.Black, -0.05);
+            var mask = new RadialGradientBrush(
+                new GradientStopCollection { maskStop1, maskStop2 })
+            { Center = new Point(0.5, 0.0), RadiusX = 0.9, RadiusY = 1.0, GradientOrigin = new Point(0.5, 0.0) };
+            t.Shape.OpacityMask = mask;
+
+            var sweepEase = new QuadraticEase { EasingMode = EasingMode.EaseIn };
+            maskStop1.BeginAnimation(GradientStop.OffsetProperty,
+                new DoubleAnimation(-0.2, 1.2, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
+            maskStop2.BeginAnimation(GradientStop.OffsetProperty,
+                new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = sweepEase });
 
             int finishedFrags = 0;
             for (int i = 0; i < frags.Count; i++)
             {
                 var f = frags[i];
-                int fragDelay = baseDelay + (int)(f.TipDist * totalSpan * 0.6) + _rng.Next(60);
-                int fragDur = 600 + _rng.Next(400);
+                double tipFactor = 1.0 - f.TipDist;
+                int fragDelay = baseDelay + (int)(tipFactor * totalSpan * 0.7) + _rng.Next(50);
+                int fragDur = 400 + _rng.Next(350);
 
                 double angle = Math.Atan2(f.LocalY, f.LocalX) + (_rng.NextDouble() - 0.5) * 0.8;
-                double drift = 12 + _rng.NextDouble() * 20;
+                double drift = 12 + _rng.NextDouble() * 22 + tipFactor * 10;
                 double endX = f.Tr.X + Math.Cos(angle) * drift;
                 double endY = f.Tr.Y + Math.Sin(angle) * drift;
 
                 f.Dot.BeginAnimation(OpacityProperty,
-                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120))
+                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(80))
                     { BeginTime = TimeSpan.FromMilliseconds(fragDelay) });
 
                 var moveEase = new QuadraticEase { EasingMode = EasingMode.EaseOut };
@@ -254,8 +266,8 @@ namespace CustomLauncher.Core
                     new DoubleAnimation(endY, TimeSpan.FromMilliseconds(fragDur))
                     { BeginTime = TimeSpan.FromMilliseconds(fragDelay), EasingFunction = moveEase });
 
-                var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(fragDur * 0.6))
-                { BeginTime = TimeSpan.FromMilliseconds(fragDelay + fragDur * 0.4) };
+                var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(fragDur * 0.5))
+                { BeginTime = TimeSpan.FromMilliseconds(fragDelay + fragDur * 0.5) };
 
                 Ellipse cd = f.Dot;
                 fadeOut.Completed += (s, e) =>
@@ -264,6 +276,7 @@ namespace CustomLauncher.Core
                     finishedFrags++;
                     if (finishedFrags >= frags.Count)
                     {
+                        t.Shape.OpacityMask = null;
                         t.Shape.Visibility = Visibility.Collapsed;
                         t.Dissolved = true; t.Fading = false;
                         onDone?.Invoke();
@@ -278,21 +291,38 @@ namespace CustomLauncher.Core
             Color accent = GetAccent();
             t.X = tx; t.Y = ty; t.Tr.X = tx; t.Tr.Y = ty;
             t.VX = t.BaseVX; t.VY = t.BaseVY; t.RotV = t.BaseRotV;
-            t.Shape.Visibility = Visibility.Collapsed;
-            t.Shape.Opacity = 0; t.Sc.ScaleX = 0.15; t.Sc.ScaleY = 0.15;
             t.Dissolved = true; t.Fading = true;
+            t.Shape.Opacity = 1; t.Sc.ScaleX = 1; t.Sc.ScaleY = 1;
+            t.Shape.Visibility = Visibility.Visible;
+
+            var maskStop1 = new GradientStop(Colors.Black, -0.2);
+            var maskStop2 = new GradientStop(Colors.Transparent, -0.05);
+            var mask = new RadialGradientBrush(
+                new GradientStopCollection { maskStop1, maskStop2 })
+            { Center = new Point(0.5, 1.0), RadiusX = 0.9, RadiusY = 1.0, GradientOrigin = new Point(0.5, 1.0) };
+            t.Shape.OpacityMask = mask;
 
             var frags = BuildFragments(tx, ty, t.Size, t.Rot, accent);
-            int totalSpan = 800;
+            int totalSpan = 900;
             int finishedFrags = 0;
+
+            var revealEase = new CubicEase { EasingMode = EasingMode.EaseOut };
+            maskStop1.BeginAnimation(GradientStop.OffsetProperty,
+                new DoubleAnimation(-0.2, 1.2, TimeSpan.FromMilliseconds(totalSpan))
+                { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase });
+            var maskAnim = new DoubleAnimation(-0.05, 1.4, TimeSpan.FromMilliseconds(totalSpan))
+            { BeginTime = TimeSpan.FromMilliseconds(baseDelay), EasingFunction = revealEase };
+            maskAnim.Completed += (s, e) => { t.Shape.OpacityMask = null; };
+            maskStop2.BeginAnimation(GradientStop.OffsetProperty, maskAnim);
 
             for (int i = 0; i < frags.Count; i++)
             {
                 var f = frags[i];
-                int fragDelay = baseDelay + (int)((1.0 - f.TipDist) * totalSpan * 0.6) + _rng.Next(60);
-                int fragDur = 500 + _rng.Next(300);
+                double baseFactor = f.TipDist;
+                int fragDelay = baseDelay + (int)((1.0 - baseFactor) * totalSpan * 0.7) + _rng.Next(50);
+                int fragDur = 400 + _rng.Next(300);
 
-                double angle = Math.Atan2(f.LocalY, f.LocalX) + (_rng.NextDouble() - 0.5) * 0.8;
+                double angle = Math.Atan2(f.LocalY, f.LocalX) + (_rng.NextDouble() - 0.5) * 0.7;
                 double scatter = 18 + _rng.NextDouble() * 25;
                 double startX = f.Tr.X + Math.Cos(angle) * scatter;
                 double startY = f.Tr.Y + Math.Sin(angle) * scatter;
@@ -304,7 +334,7 @@ namespace CustomLauncher.Core
                 Children.Add(f.Dot); _debris.Add(f.Dot);
 
                 f.Dot.BeginAnimation(OpacityProperty,
-                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(fragDur * 0.4))
+                    new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(fragDur * 0.35))
                     { BeginTime = TimeSpan.FromMilliseconds(fragDelay) });
 
                 var moveEase = new QuarticEase { EasingMode = EasingMode.EaseIn };
@@ -315,8 +345,8 @@ namespace CustomLauncher.Core
                     new DoubleAnimation(targetY, TimeSpan.FromMilliseconds(fragDur))
                     { BeginTime = TimeSpan.FromMilliseconds(fragDelay), EasingFunction = moveEase });
 
-                var fadeEnd = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150))
-                { BeginTime = TimeSpan.FromMilliseconds(fragDelay + fragDur - 80) };
+                var fadeEnd = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(120))
+                { BeginTime = TimeSpan.FromMilliseconds(fragDelay + fragDur - 60) };
 
                 Ellipse cd = f.Dot;
                 fadeEnd.Completed += (s, e) =>
@@ -325,23 +355,10 @@ namespace CustomLauncher.Core
                     finishedFrags++;
                     if (finishedFrags >= frags.Count)
                     {
-                        t.Shape.Visibility = Visibility.Visible;
-                        var easeOut = new BackEase { Amplitude = 0.15, EasingMode = EasingMode.EaseOut };
-                        t.Shape.BeginAnimation(OpacityProperty,
-                            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250)));
-                        var gy = new DoubleAnimation(0.15, 1, TimeSpan.FromMilliseconds(350)) { EasingFunction = easeOut };
-                        gy.Completed += (s2, e2) =>
-                        {
-                            t.Dissolved = false; t.Fading = false;
-                            t.Sc.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-                            t.Sc.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-                            t.Shape.BeginAnimation(OpacityProperty, null);
-                            t.Sc.ScaleX = 1; t.Sc.ScaleY = 1; t.Shape.Opacity = 1;
-                            onDone?.Invoke();
-                        };
-                        t.Sc.BeginAnimation(ScaleTransform.ScaleXProperty,
-                            new DoubleAnimation(0.15, 1, TimeSpan.FromMilliseconds(350)) { EasingFunction = easeOut });
-                        t.Sc.BeginAnimation(ScaleTransform.ScaleYProperty, gy);
+                        t.Shape.OpacityMask = null;
+                        t.Shape.Opacity = 1; t.Sc.ScaleX = 1; t.Sc.ScaleY = 1;
+                        t.Dissolved = false; t.Fading = false;
+                        onDone?.Invoke();
                     }
                 };
                 f.Dot.BeginAnimation(OpacityProperty, fadeEnd);
@@ -469,6 +486,7 @@ namespace CustomLauncher.Core
                             tr.Shape.BeginAnimation(OpacityProperty, null);
                             tr.Sc.BeginAnimation(ScaleTransform.ScaleXProperty, null);
                             tr.Sc.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                            tr.Shape.OpacityMask = null;
                             tr.Sc.ScaleX = 1; tr.Sc.ScaleY = 1; tr.Shape.Opacity = 1;
                             tr.Shape.Visibility = Visibility.Visible; tr.Dissolved = false; tr.Fading = false;
                         }
