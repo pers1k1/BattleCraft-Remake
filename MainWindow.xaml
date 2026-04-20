@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        xmlns:core="clr-namespace:CustomLauncher.Core"
         x:Name="MainWnd"
         Title="BattleCraft Remake Launcher" 
         Height="650" Width="1100"
@@ -483,7 +482,6 @@
     </Window.Resources>
 
     <Grid>
-        <core:ParticleBackground x:Name="ParticleBg"/>
 
         <Grid VerticalAlignment="Top" Height="40" Background="Transparent">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False">
@@ -542,7 +540,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
                     <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="15,0,0,0" VerticalAlignment="Center" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
-                    <CheckBox x:Name="ParticlesCheck" Content="Частицы" Foreground="#88FFFFFF" Margin="15,0,0,0" VerticalAlignment="Center" IsChecked="False" Checked="ParticlesCheck_Changed" Unchecked="ParticlesCheck_Changed"/>
+
                 </StackPanel>
             </StackPanel>
             <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,35" Width="400">

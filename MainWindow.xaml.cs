@@ -99,23 +99,12 @@ namespace CustomLauncher
         {
             InitializeComponent();
             MouseMove += OnWindowMouseMove;
-            MouseLeave += (s, e) => ParticleBg?.ClearMouse();
-            MouseLeftButtonDown += OnWindowClick;
-            Activated += (s, e) => { if (_settings.ParticlesEnabled) ParticleBg?.Resume(); };
-            Deactivated += (s, e) => ParticleBg?.Pause();
-            StateChanged += (s, e) => { if (WindowState == WindowState.Minimized) ParticleBg?.Pause(); else if (_settings.ParticlesEnabled) ParticleBg?.Resume(); };
             InitializeLauncherCore();
         }
 
-        private void OnWindowClick(object sender, MouseButtonEventArgs e)
-        {
-            ParticleBg?.Burst(e.GetPosition(ParticleBg));
-        }
 
         private void OnWindowMouseMove(object sender, MouseEventArgs e)
         {
-            ParticleBg?.SetMouse(e.GetPosition(ParticleBg));
-
             var titlePos = e.GetPosition(TitleText);
             double tw = TitleText.ActualWidth, th = TitleText.ActualHeight;
             if (tw > 0 && th > 0)
@@ -235,7 +224,6 @@ namespace CustomLauncher
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 this.Resources["AccentColor"] = c; this.Resources["AccentBrush"] = new SolidColorBrush(c);
                 if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); }
-                try { ParticleBg?.UpdateAccent(c); } catch { }
             } catch { }
         }
 
@@ -272,7 +260,6 @@ namespace CustomLauncher
             _settings = new AppSettings(); AppSettings.Save(_settings);
             try { string d = GetThemeDir(); if (Directory.Exists(d)) Directory.Delete(d, true); } catch { }
             MainWnd.Background = null; MainWnd.SetResourceReference(Control.BackgroundProperty, "PrimaryBrush"); Icon = null;
-            try { ParticleBg?.Start(); } catch { }
             InitializeLauncherCore();
         }
 
@@ -414,8 +401,6 @@ namespace CustomLauncher
             TitleContainer.Visibility = Visibility.Visible;
             WelcomeText.Text = $"Игрок: {_settings.Username}"; VersionText.Text = $"v{VER}";
             DebugCheck.IsChecked = _settings.DebugConsole;
-            ParticlesCheck.IsChecked = _settings.ParticlesEnabled;
-            if (!_settings.ParticlesEnabled) ParticleBg?.Stop(); else ParticleBg?.FadeIn();
             var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
             TitleContainer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
             TitleEntranceTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
@@ -441,7 +426,7 @@ namespace CustomLauncher
 
         private void ApplyCustomTheme()
         {
-            MainWnd.SetResourceReference(Control.BackgroundProperty, "PrimaryBrush"); if (_settings.ParticlesEnabled) ParticleBg?.Start();
+            MainWnd.SetResourceReference(Control.BackgroundProperty, "PrimaryBrush");
             if (!_settings.HasGamePath) return;
             try
             {
@@ -489,7 +474,6 @@ namespace CustomLauncher
 
         private void BtnSaveSettings_Click(object s, RoutedEventArgs e) => BtnCloseSettings_Click(s, e);
         private void DebugCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) { _settings.DebugConsole = DebugCheck.IsChecked == true; AppSettings.Save(_settings); } }
-        private void ParticlesCheck_Changed(object s, RoutedEventArgs e) { if (!IsLoaded) return; bool on = ParticlesCheck.IsChecked == true; _settings.ParticlesEnabled = on; AppSettings.Save(_settings); ParticlesCheck.IsEnabled = false; if (on) ParticleBg?.FadeIn(() => Dispatcher.Invoke(() => ParticlesCheck.IsEnabled = true)); else ParticleBg?.FadeOut(() => Dispatcher.Invoke(() => ParticlesCheck.IsEnabled = true)); }
         private void BtnSelectFolder_Click(object s, RoutedEventArgs e) { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) PathBox.Text = d.FolderName; }
 
         private void RamSlider_ValueChanged(object s, RoutedPropertyChangedEventArgs<double> e)
