@@ -13,6 +13,7 @@ namespace CustomLauncher
             "CustomLauncher");
 
         private static readonly string ConfigFile = Path.Combine(ConfigDir, "launcher_config.json");
+        private static readonly object _fileLock = new object();
 
         public string? PrimaryColor { get; set; } = "#0D0D1E";
         public string? AccentColor { get; set; } = "#BB86FC";
@@ -33,26 +34,32 @@ namespace CustomLauncher
 
         public static void Save(AppSettings settings)
         {
-            try
+            lock (_fileLock)
             {
-                if (!Directory.Exists(ConfigDir)) Directory.CreateDirectory(ConfigDir);
-                File.WriteAllText(ConfigFile, JsonConvert.SerializeObject(settings, Formatting.Indented));
+                try
+                {
+                    if (!Directory.Exists(ConfigDir)) Directory.CreateDirectory(ConfigDir);
+                    File.WriteAllText(ConfigFile, JsonConvert.SerializeObject(settings, Formatting.Indented));
+                }
+                catch { }
             }
-            catch { }
         }
 
         public static AppSettings Load()
         {
-            if (File.Exists(ConfigFile))
+            lock (_fileLock)
             {
-                try
+                if (File.Exists(ConfigFile))
                 {
-                    var s = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(ConfigFile));
-                    if (s != null) { if (s.RamMb <= 0) s.RamMb = 4096; return s; }
+                    try
+                    {
+                        var s = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(ConfigFile));
+                        if (s != null) { if (s.RamMb <= 0) s.RamMb = 4096; return s; }
+                    }
+                    catch { }
                 }
-                catch { }
+                return new AppSettings();
             }
-            return new AppSettings();
         }
     }
 }

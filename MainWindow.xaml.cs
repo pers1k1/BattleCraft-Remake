@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Documents;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
@@ -30,9 +31,20 @@ namespace CustomLauncher
         private double _scrollTarget = -1;
         private bool _scrolling;
 
+        private System.Windows.Threading.DispatcherTimer? _sysMonTimer;
+        private System.Collections.Generic.List<string> _logLines = new();
+
+        private class StatusTextDummy
+        {
+            private MainWindow _w;
+            public StatusTextDummy(MainWindow w) { _w = w; }
+            public string Text { set { _w.Log(value); } get { return ""; } }
+        }
+        private StatusTextDummy StatusText => new StatusTextDummy(this);
+
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "3.0";
+        private const string VER = "4.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.11";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -102,6 +114,55 @@ namespace CustomLauncher
             InitializeLauncherCore();
         }
 
+        private void Log(string message)
+        {
+            if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Log(message)); return; }
+            string prefix = message.Contains("Ошибка") ? "[ERR]" : "[SYS]";
+            _logLines.Add($"{prefix} {message}");
+            if (_logLines.Count > 6) _logLines.RemoveAt(0);
+            LogTerminalText.Text = string.Join("\n", _logLines);
+        }
+
+        private void StartTimers()
+        {
+            try { _sysMonTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) }; _sysMonTimer.Tick += (s, e) => UpdateSysMonitor(); _sysMonTimer.Start(); UpdateSysMonitor(); } catch { }
+        }
+
+        private void UpdateSysMonitor()
+        {
+            try
+            {
+                var memInfo = GC.GetGCMemoryInfo();
+                double totalMem = memInfo.TotalAvailableMemoryBytes / 1073741824.0;
+                double usedMem = memInfo.MemoryLoadBytes / 1073741824.0;
+                int memBars = (int)((usedMem / totalMem) * 10);
+                int emptyBars = 10 - memBars;
+                double appMem = Process.GetCurrentProcess().WorkingSet64 / 1048576.0;
+
+                var doc = SysMonitorRich.Document;
+                doc.Blocks.Clear();
+
+                var accentColor = (Color)FindResource("AccentColor");
+                var accentBrush = new SolidColorBrush(accentColor);
+                var dimBrush = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                var textBrush = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+
+                var p1 = new Paragraph();
+                p1.Inlines.Add(new Run("SYS RAM: [") { Foreground = textBrush });
+                p1.Inlines.Add(new Run(new string('|', memBars)) { Foreground = accentBrush });
+                p1.Inlines.Add(new Run(new string(' ', emptyBars)) { Foreground = dimBrush });
+                p1.Inlines.Add(new Run($"] {usedMem:F1}/{totalMem:F1} GB") { Foreground = textBrush });
+                doc.Blocks.Add(p1);
+
+                var p2 = new Paragraph();
+                p2.Inlines.Add(new Run($"APP RAM: {appMem:F0} MB") { Foreground = textBrush });
+                doc.Blocks.Add(p2);
+            }
+            catch { }
+        }
+
+
+
 
         private void OnWindowMouseMove(object sender, MouseEventArgs e)
         {
@@ -110,14 +171,14 @@ namespace CustomLauncher
             if (tw > 0 && th > 0)
             {
                 double cx = tw / 2, cy = th / 2;
-                double nd = Math.Sqrt(Math.Pow((titlePos.X - cx) / (tw / 2 + 120), 2) + Math.Pow((titlePos.Y - cy) / 60, 2));
+                double nd = Math.Sqrt(Math.Pow((titlePos.X - cx) / (tw / 2 + 60), 2) + Math.Pow((titlePos.Y - cy) / 30, 2));
                 if (nd < 1.0)
                 {
                     double p = 1.0 - nd;
                     TitleTranslate.BeginAnimation(TranslateTransform.XProperty, null);
                     TitleTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-                    TitleTranslate.X += ((cx - titlePos.X) / cx * 6 * p - TitleTranslate.X) * 0.15;
-                    TitleTranslate.Y += ((cy - titlePos.Y) / cy * 4 * p - TitleTranslate.Y) * 0.15;
+                    TitleTranslate.X += ((cx - titlePos.X) / cx * 3 * p - TitleTranslate.X) * 0.15;
+                    TitleTranslate.Y += ((cy - titlePos.Y) / cy * 2 * p - TitleTranslate.Y) * 0.15;
                 }
                 else
                 {
@@ -133,6 +194,7 @@ namespace CustomLauncher
             FillColorPresets();
             ApplyThemeFromSettings();
             ApplyCustomTheme();
+            StartTimers();
             if (_settings.IsFirstRun) ShowSetupPanel();
             else
             {
@@ -150,7 +212,7 @@ namespace CustomLauncher
             LoginPanel.Visibility = Visibility.Hidden;
             MainPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Collapsed;
-            TitleContainer.Visibility = Visibility.Collapsed;
+            TitleText.Visibility = Visibility.Collapsed;
             SetupPathBox.Text = _settings.GamePath;
         }
 
@@ -289,7 +351,7 @@ namespace CustomLauncher
                 if (!_settings.IsModpackInstalled) { didInstall = true; await InstallModpack(true); }
                 else if (_needsModpackUpdate) { didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
 
-                if (didInstall) { StatusText.Text = "Установка завершена! Нажмите ИГРАТЬ."; SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
+                if (didInstall) { Log("Загрузка завершена!"); StatusText.Text = "Установка завершена! Нажмите ИГРАТЬ."; SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
 
                 StatusText.Text = "Запуск..."; SetProgress(100);
                 var vers = await _launcher.GetAllVersionsAsync();
@@ -304,6 +366,8 @@ namespace CustomLauncher
                 _gameProcess.StartInfo.UseShellExecute = false;
 
                 _gameProcess.Start();
+                _logLines.Clear();
+                LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); Hide();
                 await _gameProcess.WaitForExitAsync();
                 _gameProcess = null; Show(); SetPlayState("idle"); StatusText.Text = "Готов";
@@ -321,8 +385,8 @@ namespace CustomLauncher
 
         private void SetPlayState(string st)
         {
-            if (st == "running") { BtnPlay.Content = "ОТМЕНА"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
-            else { BtnPlay.Content = "\u25B6  ИГРАТЬ"; BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
+            if (st == "running") { BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "ОТМЕНА", IsHitTestVisible = false }; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
+            else { BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "\u25B6  ИГРАТЬ", IsHitTestVisible = false }; BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
         }
 
         private void InjectJvmArgs(Process p)
@@ -389,29 +453,215 @@ namespace CustomLauncher
             await dl.DownloadFileAsync(MODPACK_URL, zip);
             StatusText.Text = "Распаковка...";
             await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
+            Log("Распаковка завершена!");
             _settings.IsModpackInstalled = true;
             _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
             AppSettings.Save(_settings);
+        }
+
+        private async Task AnimateTerminalText(TextBlock tb, string targetText, int delayMs = 25)
+        {
+            tb.Text = "";
+            string chars = "$?#!*%@^&~";
+            var rnd = new Random();
+            for (int i = 0; i < targetText.Length; i++)
+            {
+                tb.Text = targetText.Substring(0, i) + chars[rnd.Next(chars.Length)] + "_";
+                await Task.Delay(delayMs);
+                tb.Text = targetText.Substring(0, i + 1) + "_";
+                await Task.Delay(delayMs);
+            }
+            tb.Text = targetText;
+        }
+
+        private string GetRandomGreeting(string username)
+        {
+            int hour = DateTime.Now.Hour;
+            var rnd = new Random();
+            
+            if (hour >= 4 && hour < 12)
+            {
+                string[] p = {
+                    $"Доброе утро, {username}!", $"Прекрасное утро, не так ли, {username}?", $"Просыпайся и пой, {username}!",
+                    $"С новым днем, {username}!", $"Утро добрым бывает, {username}!", $"Время свершений, {username}!",
+                    $"Утренний кофе готов, {username}?", $"Солнце встало, {username}!", $"Бодрого утра, {username}!",
+                    $"Ранняя пташка, {username}!", $"Начинаем день с улыбки, {username}!", $"Пусть утро будет легким, {username}!",
+                    $"Светлого утра, {username}!", $"Впереди отличный день, {username}!", $"Завтрак съеден, {username}?",
+                    $"Навстречу приключениям, {username}!", $"Утро магии, {username}!", $"Свежий старт, {username}!",
+                    $"С первыми лучами солнца, {username}!", $"День начинается сейчас, {username}!", $"Бодрость духа, {username}!",
+                    $"Доброе и теплое утро, {username}!", $"Заряжайся позитивом, {username}!", $"Мир просыпается, {username}!",
+                    $"Ясное утро, {username}!", $"Утро для великих дел, {username}!", $"Солнечного утра, {username}!",
+                    $"Готов свернуть горы, {username}?", $"Отличное начало дня, {username}!", $"Улыбнись новому дню, {username}!",
+                    $"Энергичного утра, {username}!", $"Утро туманное, но доброе, {username}!", $"Пора действовать, {username}!",
+                    $"Пробуждение системы, {username}!", $"Утро зовет к новым вершинам, {username}!", $"Свежий ветер, {username}!",
+                    $"С добрым утром и хорошим днем, {username}!", $"Утренняя прохлада, {username}!", $"Встречай рассвет, {username}!",
+                    $"Утренний заряд энергии получен, {username}?", $"На старт, внимание, утро, {username}!", $"Чистый лист, {username}!",
+                    $"Утро – время планов, {username}!", $"Позитивного утра, {username}!", $"Пусть все задуманное сбудется, {username}!",
+                    $"С первыми петухами, {username}!", $"Утро мудренее вечера, {username}!", $"Волшебного утра, {username}!",
+                    $"Лучшее время дня, {username}!", $"Утро приносит надежду, {username}!", $"Удачного старта, {username}!"
+                };
+                return p[rnd.Next(p.Length)];
+            }
+            if (hour >= 12 && hour < 16)
+            {
+                string[] p = {
+                    $"Добрый день, {username}!", $"Какой солнечный день, {username}!", $"Отличный день для игры, {username}!",
+                    $"День в самом разгаре, {username}!", $"Продуктивного дня, {username}!", $"Экватор дня пройден, {username}?",
+                    $"Хорошего дня, {username}!", $"Пусть день пройдет отлично, {username}!", $"Яркого дня, {username}!",
+                    $"Как проходит день, {username}?", $"Время обеда, {username}!", $"День полон возможностей, {username}!",
+                    $"Замечательный день, {username}!", $"Светлый день, {username}!", $"Середина пути, {username}!",
+                    $"Силы еще есть, {username}?", $"Дневной перерыв, {username}!", $"Вдохновляющий день, {username}!",
+                    $"Рабочий полдень, {username}!", $"День летит незаметно, {username}!", $"Прекрасный полдень, {username}!",
+                    $"Позитивного дня, {username}!", $"Успешного продолжения дня, {username}!", $"Солнце в зените, {username}!",
+                    $"Дневная суета, {username}!", $"Наслаждайся моментом, {username}!", $"Превосходный день, {username}!",
+                    $"Бодрого дня, {username}!", $"Энергичный день, {username}!", $"Время не ждет, {username}!",
+                    $"Твори и побеждай, {username}!", $"Солнечные лучи греют, {username}!", $"День для побед, {username}!",
+                    $"Системы работают в штатном режиме, {username}!", $"Хорошего настроения, {username}!", $"Отличного самочувствия, {username}!",
+                    $"Дневные задачи, {username}!", $"Время пить чай, {username}!", $"Полдень радует, {username}!",
+                    $"Не сбавляй темп, {username}!", $"Всё идет по плану, {username}?", $"Радостного дня, {username}!",
+                    $"Пусть день будет успешным, {username}!", $"Врываемся в игру, {username}!", $"Прекрасное время суток, {username}!",
+                    $"День наполнен светом, {username}!", $"Отличный настрой, {username}!", $"Дневная доза гейминга, {username}!",
+                    $"Сияющий день, {username}!", $"Продолжаем в том же духе, {username}!", $"Всё отлично, {username}!"
+                };
+                return p[rnd.Next(p.Length)];
+            }
+            if (hour >= 16 && hour < 21)
+            {
+                string[] p = {
+                    $"Добрый вечер, {username}!", $"Красивый вечер, {username}!", $"Закат прекрасен, {username}?",
+                    $"Уютного вечера, {username}!", $"Вечер обещает быть интересным, {username}!", $"Время расслабиться, {username}!",
+                    $"Приятного вечера, {username}!", $"Замечательный вечер, {username}!", $"Вечерние игры - лучшее, {username}?",
+                    $"Спокойного вечера, {username}!", $"Вечер за окном, {username}!", $"Пора отдыхать, {username}!",
+                    $"Прекрасное завершение дня, {username}!", $"Темнеет, {username}!", $"Вечерняя прохлада, {username}!",
+                    $"Вечерние сумерки, {username}!", $"День подходит к концу, {username}!", $"Светлого вечера, {username}!",
+                    $"Тихий вечер, {username}!", $"Огни города зажигаются, {username}!", $"Чудесного вечера, {username}!",
+                    $"Теплого вечера, {username}!", $"Вечерняя атмосфера, {username}!", $"Звездный вечер, {username}!",
+                    $"Спокойствие и тишина, {username}!", $"Время итогов, {username}!", $"Отдыхай душой, {username}!",
+                    $"Добрый и уютный вечер, {username}!", $"Вечерние огни, {username}!", $"Вечер в кругу друзей, {username}!",
+                    $"Превосходный вечер, {username}!", $"Вечерний релакс, {username}!", $"Вечерняя медитация, {username}!",
+                    $"Запуск вечерних протоколов, {username}!", $"Система готова к вечеру, {username}!", $"Волшебный вечер, {username}!",
+                    $"Легкого вечера, {username}!", $"Снимаем напряжение, {username}!", $"Вечерний чай, {username}!",
+                    $"Тишина вечера, {username}!", $"Хорошего окончания дня, {username}!", $"Вечерний покой, {username}!",
+                    $"Радостного вечера, {username}!", $"Вечернее настроение, {username}!", $"Закат догорает, {username}!",
+                    $"Свет ночных фонарей, {username}!", $"Отличный вечер для побед, {username}!", $"Вечерние разговоры, {username}!",
+                    $"Наслаждайся вечером, {username}!", $"Вечерняя гармония, {username}!", $"Теплые мысли, {username}!"
+                };
+                return p[rnd.Next(p.Length)];
+            }
+            
+            string[] n = {
+                $"Доброй ночи, {username}!", $"Сверкающее небо, да, {username}?", $"Звезды ярко светят, {username}!",
+                $"Ночной дозор на связи, {username}!", $"Город засыпает, просыпается {username}!", $"Тихой ночи, {username}!",
+                $"Самое время для долгих сессий, {username}?", $"Ночь - время чудес, {username}!", $"Луна светит ярко, {username}!",
+                $"Спокойной ночи, {username}!", $"Ночные приключения ждут, {username}!", $"Темная ночь, {username}!",
+                $"Звездное небо зовет, {username}!", $"Не засиживайся допоздна, {username}!", $"Полуночный гейминг, {username}?",
+                $"Ночная тишина, {username}!", $"Ночь глубока, {username}!", $"Мистика ночи, {username}!",
+                $"Одинокая луна, {username}!", $"Ночные тени, {username}!", $"Сладких снов, {username}!",
+                $"Ночной режим активирован, {username}!", $"Темнота друг молодежи, {username}!", $"Бессонница, {username}?",
+                $"Таинственная ночь, {username}!", $"Тихая ночь, {username}!", $"Спокойствие ночи, {username}!",
+                $"Ночные огни, {username}!", $"Ночная смена, {username}!", $"Глубокая ночь, {username}!",
+                $"Звезды наблюдают, {username}!", $"Млечный путь, {username}!", $"Ночная атмосфера, {username}!",
+                $"Переход в ночной режим, {username}...", $"Сон для слабаков, {username}?", $"Волшебной ночи, {username}!",
+                $"Ночной бриз, {username}!", $"Середина ночи, {username}!", $"Ночь спокойна, {username}!",
+                $"Безмятежной ночи, {username}!", $"Ночной пейзаж, {username}!", $"Уютной ночи, {username}!",
+                $"Ночные раздумья, {username}!", $"Ночной эфир, {username}!", $"Свет во тьме, {username}!",
+                $"Ночная мгла, {username}!", $"Лунный свет, {username}!", $"Спокойной и тихой ночи, {username}!",
+                $"Ночь принадлежит нам, {username}!", $"Ночные тайны, {username}!", $"Звездная пыль, {username}!"
+            };
+            return n[rnd.Next(n.Length)];
+        }
+
+        private string GetRandomQuestion()
+        {
+            int hour = DateTime.Now.Hour;
+            var rnd = new Random();
+            var q = new System.Collections.Generic.List<string> {
+                "Как дела?", "Что нового?", "Готов к игре?", "Какие планы на игру?",
+                "Скилл наточен?", "Готов побеждать?", "Все системы в норме?",
+                "Настроение боевое?", "Кликай на ИГРАТЬ!", "Время писать историю!",
+                "Ждем только тебя!", "Проверка пинга...", "Инжект модов...", "Синхронизация..."
+            };
+            
+            if (hour >= 16 || hour < 4)
+            {
+                q.Add("Как прошел день?");
+                q.Add("Много фрагов сегодня?");
+                q.Add("Устал за день?");
+            }
+            if (hour >= 4 && hour < 12)
+            {
+                q.Add("Как спалось?");
+                q.Add("Готов к новому дню?");
+                q.Add("Утренний раш?");
+            }
+            return q[rnd.Next(q.Count)];
+        }
+
+        private async void StartWelcomeTextLoop()
+        {
+            string chars = "$?#!*%@^&~";
+            var rnd = new Random();
+            bool showGreeting = true;
+            
+            while (true)
+            {
+                string phrase = showGreeting ? GetRandomGreeting(_settings.Username) : GetRandomQuestion();
+                showGreeting = !showGreeting;
+                
+                await AnimateTerminalText(WelcomeText, phrase);
+                
+                for (int w = 0; w < 8; w++)
+                {
+                    WelcomeText.Text = phrase + "_";
+                    await Task.Delay(500);
+                    WelcomeText.Text = phrase + " ";
+                    await Task.Delay(500);
+                }
+                
+                for (int i = phrase.Length - 1; i >= 0; i--)
+                {
+                    WelcomeText.Text = phrase.Substring(0, i) + chars[rnd.Next(chars.Length)] + "_";
+                    await Task.Delay(15);
+                    WelcomeText.Text = phrase.Substring(0, i) + "_";
+                    await Task.Delay(15);
+                }
+                WelcomeText.Text = "";
+                await Task.Delay(500);
+            }
         }
 
         private async void SwitchToMain()
         {
             SetupPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Hidden;
             MainPanel.Visibility = Visibility.Visible; TopButtons.Visibility = Visibility.Visible;
-            TitleContainer.Visibility = Visibility.Visible;
-            WelcomeText.Text = $"Игрок: {_settings.Username}"; VersionText.Text = $"v{VER}";
-            DebugCheck.IsChecked = _settings.DebugConsole;
-            var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
-            TitleContainer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
-            TitleEntranceTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
+
+            WelcomeText.Text = ""; VersionText.Text = ""; TopLeftTitleText.Text = "";
+            TitleText.Text = "BATTLECRAFT";
 
             InitializeLauncher(); await CheckUpdates();
+
+            _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
+            _ = AnimateTerminalText(VersionText, $"v{VER}");
+            StartWelcomeTextLoop();
+            StartDescriptionAnimation();
         }
 
         private void LoginGridState() { MainPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Visible; UsernameBox.Clear(); }
 
         private void BtnLogin_Click(object s, RoutedEventArgs e)
         { var n = UsernameBox.Text.Trim(); if (string.IsNullOrWhiteSpace(n)) return; _settings.Username = n; AppSettings.Save(_settings); SwitchToMain(); }
+
+        private void BtnGitHub_Click(object s, RoutedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo("https://github.com/pers1k1") { UseShellExecute = true });
+        }
+
+        private async void StartDescriptionAnimation()
+        {
+            string description = "Battlecraft Remake — это ремейк режима от Nazzy, который был создан ещё в далёком 2018 году, но, к сожалению, не получил своего продолжения.\n\nОсновная суть игры заключается в том, чтобы захватывать точки, копая ресурсы на рудниках, и получить абсолютное доминирование над противником, захватив последнюю финальную точку.\n\nВ сборке присутствуют кастомные моды (кривые), которые дополняют игру.";
+            await Task.Delay(1500);
+            await AnimateTerminalText(DescriptionText, description, 8);
+        }
 
         private void BtnClose_Click(object s, RoutedEventArgs e) => Application.Current.Shutdown();
         private void BtnMinimize_Click(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -498,17 +748,20 @@ namespace CustomLauncher
                 string ts = "?t=" + DateTime.Now.Ticks;
                 var t1 = _httpClient.GetStringAsync(MODPACK_VER_URL + ts);
                 var t2 = _httpClient.GetStringAsync(LAUNCHER_VER_URL + ts);
-                await Task.WhenAll(t1, t2);
-                if (Version.TryParse(t1.Result.Trim(), out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
+                var results = await Task.WhenAll(t1, t2);
+                
+                string modpackVerStr = results[0].Trim();
+                string launcherVerStr = results[1].Trim();
+
+                if (Version.TryParse(modpackVerStr, out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
                 {
-                    _onlineModpackVer = t1.Result.Trim();
-                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = "УСТАНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
-                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = "ОБНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    _onlineModpackVer = modpackVerStr;
+                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "УСТАНОВИТЬ", IsHitTestVisible = false }; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "ОБНОВИТЬ", IsHitTestVisible = false }; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
                 }
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
-                string lv = t2.Result.Trim();
-                if (lv != VER && await ShowCustomDialog($"Обновить лаунчер до {lv}?", "Обновление", true)) await UpdateLauncher();
+                if (launcherVerStr != VER && await ShowCustomDialog($"Обновить лаунчер до {launcherVerStr}?", "Обновление", true)) await UpdateLauncher();
             }
             catch { StatusText.Text = "Ошибка сети"; }
         }
@@ -519,10 +772,16 @@ namespace CustomLauncher
             try
             {
                 string dir = AppDomain.CurrentDomain.BaseDirectory, cur = Process.GetCurrentProcess().MainModule!.FileName;
-                string tmp = Path.Combine(dir, "upd.exe"), bat = Path.Combine(dir, "update.bat");
+                string tmp = Path.Combine(dir, "upd.exe");
+                string old = cur + ".old";
                 await new FileDownloader().DownloadFileAsync(LAUNCHER_EXE_URL, tmp);
-                File.WriteAllText(bat, $@"timeout 2 & del ""{cur}"" & move ""{tmp}"" ""{cur}"" & start """" ""{cur}"" & del %0");
-                Process.Start(new ProcessStartInfo(bat) { CreateNoWindow = true, UseShellExecute = true }); Application.Current.Shutdown();
+                
+                try { if (File.Exists(old)) File.Delete(old); } catch { }
+                File.Move(cur, old);
+                File.Move(tmp, cur);
+                
+                Process.Start(new ProcessStartInfo(cur) { UseShellExecute = true }); 
+                Application.Current.Shutdown();
             }
             catch { StatusText.Text = "Ошибка обновления"; }
         }
@@ -545,7 +804,7 @@ namespace CustomLauncher
         {
             e.Handled = true;
             var sv = SettingsScrollViewer;
-            if (_scrollTarget < 0) _scrollTarget = sv.VerticalOffset;
+            if (_scrollTarget < 0 || !_scrolling) _scrollTarget = sv.VerticalOffset;
             _scrollTarget = Math.Clamp(_scrollTarget - e.Delta * 0.5, 0, sv.ScrollableHeight);
             if (!_scrolling) { _scrolling = true; CompositionTarget.Rendering += ScrollTick; }
         }
@@ -555,7 +814,7 @@ namespace CustomLauncher
             var sv = SettingsScrollViewer;
             double cur = sv.VerticalOffset, diff = _scrollTarget - cur;
             if (Math.Abs(diff) < 0.5) { sv.ScrollToVerticalOffset(_scrollTarget); _scrolling = false; CompositionTarget.Rendering -= ScrollTick; return; }
-            sv.ScrollToVerticalOffset(cur + diff * 0.15);
+            sv.ScrollToVerticalOffset(cur + diff * 0.25);
         }
 
         private void SettingsScroll_ScrollChanged(object s, ScrollChangedEventArgs e)
