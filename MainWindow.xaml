@@ -499,7 +499,7 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <RichTextBox x:Name="SysMonitorRich" FontFamily="Consolas, Courier New" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,135,20,0" IsHitTestVisible="False" Background="Transparent" BorderThickness="0" IsReadOnly="True" Focusable="False">
+        <RichTextBox x:Name="SysMonitorRich" FontFamily="Consolas, Courier New" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,115,20,0" IsHitTestVisible="False" Background="Transparent" BorderThickness="0" IsReadOnly="True" Focusable="False">
             <RichTextBox.Resources>
                 <Style TargetType="Paragraph">
                     <Setter Property="Margin" Value="0"/>
@@ -513,7 +513,6 @@
                 <Image Source="{Binding Icon, ElementName=MainWnd}" Height="20" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                 <TextBlock x:Name="TopLeftTitleText" Text="BattleCraft Remake Launcher" FontFamily="Consolas, Courier New" Foreground="#88FFFFFF" FontSize="12" VerticalAlignment="Center"/>
             </StackPanel>
-
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Style="{StaticResource SystemButton}" Click="BtnMinimize_Click">
                     <Path Data="M0,8 L8,8 8,9 0,9 z" Width="10" Height="1" Stretch="Uniform" Fill="#AAAAAA" SnapsToDevicePixels="True"/>
@@ -527,32 +526,30 @@
         <Separator VerticalAlignment="Top" Margin="0,40,0,0" Background="#444444" Opacity="0.5"/>
 
 
+        <Grid x:Name="TitleContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-40,0,0" IsHitTestVisible="False" Opacity="0">
+            <Grid.RenderTransform>
+                <TranslateTransform x:Name="TitleEntranceTranslate" Y="30"/>
+            </Grid.RenderTransform>
+            <TextBlock x:Name="TitleText" Text="BATTLECRAFT REMAKE" 
+                       FontSize="42" 
+                       FontWeight="Bold" 
+                       Foreground="White" 
+                       RenderTransformOrigin="0.5,0.5">
+                <TextBlock.RenderTransform>
+                    <TranslateTransform x:Name="TitleTranslate" X="0" Y="0"/>
+                </TextBlock.RenderTransform>
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="{DynamicResource AccentColor}" 
+                                      BlurRadius="{DynamicResource TitleBloomBlurRadius}" 
+                                      ShadowDepth="0" 
+                                      Opacity="{DynamicResource TitleBloomOpacity}"/>
+                </TextBlock.Effect>
+            </TextBlock>
+        </Grid>
 
-
-        <TextBlock x:Name="TitleText" Text="BATTLECRAFT" 
-                   FontSize="32" 
-                   FontWeight="Bold" 
-                   Foreground="White" 
-                   HorizontalAlignment="Center" 
-                   VerticalAlignment="Top"
-                   Margin="0,50,0,0"
-                   IsHitTestVisible="False"
-                   RenderTransformOrigin="0.5,0.5">
-            <TextBlock.RenderTransform>
-                <TranslateTransform x:Name="TitleTranslate" X="0" Y="0"/>
-            </TextBlock.RenderTransform>
-            <TextBlock.Effect>
-                <DropShadowEffect Color="{DynamicResource AccentColor}" 
-                                  BlurRadius="{DynamicResource TitleBloomBlurRadius}" 
-                                  ShadowDepth="0" 
-                                  Opacity="{DynamicResource TitleBloomOpacity}"/>
-            </TextBlock.Effect>
-        </TextBlock>
-
-        <StackPanel x:Name="TopButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,95,20,0">
+        <StackPanel x:Name="TopButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,70,20,0">
             <Button x:Name="BtnReinstall" Content="Перекачать моды" Click="BtnReinstall_Click" Margin="0,0,10,0" Style="{StaticResource GlowButton}"/>
-            <Button x:Name="BtnSettingsOpen" Content="Настройки" Click="BtnSettings_Click" Margin="0,0,10,0" Style="{StaticResource GlowButton}"/>
-            <Button x:Name="BtnGitHub" Content="⬡  GitHub" Click="BtnGitHub_Click" Style="{StaticResource GlowButton}" ToolTip="github.com/pers1k1"/>
+            <Button x:Name="BtnSettingsOpen" Content="Настройки" Click="BtnSettings_Click" Style="{StaticResource GlowButton}"/>
         </StackPanel>
 
         <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
@@ -562,17 +559,13 @@
         </StackPanel>
 
         <Grid x:Name="MainPanel" Visibility="Hidden">
-            <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,95,0,0"/>
-            <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v2.0" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,115,0,0"/>
-
-            <TextBlock x:Name="DescriptionText" FontFamily="Consolas, Courier New" Text="" Foreground="#77FFFFFF" FontSize="16" TextWrapping="Wrap" LineHeight="25" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,140,0,0" MaxWidth="420"/>
-
-            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,30,35">
+            <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
+            <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v2.0" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
+            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="0,0,15,0" VerticalAlignment="Center" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
-                    <Button x:Name="BtnPlay" Click="BtnPlay_Click" Style="{StaticResource PlayButton}">
-                        <TextBlock Text="&#x25B6;  ИГРАТЬ" IsHitTestVisible="False"/>
-                    </Button>
+                    <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
+                    <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="15,0,0,0" VerticalAlignment="Center" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
+
                 </StackPanel>
             </StackPanel>
             <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,35" Width="400">
@@ -580,6 +573,9 @@
                 <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
             </StackPanel>
         </Grid>
+
+        <Button x:Name="BtnGitHub" Content="⬡  GitHub" Click="BtnGitHub_Click" Style="{StaticResource GlowButton}" ToolTip="github.com/pers1k1"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,35" Opacity="0.7"/>
 
         <StackPanel x:Name="SetupPanel" Visibility="Hidden" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
             <TextBlock Text="Никнейм:" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>

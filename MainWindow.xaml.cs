@@ -12,9 +12,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Documents;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
@@ -136,32 +136,28 @@ namespace CustomLauncher
                 double totalMem = memInfo.TotalAvailableMemoryBytes / 1073741824.0;
                 double usedMem = memInfo.MemoryLoadBytes / 1073741824.0;
                 int memBars = (int)((usedMem / totalMem) * 10);
-                int emptyBars = 10 - memBars;
                 double appMem = Process.GetCurrentProcess().WorkingSet64 / 1048576.0;
+
+                var accentColor = (Color)FindResource("AccentColor");
+                var dimAccent = Color.FromArgb(180, accentColor.R, accentColor.G, accentColor.B);
+                var accentBrush = new SolidColorBrush(dimAccent);
+                var dimBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255));
+                var textBrush = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255));
 
                 var doc = SysMonitorRich.Document;
                 doc.Blocks.Clear();
-
-                var accentColor = (Color)FindResource("AccentColor");
-                var accentBrush = new SolidColorBrush(accentColor);
-                var dimBrush = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
-                var textBrush = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
-
                 var p1 = new Paragraph();
                 p1.Inlines.Add(new Run("SYS RAM: [") { Foreground = textBrush });
-                p1.Inlines.Add(new Run(new string('|', memBars)) { Foreground = accentBrush });
-                p1.Inlines.Add(new Run(new string(' ', emptyBars)) { Foreground = dimBrush });
+                for (int i = 0; i < 10; i++)
+                    p1.Inlines.Add(new Run("|") { Foreground = i < memBars ? accentBrush : dimBrush });
                 p1.Inlines.Add(new Run($"] {usedMem:F1}/{totalMem:F1} GB") { Foreground = textBrush });
                 doc.Blocks.Add(p1);
-
                 var p2 = new Paragraph();
                 p2.Inlines.Add(new Run($"APP RAM: {appMem:F0} MB") { Foreground = textBrush });
                 doc.Blocks.Add(p2);
             }
             catch { }
         }
-
-
 
 
         private void OnWindowMouseMove(object sender, MouseEventArgs e)
@@ -171,14 +167,14 @@ namespace CustomLauncher
             if (tw > 0 && th > 0)
             {
                 double cx = tw / 2, cy = th / 2;
-                double nd = Math.Sqrt(Math.Pow((titlePos.X - cx) / (tw / 2 + 60), 2) + Math.Pow((titlePos.Y - cy) / 30, 2));
+                double nd = Math.Sqrt(Math.Pow((titlePos.X - cx) / (tw / 2 + 120), 2) + Math.Pow((titlePos.Y - cy) / 60, 2));
                 if (nd < 1.0)
                 {
                     double p = 1.0 - nd;
                     TitleTranslate.BeginAnimation(TranslateTransform.XProperty, null);
                     TitleTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-                    TitleTranslate.X += ((cx - titlePos.X) / cx * 3 * p - TitleTranslate.X) * 0.15;
-                    TitleTranslate.Y += ((cy - titlePos.Y) / cy * 2 * p - TitleTranslate.Y) * 0.15;
+                    TitleTranslate.X += ((cx - titlePos.X) / cx * 6 * p - TitleTranslate.X) * 0.15;
+                    TitleTranslate.Y += ((cy - titlePos.Y) / cy * 4 * p - TitleTranslate.Y) * 0.15;
                 }
                 else
                 {
@@ -195,7 +191,7 @@ namespace CustomLauncher
             ApplyThemeFromSettings();
             ApplyCustomTheme();
             StartTimers();
-            if (_settings.IsFirstRun) ShowSetupPanel();
+            if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); }
             else
             {
                 UsernameBox.Text = _settings.Username;
@@ -212,7 +208,7 @@ namespace CustomLauncher
             LoginPanel.Visibility = Visibility.Hidden;
             MainPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Collapsed;
-            TitleText.Visibility = Visibility.Collapsed;
+            TitleContainer.Visibility = Visibility.Collapsed;
             SetupPathBox.Text = _settings.GamePath;
         }
 
@@ -230,6 +226,7 @@ namespace CustomLauncher
             SetupPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Visible;
             UsernameBox.Text = nick; RamSlider.Value = 4096; PathBox.Text = path;
+            _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             SwitchToMain();
         }
 
@@ -351,7 +348,7 @@ namespace CustomLauncher
                 if (!_settings.IsModpackInstalled) { didInstall = true; await InstallModpack(true); }
                 else if (_needsModpackUpdate) { didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
 
-                if (didInstall) { Log("Загрузка завершена!"); StatusText.Text = "Установка завершена! Нажмите ИГРАТЬ."; SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
+                if (didInstall) { Log("Готово!"); StatusText.Text = "Установка завершена! Нажмите ИГРАТЬ."; SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
 
                 StatusText.Text = "Запуск..."; SetProgress(100);
                 var vers = await _launcher.GetAllVersionsAsync();
@@ -366,8 +363,7 @@ namespace CustomLauncher
                 _gameProcess.StartInfo.UseShellExecute = false;
 
                 _gameProcess.Start();
-                _logLines.Clear();
-                LogTerminalText.Text = "";
+                _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); Hide();
                 await _gameProcess.WaitForExitAsync();
                 _gameProcess = null; Show(); SetPlayState("idle"); StatusText.Text = "Готов";
@@ -385,8 +381,8 @@ namespace CustomLauncher
 
         private void SetPlayState(string st)
         {
-            if (st == "running") { BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "ОТМЕНА", IsHitTestVisible = false }; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
-            else { BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "\u25B6  ИГРАТЬ", IsHitTestVisible = false }; BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
+            if (st == "running") { BtnPlay.Content = "ОТМЕНА"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
+            else { BtnPlay.Content = "\u25B6  ИГРАТЬ"; BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
         }
 
         private void InjectJvmArgs(Process p)
@@ -459,7 +455,7 @@ namespace CustomLauncher
             AppSettings.Save(_settings);
         }
 
-        private async Task AnimateTerminalText(TextBlock tb, string targetText, int delayMs = 25)
+        private async Task AnimateTerminalText(TextBlock tb, string targetText)
         {
             tb.Text = "";
             string chars = "$?#!*%@^&~";
@@ -467,9 +463,9 @@ namespace CustomLauncher
             for (int i = 0; i < targetText.Length; i++)
             {
                 tb.Text = targetText.Substring(0, i) + chars[rnd.Next(chars.Length)] + "_";
-                await Task.Delay(delayMs);
+                await Task.Delay(25);
                 tb.Text = targetText.Substring(0, i + 1) + "_";
-                await Task.Delay(delayMs);
+                await Task.Delay(25);
             }
             tb.Text = targetText;
         }
@@ -634,16 +630,30 @@ namespace CustomLauncher
         {
             SetupPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Hidden;
             MainPanel.Visibility = Visibility.Visible; TopButtons.Visibility = Visibility.Visible;
+            TitleContainer.Visibility = Visibility.Visible;
 
-            WelcomeText.Text = ""; VersionText.Text = ""; TopLeftTitleText.Text = "";
-            TitleText.Text = "BATTLECRAFT";
+            WelcomeText.Text = ""; VersionText.Text = "";
+            TitleText.Text = "BATTLECRAFT REMAKE";
+
+            var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
+            TitleContainer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
+            TitleEntranceTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
+
+            TopButtons.Opacity = 0;
+            TopButtons.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(300) });
+
+            BtnPlay.Opacity = 0;
+            BtnPlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(500) });
+
+            BtnGitHub.Opacity = 0;
+            BtnGitHub.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 0.7, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(400) });
 
             InitializeLauncher(); await CheckUpdates();
 
-            _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
+            if (TopLeftTitleText.Text != "BattleCraft Remake Launcher")
+                _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             _ = AnimateTerminalText(VersionText, $"v{VER}");
             StartWelcomeTextLoop();
-            StartDescriptionAnimation();
         }
 
         private void LoginGridState() { MainPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Visible; UsernameBox.Clear(); }
@@ -654,13 +664,6 @@ namespace CustomLauncher
         private void BtnGitHub_Click(object s, RoutedEventArgs e)
         {
             Process.Start(new ProcessStartInfo("https://github.com/pers1k1") { UseShellExecute = true });
-        }
-
-        private async void StartDescriptionAnimation()
-        {
-            string description = "Battlecraft Remake — это ремейк режима от Nazzy, который был создан ещё в далёком 2018 году, но, к сожалению, не получил своего продолжения.\n\nОсновная суть игры заключается в том, чтобы захватывать точки, копая ресурсы на рудниках, и получить абсолютное доминирование над противником, захватив последнюю финальную точку.\n\nВ сборке присутствуют кастомные моды (кривые), которые дополняют игру.";
-            await Task.Delay(1500);
-            await AnimateTerminalText(DescriptionText, description, 8);
         }
 
         private void BtnClose_Click(object s, RoutedEventArgs e) => Application.Current.Shutdown();
@@ -756,8 +759,8 @@ namespace CustomLauncher
                 if (Version.TryParse(modpackVerStr, out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
                 {
                     _onlineModpackVer = modpackVerStr;
-                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "УСТАНОВИТЬ", IsHitTestVisible = false }; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
-                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = new System.Windows.Controls.TextBlock { Text = "ОБНОВИТЬ", IsHitTestVisible = false }; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = "УСТАНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = "ОБНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
                 }
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
@@ -791,7 +794,7 @@ namespace CustomLauncher
             if (_isBusy) return;
             if (!_settings.HasGamePath) { await ShowCustomDialog("Сначала выберите папку!"); return; }
             if (await ShowCustomDialog("Перекачать моды?", "Подтверждение", true))
-            { SetBusy(true); await InstallModpack(true); StatusText.Text = "Моды переустановлены"; SetPlayState("idle"); SetBusy(false); }
+            { SetBusy(true); await InstallModpack(true); Log("Готово!"); StatusText.Text = "Моды переустановлены"; SetPlayState("idle"); SetBusy(false); }
         }
 
         private void BtnChangeIcon_Click(object s, RoutedEventArgs e)
