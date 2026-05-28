@@ -51,7 +51,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "5.3";
+        private const string VER = "5.4";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -705,7 +705,11 @@ namespace CustomLauncher
             Process.Start(new ProcessStartInfo("https://github.com/pers1k1") { UseShellExecute = true });
         }
 
-        private void BtnClose_Click(object s, RoutedEventArgs e) => Application.Current.Shutdown();
+        private void BtnClose_Click(object s, RoutedEventArgs e)
+        {
+            _serverManager?.ForceKillProcess();
+            Application.Current.Shutdown();
+        }
         private void BtnMinimize_Click(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
         private void SetProgress(double v)
@@ -1138,15 +1142,22 @@ namespace CustomLauncher
             AppendConsoleOutput($"[SYS] {statusMessage}");
         }
 
+        private void EnsureServerManagerInitialized()
+        {
+            if (_serverManager != null) return;
+
+            _serverManager = new ServerManager();
+            _serverManager.OutputReceived += AppendConsoleOutput;
+            _serverManager.StateChanged += OnServerStateChanged;
+        }
+
         private async void BtnStartServer_Click(object s, RoutedEventArgs e)
         {
             if (_activeServerConfig == null || _isServerBusy) return;
 
             SaveActiveServerConfig();
 
-            _serverManager ??= new ServerManager();
-            _serverManager.OutputReceived += AppendConsoleOutput;
-            _serverManager.StateChanged += OnServerStateChanged;
+            EnsureServerManagerInitialized();
 
             ServerConsoleOutput.Text = "";
             AppendConsoleOutput("[SYS] Запуск сервера...");
