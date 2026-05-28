@@ -225,7 +225,7 @@ namespace CustomLauncher.Core
         {
             string userJvmArgsPath = Path.Combine(serverDir, "user_jvm_args.txt");
             int minHeapMb = Math.Min(config.ServerRamMb, 1024);
-            File.WriteAllText(userJvmArgsPath, $"-Xmx{config.ServerRamMb}M\n-Xms{minHeapMb}M\n");
+            File.WriteAllText(userJvmArgsPath, $"-Xmx{config.ServerRamMb}M\n-Xms{minHeapMb}M\n-Dfml.queryResult=confirm\n");
         }
 
         public static void GenerateServerProperties(ServerConfig config)
