@@ -479,6 +479,42 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#88FFFFFF"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="NavBd" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBd" Property="Background" Value="#10FFFFFF"/>
+                                <Setter Property="Foreground" Value="#CCFFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ServerActionButton" TargetType="Button" BasedOn="{StaticResource GlowButton}">
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
     </Window.Resources>
 
     <Grid x:Name="RootGrid" Background="Transparent">
@@ -559,19 +595,168 @@
         </StackPanel>
 
         <Grid x:Name="MainPanel" Visibility="Hidden">
-            <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
-            <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v2.0" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
-            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
-                    <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="15,0,0,0" VerticalAlignment="Center" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
+            <Border Grid.Column="0" Background="#08FFFFFF" BorderBrush="#15FFFFFF" BorderThickness="0,0,1,0" Margin="0,40,0,0">
+                <StackPanel Margin="0,25,0,0">
+                    <TextBlock Text="PLAY" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,0,0,10"/>
+                    <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x25B6;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Text="Играть" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Text="SERVER" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,25,0,10"/>
+                    <Button x:Name="NavServerBtn" Click="NavServer_Click" Style="{StaticResource NavButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Text="Серверы" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
-            </StackPanel>
-            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,35" Width="400">
-                <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="{DynamicResource AccentBrush}" Opacity="0.8" FontSize="11" HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,10" Height="50"/>
-                <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
-            </StackPanel>
+            </Border>
+
+            <Grid x:Name="PlayContentPanel" Grid.Column="1">
+                <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
+                <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v2.0" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
+                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
+                        <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="15,0,0,0" VerticalAlignment="Center" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,35" Width="400">
+                    <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="{DynamicResource AccentBrush}" Opacity="0.8" FontSize="11" HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,10" Height="50"/>
+                    <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid x:Name="ServerContentPanel" Grid.Column="1" Visibility="Collapsed" Margin="20,50,20,15">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                    <ComboBox x:Name="ServerSelector" Width="220" SelectionChanged="ServerSelector_Changed"/>
+                    <Button Content="+ Создать" Click="BtnCreateServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}"/>
+                    <Button Content="Удалить" Click="BtnDeleteServer_Click" Margin="0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
+                </StackPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="280"/>
+                        <ColumnDefinition Width="*" MinWidth="280"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
+                        <StackPanel x:Name="ServerConfigForm">
+                            <TextBlock Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="Имя сервера (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                            <TextBox x:Name="ServerMotdBox" Text="BattleCraft Server"/>
+
+                            <TextBlock Text="Макс. игроков:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
+                            <TextBox x:Name="ServerMaxPlayersBox" Text="20" Width="100" HorizontalAlignment="Left"/>
+
+                            <TextBlock Text="Порт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
+                            <TextBox x:Name="ServerPortBox" Text="25565" Width="100" HorizontalAlignment="Left"/>
+
+                            <TextBlock Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
+                            <Grid Margin="0,0,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="50"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="ServerViewDistanceSlider" Minimum="2" Maximum="32" Value="10" VerticalAlignment="Center" SmallChange="1" LargeChange="4" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=ServerViewDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <TextBlock Text="Оперативная память (МБ):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
+                            <Grid Margin="0,0,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="60"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="ServerRamSlider" Minimum="1024" Maximum="8192" Value="4096" VerticalAlignment="Center" SmallChange="512" LargeChange="1024" IsSnapToTickEnabled="True" TickFrequency="512"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=ServerRamSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <TextBlock Text="Сервер будет требовать лицензию: Нет" Foreground="#66FFFFFF" FontSize="12" Margin="0,15,0,0" FontStyle="Italic"/>
+
+                            <CheckBox x:Name="ServerWhitelistCheck" Content="Включить вайтлист" Margin="0,15,0,0" Checked="ServerWhitelistCheck_Changed" Unchecked="ServerWhitelistCheck_Changed"/>
+
+                            <StackPanel x:Name="WhitelistPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="WhitelistPlayerNameBox" Grid.Column="0"/>
+                                    <Button Content="+" Click="BtnAddWhitelistPlayer_Click" Grid.Column="1" Width="35" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
+                                </Grid>
+                                <Border Background="#10FFFFFF" CornerRadius="4" Margin="0,8,0,0" MinHeight="60" MaxHeight="150">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <StackPanel x:Name="WhitelistPlayersContainer"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </StackPanel>
+
+                            <CheckBox x:Name="ServerEulaCheck" Content="Принимаю EULA Mojang" Margin="0,15,0,0" Checked="ServerEulaCheck_Changed" Unchecked="ServerEulaCheck_Changed"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Grid Grid.Column="1" Margin="10,0,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <Border Grid.Row="1" Background="#0AFFFFFF" CornerRadius="6" BorderBrush="#15FFFFFF" BorderThickness="1">
+                            <TextBox x:Name="ServerConsoleOutput" 
+                                     IsReadOnly="True" 
+                                     TextWrapping="Wrap" 
+                                     VerticalScrollBarVisibility="Auto"
+                                     FontFamily="Consolas, Courier New" 
+                                     FontSize="11"
+                                     Foreground="#BBFFFFFF"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="10"
+                                     AcceptsReturn="True"
+                                     VerticalContentAlignment="Top"/>
+                        </Border>
+
+                        <Grid Grid.Row="2" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="ServerConsoleInput" Grid.Column="0" KeyDown="ServerConsoleInput_KeyDown"/>
+                            <Button Content="&#x27A4;" Grid.Column="1" Click="BtnSendCommand_Click" Width="35" Margin="5,0,0,0" Style="{StaticResource GlowButton}" FontSize="16"/>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button x:Name="BtnInstallServer" Content="Создать сервер" Click="BtnInstallServer_Click" Style="{StaticResource ServerActionButton}" IsEnabled="False"/>
+                    <Button x:Name="BtnStartServer" Content="Запустить" Click="BtnStartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnStopServer" Content="Остановить" Click="BtnStopServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed" Foreground="#FF6B6B"/>
+                    <Button x:Name="BtnRestartServer" Content="Перезапустить" Click="BtnRestartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnRestoreBackup" Content="Восстановить мир" Click="BtnRestoreBackup_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnOpenServerFolder" Content="Открыть папку" Click="BtnOpenServerFolder_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <TextBlock x:Name="ServerStatusText" Foreground="{DynamicResource AccentBrush}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    <ProgressBar x:Name="ServerProgressBar" Width="200" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <Button x:Name="BtnGitHub" Content="⬡  GitHub" Click="BtnGitHub_Click" Style="{StaticResource GlowButton}" ToolTip="github.com/pers1k1"
@@ -740,7 +925,8 @@
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock x:Name="CustomDialogTitle" Text="TITLE" FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
-                    <TextBlock x:Name="CustomDialogMessage" Text="Message" FontSize="14" Foreground="#CCCCCC" TextWrapping="Wrap" Margin="0,0,0,25"/>
+                    <TextBlock x:Name="CustomDialogMessage" Text="Message" FontSize="14" Foreground="#CCCCCC" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                    <TextBox x:Name="CustomDialogInputBox" Visibility="Collapsed" Margin="0,0,0,15"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" x:Name="CustomDialogButtons">
                         <Button x:Name="CustomDialogBtnCancel" Content="Отмена" Width="100" Margin="0,0,10,0" Style="{StaticResource GlowButton}" Click="CustomDialogCancel_Click"/>
                         <Button x:Name="CustomDialogBtnOk" Content="OK" Width="100" Style="{StaticResource GlowButton}" Click="CustomDialogOk_Click"/>
