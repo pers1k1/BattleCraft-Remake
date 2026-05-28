@@ -24,21 +24,47 @@ namespace CustomLauncher.Core
         public async Task InstallAsync(string targetPath, Action<double>? onProgress = null)
         {
             EnsureDirectoryExists(targetPath);
-            EnsureDirectoryExists(Path.Combine(targetPath, "server"));
-            EnsureDirectoryExists(Path.Combine(targetPath, "backup"));
+
+            string serverDirectory = Path.Combine(targetPath, "server");
+            string backupDirectory = Path.Combine(targetPath, "backup");
+
+            EnsureDirectoryExists(serverDirectory);
+            EnsureDirectoryExists(backupDirectory);
 
             string temporaryZipPath = Path.Combine(
                 Path.GetTempPath(),
                 $"bcserver_{Guid.NewGuid():N}.zip");
 
+            string temporaryExtractPath = Path.Combine(
+                Path.GetTempPath(),
+                $"bcserver_extract_{Guid.NewGuid():N}");
+
             try
             {
                 await DownloadArchive(temporaryZipPath, onProgress);
-                await ExtractArchive(temporaryZipPath, targetPath);
+                await ExtractArchive(temporaryZipPath, temporaryExtractPath);
+
+                string extractedServerDir = Path.Combine(temporaryExtractPath, "server");
+                string extractedBackupDir = Path.Combine(temporaryExtractPath, "backup");
+
+                string sourceForCopy = Directory.Exists(extractedServerDir)
+                    ? extractedServerDir
+                    : temporaryExtractPath;
+
+                await Task.Run(() =>
+                {
+                    CopyDirectoryContents(sourceForCopy, serverDirectory);
+
+                    if (Directory.Exists(extractedBackupDir))
+                        CopyDirectoryContents(extractedBackupDir, backupDirectory);
+                    else
+                        CopyDirectoryContents(sourceForCopy, backupDirectory);
+                });
             }
             finally
             {
                 TryDeleteFile(temporaryZipPath);
+                TryDeleteDirectory(temporaryExtractPath);
             }
         }
 
@@ -83,6 +109,11 @@ namespace CustomLauncher.Core
         private static void TryDeleteFile(string path)
         {
             try { if (File.Exists(path)) File.Delete(path); } catch { }
+        }
+
+        private static void TryDeleteDirectory(string path)
+        {
+            try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { }
         }
     }
 }
