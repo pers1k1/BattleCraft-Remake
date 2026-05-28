@@ -36,6 +36,8 @@ namespace CustomLauncher.Core
             string serverDir = ResolveServerDirectory(config);
             EnsureDirectoryExists(serverDir);
 
+            CleanStaleSessionLocks(serverDir);
+
             GenerateEula(config);
             GenerateUserJvmArgs(config, serverDir);
 
@@ -64,9 +66,7 @@ namespace CustomLauncher.Core
             var exitTask = _serverProcess.WaitForExitAsync();
 
             if (await Task.WhenAny(exitTask, timeoutTask) == timeoutTask)
-            {
-                try { _serverProcess.Kill(); } catch { }
-            }
+                ForceKillProcess();
         }
 
         public async Task RestartAsync(ServerConfig config, string javaPath)
@@ -74,6 +74,14 @@ namespace CustomLauncher.Core
             await StopAsync();
             await Task.Delay(2000);
             await StartAsync(config, javaPath);
+        }
+
+        public void ForceKillProcess()
+        {
+            try { _serverProcess?.Kill(entireProcessTree: true); } catch { }
+            _serverInput = null;
+            _serverProcess = null;
+            SetState(ServerState.Stopped);
         }
 
         public void SendCommand(string command)
@@ -122,27 +130,34 @@ namespace CustomLauncher.Core
 
             SetState(ServerState.Running);
 
+            Task processExitTask = firstRunProcess.WaitForExitAsync();
             var readyTimeout = Task.Delay(TimeSpan.FromMinutes(5));
-            var readyResult = await Task.WhenAny(serverReadySignal.Task, readyTimeout);
+            var completedTask = await Task.WhenAny(serverReadySignal.Task, processExitTask, readyTimeout);
 
-            if (readyResult == readyTimeout)
+            if (completedTask == processExitTask)
+            {
+                OutputReceived?.Invoke("[WARN] Процесс завершился до полной готовности.");
+                SetState(ServerState.Stopped);
+                await Task.Delay(1500);
+                return;
+            }
+
+            if (completedTask == readyTimeout)
                 OutputReceived?.Invoke("[WARN] Таймаут первого запуска, принудительная остановка...");
 
             OutputReceived?.Invoke("[SYS] Остановка для конфигурации...");
             try { firstRunInput.WriteLine("stop"); firstRunInput.Flush(); } catch { }
 
             var exitTimeout = Task.Delay(TimeSpan.FromSeconds(30));
-            var exitResult = await Task.WhenAny(firstRunProcess.WaitForExitAsync(), exitTimeout);
-
-            if (exitResult == exitTimeout)
+            if (await Task.WhenAny(processExitTask, exitTimeout) == exitTimeout)
             {
-                try { firstRunProcess.Kill(); } catch { }
+                try { firstRunProcess.Kill(entireProcessTree: true); } catch { }
             }
 
             SetState(ServerState.Stopped);
 
             OutputReceived?.Invoke("[SYS] Применение настроек...");
-            await Task.Delay(1500);
+            await Task.Delay(2000);
         }
 
         private void LaunchServerProcess(string javaPath, string serverDir)
@@ -244,6 +259,17 @@ namespace CustomLauncher.Core
                 return Path.GetFileName(anyJars[0]);
 
             return "server.jar";
+        }
+
+        private static void CleanStaleSessionLocks(string serverDir)
+        {
+            if (!Directory.Exists(serverDir))
+                return;
+
+            foreach (string lockFile in Directory.GetFiles(serverDir, "session.lock", SearchOption.AllDirectories))
+            {
+                try { File.Delete(lockFile); } catch { }
+            }
         }
 
         private static void GenerateUserJvmArgs(ServerConfig config, string serverDir)
