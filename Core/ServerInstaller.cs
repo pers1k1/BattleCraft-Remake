@@ -15,6 +15,7 @@ namespace CustomLauncher.Core
             "https://github.com/pers1k1/server/releases/download/main/server.zip";
 
         public event Action<string>? StatusChanged;
+        public event Action<string>? LogReceived;
 
         public static bool IsInstalled(string serverBasePath)
         {
@@ -65,7 +66,7 @@ namespace CustomLauncher.Core
             }
         }
 
-        private static async Task RunForgeInstaller(string installerJarPath, string serverDirectory, string javaPath)
+        private async Task RunForgeInstaller(string installerJarPath, string serverDirectory, string javaPath)
         {
             var processInfo = new ProcessStartInfo
             {
@@ -81,25 +82,36 @@ namespace CustomLauncher.Core
             using var process = Process.Start(processInfo)
                 ?? throw new InvalidOperationException("Java process failed to start.");
 
+            process.OutputDataReceived += OnInstallerOutputReceived;
+            process.ErrorDataReceived += OnInstallerOutputReceived;
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
             await process.WaitForExitAsync();
 
             if (process.ExitCode != 0)
-            {
-                string errorOutput = await process.StandardError.ReadToEndAsync();
                 throw new InvalidOperationException(
-                    $"Forge installer exited with code {process.ExitCode}: {errorOutput}");
-            }
+                    $"Forge installer exited with code {process.ExitCode}");
 
             CleanInstallerArtifacts(serverDirectory);
         }
 
+        private void OnInstallerOutputReceived(object sender, DataReceivedEventArgs eventArgs)
+        {
+            if (eventArgs.Data != null)
+                LogReceived?.Invoke(eventArgs.Data);
+        }
+
         private static void CleanInstallerArtifacts(string serverDirectory)
         {
-            string parentDirectory = Directory.GetParent(serverDirectory)?.FullName
-                ?? serverDirectory;
+            string? parentDirectory = Directory.GetParent(serverDirectory)?.FullName;
 
-            foreach (string logFile in Directory.GetFiles(parentDirectory, "installer*.log", SearchOption.TopDirectoryOnly))
-                TryDeleteFile(logFile);
+            if (parentDirectory != null)
+            {
+                foreach (string logFile in Directory.GetFiles(parentDirectory, "installer*.log", SearchOption.TopDirectoryOnly))
+                    TryDeleteFile(logFile);
+            }
 
             foreach (string logFile in Directory.GetFiles(serverDirectory, "installer*.log", SearchOption.TopDirectoryOnly))
                 TryDeleteFile(logFile);
@@ -135,14 +147,6 @@ namespace CustomLauncher.Core
                 TryDeleteFile(temporaryZipPath);
                 TryDeleteDirectory(temporaryExtractPath);
             }
-        }
-
-        public static void RestoreBackup(string backupDirectory, string serverDirectory)
-        {
-            if (!Directory.Exists(backupDirectory))
-                throw new DirectoryNotFoundException($"Backup directory not found: {backupDirectory}");
-
-            CopyDirectoryContents(backupDirectory, serverDirectory);
         }
 
         public static void CopyDirectoryContents(string sourceDirectory, string destinationDirectory)
