@@ -922,6 +922,7 @@ namespace CustomLauncher
             TitleContainer.Visibility = Visibility.Visible;
             TopButtons.Visibility = Visibility.Visible;
             BtnGitHub.Visibility = Visibility.Visible;
+            SysMonitorRich.Visibility = Visibility.Visible;
         }
 
         private void NavServer_Click(object s, RoutedEventArgs e)
@@ -934,6 +935,7 @@ namespace CustomLauncher
             TitleContainer.Visibility = Visibility.Collapsed;
             TopButtons.Visibility = Visibility.Collapsed;
             BtnGitHub.Visibility = Visibility.Collapsed;
+            SysMonitorRich.Visibility = Visibility.Collapsed;
             LoadServerList();
         }
 
@@ -1084,14 +1086,21 @@ namespace CustomLauncher
             }
 
             bool confirmed = await ShowCustomDialog(
-                $"Удалить сервер '{_activeServerConfig.Name}'? Файлы на диске НЕ будут удалены.",
+                $"Удалить сервер '{_activeServerConfig.Name}'? Файлы на диске БУДУТ удалены.",
                 "Подтверждение", true);
 
             if (!confirmed) return;
 
+            string serverBasePath = _activeServerConfig.ServerPath;
+
             _settings.Servers.RemoveAll(sc => sc.Name == _activeServerConfig.Name);
             _activeServerConfig = null;
             AppSettings.Save(_settings);
+
+            if (!string.IsNullOrWhiteSpace(serverBasePath) && Directory.Exists(serverBasePath))
+            {
+                try { Directory.Delete(serverBasePath, true); } catch { }
+            }
 
             LoadServerList();
         }
@@ -1193,8 +1202,15 @@ namespace CustomLauncher
                 return;
             }
 
+            string backupDir = Path.Combine(_activeServerConfig.ServerPath, "backup");
+            if (!Directory.Exists(backupDir) || Directory.GetFileSystemEntries(backupDir).Length == 0)
+            {
+                await ShowCustomDialog("Локальный бэкап не найден! Переустановите сервер.");
+                return;
+            }
+
             bool confirmed = await ShowCustomDialog(
-                "Восстановить мир из начального бэкапа? Текущий мир будет перезаписан.",
+                "Восстановить мир из локального бэкапа? Текущий мир будет перезаписан.",
                 "Подтверждение", true);
 
             if (!confirmed) return;
@@ -1203,9 +1219,9 @@ namespace CustomLauncher
 
             try
             {
-                var installer = new ServerInstaller();
-                await installer.RestoreBackupAsync(_activeServerConfig.ServerPath, OnServerProgress);
-                AppendConsoleOutput("[SYS] Мир восстановлен из бэкапа.");
+                string serverDir = Path.Combine(_activeServerConfig.ServerPath, "server");
+                await Task.Run(() => ServerInstaller.CopyDirectoryContents(backupDir, serverDir));
+                AppendConsoleOutput("[SYS] Мир восстановлен из локального бэкапа.");
             }
             catch (Exception ex)
             {

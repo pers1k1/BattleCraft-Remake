@@ -649,83 +649,91 @@
                 </StackPanel>
 
                 <Grid x:Name="ServerConfigConsoleGrid" Grid.Row="1" Visibility="Collapsed">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="280"/>
-                        <ColumnDefinition Width="*" MinWidth="280"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" MaxHeight="220"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
                         <StackPanel x:Name="ServerConfigForm">
-                            <TextBlock Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"/>
+                            <TextBlock Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="Имя сервера (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
-                            <TextBox x:Name="ServerMotdBox" Text="BattleCraft Server"/>
+                            <WrapPanel Orientation="Horizontal">
+                                <StackPanel Margin="0,0,25,8">
+                                    <TextBlock Text="Имя сервера (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="ServerMotdBox" Text="BattleCraft Server" Width="250"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,25,8">
+                                    <TextBlock Text="Макс. игроков:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="ServerMaxPlayersBox" Text="20" Width="80"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,25,8">
+                                    <TextBlock Text="Порт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="ServerPortBox" Text="25565" Width="80"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,25,8" Width="200">
+                                    <TextBlock Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="ServerViewDistanceSlider" Minimum="2" Maximum="32" Value="10" VerticalAlignment="Center" SmallChange="1" LargeChange="4" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=ServerViewDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,25,8" Width="200">
+                                    <TextBlock Text="ОЗУ (МБ):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="45"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="ServerRamSlider" Minimum="1024" Maximum="8192" Value="4096" VerticalAlignment="Center" SmallChange="512" LargeChange="1024" IsSnapToTickEnabled="True" TickFrequency="512"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=ServerRamSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </WrapPanel>
 
-                            <TextBlock Text="Макс. игроков:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
-                            <TextBox x:Name="ServerMaxPlayersBox" Text="20" Width="100" HorizontalAlignment="Left"/>
+                            <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="Сервер будет требовать лицензию: Нет" Foreground="#66FFFFFF" FontSize="12" Margin="0,0,25,0" FontStyle="Italic" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="ServerWhitelistCheck" Content="Включить вайтлист" Margin="0,0,25,0" VerticalAlignment="Center" Checked="ServerWhitelistCheck_Changed" Unchecked="ServerWhitelistCheck_Changed"/>
+                                <CheckBox x:Name="ServerEulaCheck" Content="Принимаю EULA Mojang" VerticalAlignment="Center" Checked="ServerEulaCheck_Changed" Unchecked="ServerEulaCheck_Changed"/>
+                            </WrapPanel>
 
-                            <TextBlock Text="Порт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
-                            <TextBox x:Name="ServerPortBox" Text="25565" Width="100" HorizontalAlignment="Left"/>
-
-                            <TextBlock Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
-                            <Grid Margin="0,0,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="ServerViewDistanceSlider" Minimum="2" Maximum="32" Value="10" VerticalAlignment="Center" SmallChange="1" LargeChange="4" IsSnapToTickEnabled="True" TickFrequency="1"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=ServerViewDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Grid>
-
-                            <TextBlock Text="Оперативная память (МБ):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,12,0,4"/>
-                            <Grid Margin="0,0,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="60"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="ServerRamSlider" Minimum="1024" Maximum="8192" Value="4096" VerticalAlignment="Center" SmallChange="512" LargeChange="1024" IsSnapToTickEnabled="True" TickFrequency="512"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=ServerRamSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Grid>
-
-                            <TextBlock Text="Сервер будет требовать лицензию: Нет" Foreground="#66FFFFFF" FontSize="12" Margin="0,15,0,0" FontStyle="Italic"/>
-
-                            <CheckBox x:Name="ServerWhitelistCheck" Content="Включить вайтлист" Margin="0,15,0,0" Checked="ServerWhitelistCheck_Changed" Unchecked="ServerWhitelistCheck_Changed"/>
-
-                            <StackPanel x:Name="WhitelistPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                            <StackPanel x:Name="WhitelistPanel" Visibility="Collapsed" Margin="0,8,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="250"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="WhitelistPlayerNameBox" Grid.Column="0"/>
                                     <Button Content="+" Click="BtnAddWhitelistPlayer_Click" Grid.Column="1" Width="35" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
                                 </Grid>
-                                <Border Background="#10FFFFFF" CornerRadius="4" Margin="0,8,0,0" MinHeight="60" MaxHeight="150">
+                                <Border Background="#10FFFFFF" CornerRadius="4" Margin="0,5,0,0" MinHeight="30" MaxHeight="80">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <StackPanel x:Name="WhitelistPlayersContainer"/>
                                     </ScrollViewer>
                                 </Border>
                             </StackPanel>
-
-                            <CheckBox x:Name="ServerEulaCheck" Content="Принимаю EULA Mojang" Margin="0,15,0,0" Checked="ServerEulaCheck_Changed" Unchecked="ServerEulaCheck_Changed"/>
                         </StackPanel>
                     </ScrollViewer>
 
-                    <Grid Grid.Column="1" Margin="10,0,0,0">
+                    <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
 
                         <Border Grid.Row="1" Background="#0AFFFFFF" CornerRadius="6" BorderBrush="#15FFFFFF" BorderThickness="1">
-                            <TextBox x:Name="ServerConsoleOutput" 
-                                     IsReadOnly="True" 
-                                     TextWrapping="Wrap" 
+                            <TextBox x:Name="ServerConsoleOutput"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
-                                     FontFamily="Consolas, Courier New" 
+                                     FontFamily="Consolas, Courier New"
                                      FontSize="11"
                                      Foreground="#BBFFFFFF"
                                      Background="Transparent"
