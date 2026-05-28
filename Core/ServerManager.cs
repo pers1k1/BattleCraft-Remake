@@ -125,18 +125,22 @@ namespace CustomLauncher.Core
 
         private async Task MonitorProcessExitAsync()
         {
-            if (_serverProcess == null) return;
+            var process = _serverProcess;
+            if (process == null) return;
 
             try
             {
-                await _serverProcess.WaitForExitAsync();
+                await process.WaitForExitAsync();
             }
             catch { }
             finally
             {
-                _serverInput = null;
-                _serverProcess = null;
-                SetState(ServerState.Stopped);
+                if (_serverProcess == process)
+                {
+                    _serverInput = null;
+                    _serverProcess = null;
+                    SetState(ServerState.Stopped);
+                }
             }
         }
 
