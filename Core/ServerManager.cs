@@ -50,17 +50,21 @@ namespace CustomLauncher.Core
 
         public async Task StopAsync()
         {
-            if (CurrentState != ServerState.Running || _serverProcess == null)
+            var process = _serverProcess;
+            if (CurrentState != ServerState.Running || process == null)
                 return;
 
             SetState(ServerState.Stopping);
             SendCommand("stop");
 
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
-            var exitTask = _serverProcess.WaitForExitAsync();
-
-            if (await Task.WhenAny(exitTask, timeoutTask) == timeoutTask)
-                ForceKillProcess();
+            try
+            {
+                var exitTask = process.WaitForExitAsync();
+                if (await Task.WhenAny(exitTask, timeoutTask) == timeoutTask)
+                    ForceKillProcess();
+            }
+            catch { }
         }
 
         public async Task RestartAsync(ServerConfig config, string javaPath)
@@ -72,7 +76,8 @@ namespace CustomLauncher.Core
 
         public void ForceKillProcess()
         {
-            try { _serverProcess?.Kill(entireProcessTree: true); } catch { }
+            var process = _serverProcess;
+            try { process?.Kill(entireProcessTree: true); } catch { }
             _serverInput = null;
             _serverProcess = null;
             SetState(ServerState.Stopped);
@@ -80,13 +85,14 @@ namespace CustomLauncher.Core
 
         public void SendCommand(string command)
         {
-            if (_serverInput == null || CurrentState != ServerState.Running)
+            var input = _serverInput;
+            if (input == null || CurrentState != ServerState.Running)
                 return;
 
             try
             {
-                _serverInput.WriteLine(command);
-                _serverInput.Flush();
+                input.WriteLine(command);
+                input.Flush();
             }
             catch { }
         }
