@@ -51,7 +51,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "5.7";
+        private const string VER = "5.8";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1155,17 +1155,15 @@ namespace CustomLauncher
         {
             if (_activeServerConfig == null || _isServerBusy) return;
 
-            SaveActiveServerConfig();
-
-            EnsureServerManagerInitialized();
-
-            ServerConsoleOutput.Text = "";
-            AppendConsoleOutput("[SYS] Запуск сервера...");
-
-            UpdateServerButtons();
-
             try
             {
+                SaveActiveServerConfig();
+                EnsureServerManagerInitialized();
+
+                ServerConsoleOutput.Text = "";
+                AppendConsoleOutput("[SYS] Запуск сервера...");
+                UpdateServerButtons();
+
                 string javaPath = FindJava();
                 await _serverManager.StartAsync(_activeServerConfig, javaPath);
             }
