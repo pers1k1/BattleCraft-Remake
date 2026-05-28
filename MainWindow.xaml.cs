@@ -51,7 +51,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "5.6";
+        private const string VER = "5.7";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1182,16 +1182,30 @@ namespace CustomLauncher
         private async void BtnStopServer_Click(object s, RoutedEventArgs e)
         {
             if (_serverManager == null) return;
-            AppendConsoleOutput("[SYS] Остановка сервера...");
-            await _serverManager.StopAsync();
+            try
+            {
+                AppendConsoleOutput("[SYS] Остановка сервера...");
+                await _serverManager.StopAsync();
+            }
+            catch (Exception ex)
+            {
+                AppendConsoleOutput($"[ERR] Ошибка при остановке: {ex.Message}");
+            }
         }
 
         private async void BtnRestartServer_Click(object s, RoutedEventArgs e)
         {
             if (_serverManager == null || _activeServerConfig == null) return;
-            AppendConsoleOutput("[SYS] Перезапуск сервера...");
-            string javaPath = FindJava();
-            await _serverManager.RestartAsync(_activeServerConfig, javaPath);
+            try
+            {
+                AppendConsoleOutput("[SYS] Перезапуск сервера...");
+                string javaPath = FindJava();
+                await _serverManager.RestartAsync(_activeServerConfig, javaPath);
+            }
+            catch (Exception ex)
+            {
+                AppendConsoleOutput($"[ERR] Ошибка при перезапуске: {ex.Message}");
+            }
         }
 
         private async void BtnRestoreBackup_Click(object s, RoutedEventArgs e)
