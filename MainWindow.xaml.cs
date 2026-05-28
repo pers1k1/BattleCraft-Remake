@@ -50,7 +50,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "5.1";
+        private const string VER = "5.2";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1099,12 +1099,14 @@ namespace CustomLauncher
                 return;
             }
 
-            SetServerBusy(true, "Скачивание сервера...");
+            SetServerBusy(true, "Установка сервера...");
 
             try
             {
+                string javaPath = FindJava();
                 var installer = new ServerInstaller();
-                await installer.InstallAsync(_activeServerConfig.ServerPath, OnServerProgress);
+                installer.StatusChanged += OnInstallerStatusChanged;
+                await installer.InstallAsync(_activeServerConfig.ServerPath, javaPath, OnServerProgress);
 
                 _activeServerConfig.IsInstalled = true;
                 AppSettings.Save(_settings);
@@ -1113,6 +1115,7 @@ namespace CustomLauncher
             }
             catch (Exception ex)
             {
+                AppendConsoleOutput($"[ERR] {ex.Message}");
                 await ShowCustomDialog($"Ошибка установки: {ex.Message}");
             }
             finally
@@ -1120,6 +1123,18 @@ namespace CustomLauncher
                 SetServerBusy(false);
                 UpdateServerButtons();
             }
+        }
+
+        private void OnInstallerStatusChanged(string statusMessage)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(() => OnInstallerStatusChanged(statusMessage));
+                return;
+            }
+
+            ServerStatusText.Text = statusMessage;
+            AppendConsoleOutput($"[SYS] {statusMessage}");
         }
 
         private async void BtnStartServer_Click(object s, RoutedEventArgs e)
