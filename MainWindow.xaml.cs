@@ -51,7 +51,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "5.9";
+        private const string VER = "6.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -871,6 +871,7 @@ namespace CustomLauncher
             var btn = (Button)sender;
             if (btn.Template.FindName("BtnTr", btn) is TranslateTransform t)
             {
+                if (btn.ActualWidth <= 0 || btn.ActualHeight <= 0) return;
                 t.BeginAnimation(TranslateTransform.XProperty, null);
                 t.BeginAnimation(TranslateTransform.YProperty, null);
                 var p = e.GetPosition(btn);
@@ -887,6 +888,8 @@ namespace CustomLauncher
             var btn = (Button)sender;
             if (btn.Template.FindName("BtnTr", btn) is TranslateTransform t)
             {
+                if (double.IsInfinity(t.X) || double.IsNaN(t.X)) t.X = 0;
+                if (double.IsInfinity(t.Y) || double.IsNaN(t.Y)) t.Y = 0;
                 var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
                 t.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
                 t.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
