@@ -919,6 +919,9 @@ namespace CustomLauncher
             UpdateNavHighlight();
             PlayContentPanel.Visibility = Visibility.Visible;
             ServerContentPanel.Visibility = Visibility.Collapsed;
+            TitleContainer.Visibility = Visibility.Visible;
+            TopButtons.Visibility = Visibility.Visible;
+            BtnGitHub.Visibility = Visibility.Visible;
         }
 
         private void NavServer_Click(object s, RoutedEventArgs e)
@@ -928,6 +931,9 @@ namespace CustomLauncher
             UpdateNavHighlight();
             PlayContentPanel.Visibility = Visibility.Collapsed;
             ServerContentPanel.Visibility = Visibility.Visible;
+            TitleContainer.Visibility = Visibility.Collapsed;
+            TopButtons.Visibility = Visibility.Collapsed;
+            BtnGitHub.Visibility = Visibility.Collapsed;
             LoadServerList();
         }
 
@@ -979,6 +985,7 @@ namespace CustomLauncher
             {
                 _activeServerConfig = null;
                 ServerConfigForm.IsEnabled = false;
+                ServerConfigConsoleGrid.Visibility = Visibility.Collapsed;
                 UpdateServerButtons();
                 return;
             }
@@ -989,10 +996,12 @@ namespace CustomLauncher
             if (_activeServerConfig == null)
             {
                 ServerConfigForm.IsEnabled = false;
+                ServerConfigConsoleGrid.Visibility = Visibility.Collapsed;
                 UpdateServerButtons();
                 return;
             }
 
+            ServerConfigConsoleGrid.Visibility = Visibility.Visible;
             ServerConfigForm.IsEnabled = true;
             _settings.LastActiveServerName = _activeServerConfig.Name;
 
@@ -1044,8 +1053,10 @@ namespace CustomLauncher
                 return;
             }
 
+            string sanitizedName = ServerManager.SanitizePathSegment(serverName);
+
             string defaultServerBasePath = _settings.HasGamePath
-                ? Path.Combine(_settings.GamePath, "servers", serverName)
+                ? Path.Combine(_settings.GamePath, "servers", sanitizedName)
                 : "";
 
             var newConfig = new ServerConfig
@@ -1110,12 +1121,6 @@ namespace CustomLauncher
                 var installer = new ServerInstaller();
                 await installer.InstallAsync(_activeServerConfig.ServerPath, OnServerProgress);
 
-                ServerManager.GenerateServerProperties(_activeServerConfig);
-                ServerManager.GenerateEula(_activeServerConfig);
-
-                if (_activeServerConfig.WhitelistEnabled)
-                    ServerManager.GenerateWhitelistJson(_activeServerConfig);
-
                 _activeServerConfig.IsInstalled = true;
                 AppSettings.Save(_settings);
 
@@ -1137,10 +1142,6 @@ namespace CustomLauncher
             if (_activeServerConfig == null) return;
 
             SaveActiveServerConfig();
-            ServerManager.GenerateServerProperties(_activeServerConfig);
-
-            if (_activeServerConfig.WhitelistEnabled)
-                ServerManager.GenerateWhitelistJson(_activeServerConfig);
 
             _serverManager ??= new ServerManager();
             _serverManager.OutputReceived += AppendConsoleOutput;
