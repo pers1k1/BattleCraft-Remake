@@ -17,12 +17,15 @@ namespace CustomLauncher.Core
             if (!Directory.Exists(serverDirectory))
                 return false;
 
-            return Directory.GetFiles(serverDirectory, "*.jar").Length > 0;
+            return Directory.GetFiles(serverDirectory, "*.jar", SearchOption.AllDirectories).Length > 0
+                || Directory.GetFiles(serverDirectory, "win_args.txt", SearchOption.AllDirectories).Length > 0;
         }
 
         public async Task InstallAsync(string targetPath, Action<double>? onProgress = null)
         {
             EnsureDirectoryExists(targetPath);
+            EnsureDirectoryExists(Path.Combine(targetPath, "server"));
+            EnsureDirectoryExists(Path.Combine(targetPath, "backup"));
 
             string temporaryZipPath = Path.Combine(
                 Path.GetTempPath(),
@@ -39,21 +42,21 @@ namespace CustomLauncher.Core
             }
         }
 
-        public async Task RestoreBackupAsync(string serverBasePath, Action<double>? onProgress = null)
+        public static void CopyDirectoryContents(string sourceDirectory, string destinationDirectory)
         {
-            string backupDirectory = Path.Combine(serverBasePath, "backup");
-            string serverDirectory = Path.Combine(serverBasePath, "server");
+            EnsureDirectoryExists(destinationDirectory);
 
-            bool backupMissing = !Directory.Exists(backupDirectory)
-                || Directory.GetFileSystemEntries(backupDirectory).Length == 0;
-
-            if (backupMissing)
+            foreach (string directoryPath in Directory.GetDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
             {
-                await InstallAsync(serverBasePath, onProgress);
-                return;
+                string targetSubDirectory = directoryPath.Replace(sourceDirectory, destinationDirectory);
+                EnsureDirectoryExists(targetSubDirectory);
             }
 
-            await Task.Run(() => CopyDirectoryRecursive(backupDirectory, serverDirectory));
+            foreach (string filePath in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+            {
+                string targetFilePath = filePath.Replace(sourceDirectory, destinationDirectory);
+                File.Copy(filePath, targetFilePath, overwrite: true);
+            }
         }
 
         private static async Task DownloadArchive(string destinationPath, Action<double>? onProgress)
@@ -69,21 +72,6 @@ namespace CustomLauncher.Core
         private static async Task ExtractArchive(string zipPath, string targetDirectory)
         {
             await Task.Run(() => ZipFile.ExtractToDirectory(zipPath, targetDirectory, true));
-        }
-
-        private static void CopyDirectoryRecursive(string sourceDirectory, string destinationDirectory)
-        {
-            foreach (string directoryPath in Directory.GetDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
-            {
-                string targetSubDirectory = directoryPath.Replace(sourceDirectory, destinationDirectory);
-                EnsureDirectoryExists(targetSubDirectory);
-            }
-
-            foreach (string filePath in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
-            {
-                string targetFilePath = filePath.Replace(sourceDirectory, destinationDirectory);
-                File.Copy(filePath, targetFilePath, overwrite: true);
-            }
         }
 
         private static void EnsureDirectoryExists(string path)
