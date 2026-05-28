@@ -38,6 +38,7 @@ namespace CustomLauncher
         private ServerManager? _serverManager;
         private ServerConfig? _activeServerConfig;
         private bool _isServerTab;
+        private bool _isServerBusy;
         private const int MAX_CONSOLE_CHARS = 100000;
 
         private class StatusTextDummy
@@ -50,7 +51,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "5.2";
+        private const string VER = "5.3";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1083,7 +1084,7 @@ namespace CustomLauncher
 
         private async void BtnInstallServer_Click(object s, RoutedEventArgs e)
         {
-            if (_activeServerConfig == null) return;
+            if (_activeServerConfig == null || _isServerBusy) return;
 
             SaveActiveServerConfig();
 
@@ -1106,6 +1107,7 @@ namespace CustomLauncher
                 string javaPath = FindJava();
                 var installer = new ServerInstaller();
                 installer.StatusChanged += OnInstallerStatusChanged;
+                installer.LogReceived += AppendConsoleOutput;
                 await installer.InstallAsync(_activeServerConfig.ServerPath, javaPath, OnServerProgress);
 
                 _activeServerConfig.IsInstalled = true;
@@ -1121,7 +1123,6 @@ namespace CustomLauncher
             finally
             {
                 SetServerBusy(false);
-                UpdateServerButtons();
             }
         }
 
@@ -1139,7 +1140,7 @@ namespace CustomLauncher
 
         private async void BtnStartServer_Click(object s, RoutedEventArgs e)
         {
-            if (_activeServerConfig == null) return;
+            if (_activeServerConfig == null || _isServerBusy) return;
 
             SaveActiveServerConfig();
 
@@ -1312,23 +1313,26 @@ namespace CustomLauncher
             bool isStopped = _serverManager == null || _serverManager.CurrentState == ServerState.Stopped;
 
             BtnInstallServer.Visibility = hasConfig && !isInstalled ? Visibility.Visible : Visibility.Collapsed;
-            BtnInstallServer.IsEnabled = hasConfig && _activeServerConfig!.EulaAccepted;
+            BtnInstallServer.IsEnabled = hasConfig && _activeServerConfig!.EulaAccepted && !_isServerBusy;
 
             BtnStartServer.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
+            BtnStartServer.IsEnabled = !_isServerBusy;
             BtnStopServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
             BtnRestartServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
             BtnRestoreBackup.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
+            BtnRestoreBackup.IsEnabled = !_isServerBusy;
             BtnOpenServerFolder.Visibility = isInstalled ? Visibility.Visible : Visibility.Collapsed;
 
-            ServerConfigForm.IsEnabled = hasConfig && !isRunning && !isStopping;
+            ServerConfigForm.IsEnabled = hasConfig && !isRunning && !isStopping && !_isServerBusy;
         }
 
         private void SetServerBusy(bool busy, string statusMessage = "")
         {
+            _isServerBusy = busy;
             ServerStatusText.Text = statusMessage;
             ServerProgressBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
             ServerProgressBar.Value = 0;
-            ServerConfigForm.IsEnabled = !busy;
+            UpdateServerButtons();
         }
 
         private void ServerWhitelistCheck_Changed(object s, RoutedEventArgs e)
