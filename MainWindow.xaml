@@ -644,11 +644,11 @@
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
                     <ComboBox x:Name="ServerSelector" Width="220" SelectionChanged="ServerSelector_Changed"/>
-                    <Button Content="+ Создать" Click="BtnCreateServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}"/>
-                    <Button Content="Удалить" Click="BtnDeleteServer_Click" Margin="0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
+                    <Button Content="+ Создать" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
+                    <Button Content="Удалить" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
                 </StackPanel>
 
-                <Grid Grid.Row="1">
+                <Grid x:Name="ServerConfigConsoleGrid" Grid.Row="1" Visibility="Collapsed">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" MinWidth="280"/>
                         <ColumnDefinition Width="*" MinWidth="280"/>
