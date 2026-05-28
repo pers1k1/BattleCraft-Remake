@@ -4,6 +4,7 @@ using CmlLib.Core.ProcessBuilder;
 using CustomLauncher.Core;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -33,6 +34,11 @@ namespace CustomLauncher
 
         private System.Windows.Threading.DispatcherTimer? _sysMonTimer;
         private System.Collections.Generic.List<string> _logLines = new();
+
+        private ServerManager? _serverManager;
+        private ServerConfig? _activeServerConfig;
+        private bool _isServerTab;
+        private const int MAX_CONSOLE_CHARS = 100000;
 
         private class StatusTextDummy
         {
@@ -103,8 +109,45 @@ namespace CustomLauncher
         private void CloseCustomDialog()
         {
             var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150));
-            fade.Completed += (s2, e2) => { CustomDialogOverlay.Visibility = Visibility.Hidden; CustomDialogOverlay.BeginAnimation(OpacityProperty, null); CustomDialogOverlay.Opacity = 1; };
+            fade.Completed += (s2, e2) =>
+            {
+                CustomDialogOverlay.Visibility = Visibility.Hidden;
+                CustomDialogOverlay.BeginAnimation(OpacityProperty, null);
+                CustomDialogOverlay.Opacity = 1;
+                CustomDialogInputBox.Visibility = Visibility.Collapsed;
+            };
             CustomDialogOverlay.BeginAnimation(OpacityProperty, fade);
+        }
+
+        private async Task<string?> ShowInputDialogAsync(string title, string defaultValue = "")
+        {
+            CustomDialogTitle.Text = title;
+            CustomDialogMessage.Text = "";
+            CustomDialogMessage.Visibility = Visibility.Collapsed;
+            CustomDialogInputBox.Visibility = Visibility.Visible;
+            CustomDialogInputBox.Text = defaultValue;
+            CustomDialogBtnCancel.Visibility = Visibility.Visible;
+            CustomDialogBtnOk.Content = "OK";
+
+            CustomDialogOverlay.Visibility = Visibility.Visible;
+            CustomDialogOverlay.Opacity = 0;
+            CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+            CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+            CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+
+            _dialogTcs = new TaskCompletionSource<bool>();
+            bool confirmed = await _dialogTcs.Task;
+
+            CustomDialogMessage.Visibility = Visibility.Visible;
+
+            if (!confirmed)
+                return null;
+
+            string trimmedInput = CustomDialogInputBox.Text.Trim();
+            return string.IsNullOrWhiteSpace(trimmedInput) ? null : trimmedInput;
         }
 
         public MainWindow()
@@ -867,6 +910,506 @@ namespace CustomLauncher
                 t.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
                 t.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
             }
+        }
+
+        private void NavPlay_Click(object s, RoutedEventArgs e)
+        {
+            if (!_isServerTab) return;
+            _isServerTab = false;
+            UpdateNavHighlight();
+            PlayContentPanel.Visibility = Visibility.Visible;
+            ServerContentPanel.Visibility = Visibility.Collapsed;
+        }
+
+        private void NavServer_Click(object s, RoutedEventArgs e)
+        {
+            if (_isServerTab) return;
+            _isServerTab = true;
+            UpdateNavHighlight();
+            PlayContentPanel.Visibility = Visibility.Collapsed;
+            ServerContentPanel.Visibility = Visibility.Visible;
+            LoadServerList();
+        }
+
+        private void UpdateNavHighlight()
+        {
+            if (_isServerTab)
+            {
+                NavPlayBtn.BorderBrush = new SolidColorBrush(Colors.Transparent);
+                NavPlayBtn.Foreground = new SolidColorBrush(Color.FromArgb(136, 255, 255, 255));
+                NavServerBtn.SetResourceReference(Control.BorderBrushProperty, "AccentBrush");
+                NavServerBtn.Foreground = new SolidColorBrush(Colors.White);
+            }
+            else
+            {
+                NavServerBtn.BorderBrush = new SolidColorBrush(Colors.Transparent);
+                NavServerBtn.Foreground = new SolidColorBrush(Color.FromArgb(136, 255, 255, 255));
+                NavPlayBtn.SetResourceReference(Control.BorderBrushProperty, "AccentBrush");
+                NavPlayBtn.Foreground = new SolidColorBrush(Colors.White);
+            }
+        }
+
+        private void LoadServerList()
+        {
+            ServerSelector.SelectionChanged -= ServerSelector_Changed;
+            ServerSelector.Items.Clear();
+
+            foreach (var serverConfig in _settings.Servers)
+                ServerSelector.Items.Add(new ComboBoxItem { Content = serverConfig.Name, Tag = serverConfig.Name });
+
+            if (_settings.Servers.Count > 0)
+            {
+                int targetIndex = _settings.Servers.FindIndex(sc => sc.Name == _settings.LastActiveServerName);
+                ServerSelector.SelectedIndex = targetIndex >= 0 ? targetIndex : 0;
+            }
+
+            ServerSelector.SelectionChanged += ServerSelector_Changed;
+            LoadSelectedServerConfig();
+        }
+
+        private void ServerSelector_Changed(object s, SelectionChangedEventArgs e)
+        {
+            SaveActiveServerConfig();
+            LoadSelectedServerConfig();
+        }
+
+        private void LoadSelectedServerConfig()
+        {
+            if (ServerSelector.SelectedItem is not ComboBoxItem selectedItem)
+            {
+                _activeServerConfig = null;
+                ServerConfigForm.IsEnabled = false;
+                UpdateServerButtons();
+                return;
+            }
+
+            string selectedName = selectedItem.Tag as string ?? "";
+            _activeServerConfig = _settings.Servers.FirstOrDefault(sc => sc.Name == selectedName);
+
+            if (_activeServerConfig == null)
+            {
+                ServerConfigForm.IsEnabled = false;
+                UpdateServerButtons();
+                return;
+            }
+
+            ServerConfigForm.IsEnabled = true;
+            _settings.LastActiveServerName = _activeServerConfig.Name;
+
+            ServerMotdBox.Text = _activeServerConfig.Motd;
+            ServerMaxPlayersBox.Text = _activeServerConfig.MaxPlayers.ToString();
+            ServerPortBox.Text = _activeServerConfig.ServerPort.ToString();
+            ServerViewDistanceSlider.Value = _activeServerConfig.ViewDistance;
+            ServerRamSlider.Value = _activeServerConfig.ServerRamMb;
+            ServerWhitelistCheck.IsChecked = _activeServerConfig.WhitelistEnabled;
+            ServerEulaCheck.IsChecked = _activeServerConfig.EulaAccepted;
+
+            WhitelistPanel.Visibility = _activeServerConfig.WhitelistEnabled
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            RebuildWhitelistUi();
+            UpdateServerButtons();
+        }
+
+        private void SaveActiveServerConfig()
+        {
+            if (_activeServerConfig == null) return;
+
+            _activeServerConfig.Motd = ServerMotdBox.Text.Trim();
+
+            if (int.TryParse(ServerMaxPlayersBox.Text, out int maxPlayers))
+                _activeServerConfig.MaxPlayers = maxPlayers;
+
+            if (int.TryParse(ServerPortBox.Text, out int port))
+                _activeServerConfig.ServerPort = port;
+
+            _activeServerConfig.ViewDistance = (int)ServerViewDistanceSlider.Value;
+            _activeServerConfig.ServerRamMb = (int)ServerRamSlider.Value;
+            _activeServerConfig.WhitelistEnabled = ServerWhitelistCheck.IsChecked == true;
+            _activeServerConfig.EulaAccepted = ServerEulaCheck.IsChecked == true;
+
+            AppSettings.Save(_settings);
+        }
+
+        private async void BtnCreateServer_Click(object s, RoutedEventArgs e)
+        {
+            string? serverName = await ShowInputDialogAsync("Имя нового сервера", $"Server {_settings.Servers.Count + 1}");
+            if (serverName == null) return;
+
+            bool nameExists = _settings.Servers.Any(sc => sc.Name.Equals(serverName, StringComparison.OrdinalIgnoreCase));
+            if (nameExists)
+            {
+                await ShowCustomDialog("Сервер с таким именем уже существует!");
+                return;
+            }
+
+            string defaultServerBasePath = _settings.HasGamePath
+                ? Path.Combine(_settings.GamePath, "servers", serverName)
+                : "";
+
+            var newConfig = new ServerConfig
+            {
+                Name = serverName,
+                ServerPath = defaultServerBasePath
+            };
+
+            _settings.Servers.Add(newConfig);
+            _settings.LastActiveServerName = serverName;
+            AppSettings.Save(_settings);
+
+            LoadServerList();
+        }
+
+        private async void BtnDeleteServer_Click(object s, RoutedEventArgs e)
+        {
+            if (_activeServerConfig == null) return;
+
+            bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
+            if (isRunning)
+            {
+                await ShowCustomDialog("Сначала остановите сервер!");
+                return;
+            }
+
+            bool confirmed = await ShowCustomDialog(
+                $"Удалить сервер '{_activeServerConfig.Name}'? Файлы на диске НЕ будут удалены.",
+                "Подтверждение", true);
+
+            if (!confirmed) return;
+
+            _settings.Servers.RemoveAll(sc => sc.Name == _activeServerConfig.Name);
+            _activeServerConfig = null;
+            AppSettings.Save(_settings);
+
+            LoadServerList();
+        }
+
+        private async void BtnInstallServer_Click(object s, RoutedEventArgs e)
+        {
+            if (_activeServerConfig == null) return;
+
+            SaveActiveServerConfig();
+
+            if (!_activeServerConfig.EulaAccepted)
+            {
+                await ShowCustomDialog("Необходимо принять EULA!");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_activeServerConfig.ServerPath))
+            {
+                await ShowCustomDialog("Путь к серверу не задан!");
+                return;
+            }
+
+            SetServerBusy(true, "Скачивание сервера...");
+
+            try
+            {
+                var installer = new ServerInstaller();
+                await installer.InstallAsync(_activeServerConfig.ServerPath, OnServerProgress);
+
+                ServerManager.GenerateServerProperties(_activeServerConfig);
+                ServerManager.GenerateEula(_activeServerConfig);
+
+                if (_activeServerConfig.WhitelistEnabled)
+                    ServerManager.GenerateWhitelistJson(_activeServerConfig);
+
+                _activeServerConfig.IsInstalled = true;
+                AppSettings.Save(_settings);
+
+                AppendConsoleOutput("[SYS] Сервер установлен.");
+            }
+            catch (Exception ex)
+            {
+                await ShowCustomDialog($"Ошибка установки: {ex.Message}");
+            }
+            finally
+            {
+                SetServerBusy(false);
+                UpdateServerButtons();
+            }
+        }
+
+        private async void BtnStartServer_Click(object s, RoutedEventArgs e)
+        {
+            if (_activeServerConfig == null) return;
+
+            SaveActiveServerConfig();
+            ServerManager.GenerateServerProperties(_activeServerConfig);
+
+            if (_activeServerConfig.WhitelistEnabled)
+                ServerManager.GenerateWhitelistJson(_activeServerConfig);
+
+            _serverManager ??= new ServerManager();
+            _serverManager.OutputReceived += AppendConsoleOutput;
+            _serverManager.StateChanged += OnServerStateChanged;
+
+            ServerConsoleOutput.Text = "";
+            AppendConsoleOutput("[SYS] Запуск сервера...");
+
+            UpdateServerButtons();
+
+            try
+            {
+                string javaPath = FindJava();
+                await _serverManager.StartAsync(_activeServerConfig, javaPath);
+            }
+            catch (Exception ex)
+            {
+                AppendConsoleOutput($"[ERR] {ex.Message}");
+            }
+            finally
+            {
+                UpdateServerButtons();
+            }
+        }
+
+        private async void BtnStopServer_Click(object s, RoutedEventArgs e)
+        {
+            if (_serverManager == null) return;
+            AppendConsoleOutput("[SYS] Остановка сервера...");
+            await _serverManager.StopAsync();
+        }
+
+        private async void BtnRestartServer_Click(object s, RoutedEventArgs e)
+        {
+            if (_serverManager == null || _activeServerConfig == null) return;
+            AppendConsoleOutput("[SYS] Перезапуск сервера...");
+            string javaPath = FindJava();
+            await _serverManager.RestartAsync(_activeServerConfig, javaPath);
+        }
+
+        private async void BtnRestoreBackup_Click(object s, RoutedEventArgs e)
+        {
+            if (_activeServerConfig == null) return;
+
+            bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
+            if (isRunning)
+            {
+                await ShowCustomDialog("Сначала остановите сервер!");
+                return;
+            }
+
+            bool confirmed = await ShowCustomDialog(
+                "Восстановить мир из начального бэкапа? Текущий мир будет перезаписан.",
+                "Подтверждение", true);
+
+            if (!confirmed) return;
+
+            SetServerBusy(true, "Восстановление мира...");
+
+            try
+            {
+                var installer = new ServerInstaller();
+                await installer.RestoreBackupAsync(_activeServerConfig.ServerPath, OnServerProgress);
+                AppendConsoleOutput("[SYS] Мир восстановлен из бэкапа.");
+            }
+            catch (Exception ex)
+            {
+                await ShowCustomDialog($"Ошибка восстановления: {ex.Message}");
+            }
+            finally
+            {
+                SetServerBusy(false);
+            }
+        }
+
+        private void BtnOpenServerFolder_Click(object s, RoutedEventArgs e)
+        {
+            if (_activeServerConfig == null || string.IsNullOrWhiteSpace(_activeServerConfig.ServerPath)) return;
+
+            string serverDirectory = Path.Combine(_activeServerConfig.ServerPath, "server");
+            string targetDirectory = Directory.Exists(serverDirectory) ? serverDirectory : _activeServerConfig.ServerPath;
+
+            if (Directory.Exists(targetDirectory))
+                Process.Start(new ProcessStartInfo(targetDirectory) { UseShellExecute = true });
+        }
+
+        private void BtnSendCommand_Click(object s, RoutedEventArgs e)
+        {
+            SendConsoleCommand();
+        }
+
+        private void ServerConsoleInput_KeyDown(object s, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+                SendConsoleCommand();
+        }
+
+        private void SendConsoleCommand()
+        {
+            string command = ServerConsoleInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(command) || _serverManager == null) return;
+
+            AppendConsoleOutput($"> {command}");
+            _serverManager.SendCommand(command);
+            ServerConsoleInput.Text = "";
+        }
+
+        private void AppendConsoleOutput(string line)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(() => AppendConsoleOutput(line));
+                return;
+            }
+
+            ServerConsoleOutput.AppendText(line + "\n");
+
+            if (ServerConsoleOutput.Text.Length > MAX_CONSOLE_CHARS)
+                ServerConsoleOutput.Text = ServerConsoleOutput.Text.Substring(ServerConsoleOutput.Text.Length - MAX_CONSOLE_CHARS / 2);
+
+            ServerConsoleOutput.ScrollToEnd();
+        }
+
+        private void OnServerStateChanged(ServerState newState)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(() => OnServerStateChanged(newState));
+                return;
+            }
+
+            string stateLabel = newState switch
+            {
+                ServerState.Starting => "Запуск...",
+                ServerState.Running => "Работает",
+                ServerState.Stopping => "Остановка...",
+                _ => "Остановлен"
+            };
+
+            ServerStatusText.Text = stateLabel;
+            UpdateServerButtons();
+        }
+
+        private void OnServerProgress(double progressPercent)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(() => OnServerProgress(progressPercent));
+                return;
+            }
+
+            ServerProgressBar.Value = progressPercent;
+        }
+
+        private void UpdateServerButtons()
+        {
+            bool hasConfig = _activeServerConfig != null;
+            bool isInstalled = hasConfig && (_activeServerConfig!.IsInstalled || ServerInstaller.IsInstalled(_activeServerConfig.ServerPath));
+            bool isRunning = _serverManager != null && _serverManager.CurrentState == ServerState.Running;
+            bool isStopping = _serverManager != null && _serverManager.CurrentState == ServerState.Stopping;
+            bool isStopped = _serverManager == null || _serverManager.CurrentState == ServerState.Stopped;
+
+            BtnInstallServer.Visibility = hasConfig && !isInstalled ? Visibility.Visible : Visibility.Collapsed;
+            BtnInstallServer.IsEnabled = hasConfig && _activeServerConfig!.EulaAccepted;
+
+            BtnStartServer.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
+            BtnStopServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
+            BtnRestartServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
+            BtnRestoreBackup.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
+            BtnOpenServerFolder.Visibility = isInstalled ? Visibility.Visible : Visibility.Collapsed;
+
+            ServerConfigForm.IsEnabled = hasConfig && !isRunning && !isStopping;
+        }
+
+        private void SetServerBusy(bool busy, string statusMessage = "")
+        {
+            ServerStatusText.Text = statusMessage;
+            ServerProgressBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+            ServerProgressBar.Value = 0;
+            ServerConfigForm.IsEnabled = !busy;
+        }
+
+        private void ServerWhitelistCheck_Changed(object s, RoutedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            WhitelistPanel.Visibility = ServerWhitelistCheck.IsChecked == true
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void ServerEulaCheck_Changed(object s, RoutedEventArgs e)
+        {
+            if (!IsLoaded || _activeServerConfig == null) return;
+            _activeServerConfig.EulaAccepted = ServerEulaCheck.IsChecked == true;
+            UpdateServerButtons();
+        }
+
+        private void BtnAddWhitelistPlayer_Click(object s, RoutedEventArgs e)
+        {
+            string playerName = WhitelistPlayerNameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(playerName) || _activeServerConfig == null) return;
+
+            bool alreadyExists = _activeServerConfig.WhitelistedPlayers
+                .Any(p => p.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+
+            if (alreadyExists) return;
+
+            _activeServerConfig.WhitelistedPlayers.Add(playerName);
+            WhitelistPlayerNameBox.Text = "";
+            RebuildWhitelistUi();
+            AppSettings.Save(_settings);
+        }
+
+        private void RemoveWhitelistPlayer(string playerName)
+        {
+            if (_activeServerConfig == null) return;
+            _activeServerConfig.WhitelistedPlayers.RemoveAll(
+                p => p.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+            RebuildWhitelistUi();
+            AppSettings.Save(_settings);
+        }
+
+        private void RebuildWhitelistUi()
+        {
+            WhitelistPlayersContainer.Children.Clear();
+
+            if (_activeServerConfig == null) return;
+
+            foreach (string playerName in _activeServerConfig.WhitelistedPlayers)
+            {
+                var playerRow = CreateWhitelistPlayerRow(playerName);
+                WhitelistPlayersContainer.Children.Add(playerRow);
+            }
+        }
+
+        private Grid CreateWhitelistPlayerRow(string playerName)
+        {
+            var rowGrid = new Grid { Margin = new Thickness(8, 3, 8, 3) };
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var nameBlock = new TextBlock
+            {
+                Text = playerName,
+                Foreground = new SolidColorBrush(Color.FromArgb(204, 255, 255, 255)),
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = 12
+            };
+
+            var removeButton = new Button
+            {
+                Content = "x",
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(255, 107, 107)),
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Padding = new Thickness(6, 2, 6, 2)
+            };
+
+            string capturedName = playerName;
+            removeButton.Click += (s, e) => RemoveWhitelistPlayer(capturedName);
+
+            Grid.SetColumn(nameBlock, 0);
+            Grid.SetColumn(removeButton, 1);
+            rowGrid.Children.Add(nameBlock);
+            rowGrid.Children.Add(removeButton);
+
+            return rowGrid;
         }
     }
 }

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using CustomLauncher.Core;
 using Newtonsoft.Json;
 
 namespace CustomLauncher
@@ -26,6 +28,8 @@ namespace CustomLauncher
         public bool IsModpackInstalled { get; set; } = false;
         public bool DebugConsole { get; set; } = false;
         public string ModpackVersion { get; set; } = "0.0";
+        public List<ServerConfig> Servers { get; set; } = new();
+        public string LastActiveServerName { get; set; } = "";
 
         public bool IsFirstRun => string.IsNullOrWhiteSpace(Username);
         public bool HasGamePath => !string.IsNullOrWhiteSpace(GamePath);
