@@ -227,6 +227,7 @@ namespace CustomLauncher.Core
 
             string[] propertyLines =
             {
+                "level-name=sigma",
                 $"motd={config.Motd}",
                 $"max-players={config.MaxPlayers}",
                 $"server-port={config.ServerPort}",
