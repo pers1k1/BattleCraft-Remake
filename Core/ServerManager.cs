@@ -49,7 +49,7 @@ namespace CustomLauncher.Core
             if (config.WhitelistEnabled)
                 GenerateWhitelistJson(config);
 
-            await LaunchServerProcess(javaPath, serverDir);
+            LaunchServerProcess(javaPath, serverDir);
         }
 
         public async Task StopAsync()
@@ -145,7 +145,7 @@ namespace CustomLauncher.Core
             await Task.Delay(1500);
         }
 
-        private async Task LaunchServerProcess(string javaPath, string serverDir)
+        private void LaunchServerProcess(string javaPath, string serverDir)
         {
             SetState(ServerState.Starting);
 
@@ -160,11 +160,24 @@ namespace CustomLauncher.Core
 
             SetState(ServerState.Running);
 
-            await _serverProcess.WaitForExitAsync();
+            _ = MonitorProcessExitAsync();
+        }
 
-            _serverInput = null;
-            _serverProcess = null;
-            SetState(ServerState.Stopped);
+        private async Task MonitorProcessExitAsync()
+        {
+            if (_serverProcess == null) return;
+
+            try
+            {
+                await _serverProcess.WaitForExitAsync();
+            }
+            catch { }
+            finally
+            {
+                _serverInput = null;
+                _serverProcess = null;
+                SetState(ServerState.Stopped);
+            }
         }
 
         private Process CreateServerProcess(string javaPath, string serverDir)

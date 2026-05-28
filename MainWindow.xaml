@@ -562,26 +562,7 @@
         <Separator VerticalAlignment="Top" Margin="0,40,0,0" Background="#444444" Opacity="0.5"/>
 
 
-        <Grid x:Name="TitleContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-40,0,0" IsHitTestVisible="False" Opacity="0">
-            <Grid.RenderTransform>
-                <TranslateTransform x:Name="TitleEntranceTranslate" Y="30"/>
-            </Grid.RenderTransform>
-            <TextBlock x:Name="TitleText" Text="BATTLECRAFT REMAKE" 
-                       FontSize="42" 
-                       FontWeight="Bold" 
-                       Foreground="White" 
-                       RenderTransformOrigin="0.5,0.5">
-                <TextBlock.RenderTransform>
-                    <TranslateTransform x:Name="TitleTranslate" X="0" Y="0"/>
-                </TextBlock.RenderTransform>
-                <TextBlock.Effect>
-                    <DropShadowEffect Color="{DynamicResource AccentColor}" 
-                                      BlurRadius="{DynamicResource TitleBloomBlurRadius}" 
-                                      ShadowDepth="0" 
-                                      Opacity="{DynamicResource TitleBloomOpacity}"/>
-                </TextBlock.Effect>
-            </TextBlock>
-        </Grid>
+
 
         <StackPanel x:Name="TopButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,70,20,0">
             <Button x:Name="BtnReinstall" Content="Перекачать моды" Click="BtnReinstall_Click" Margin="0,0,10,0" Style="{StaticResource GlowButton}"/>
@@ -624,10 +605,8 @@
                 <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
                 <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v2.0" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
                 <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
-                        <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="15,0,0,0" VerticalAlignment="Center" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
-                    </StackPanel>
+                    <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="0,0,0,10" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
+                    <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
                 </StackPanel>
                 <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,35" Width="400">
                     <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="{DynamicResource AccentBrush}" Opacity="0.8" FontSize="11" HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,10" Height="50"/>
@@ -728,7 +707,7 @@
 
                         <TextBlock Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
 
-                        <Border Grid.Row="1" Background="#0AFFFFFF" CornerRadius="6" BorderBrush="#15FFFFFF" BorderThickness="1">
+                        <Border Grid.Row="1" Background="#0AFFFFFF" CornerRadius="6" BorderBrush="#15FFFFFF" BorderThickness="1" Padding="0">
                             <TextBox x:Name="ServerConsoleOutput"
                                      IsReadOnly="True"
                                      TextWrapping="Wrap"
@@ -740,7 +719,9 @@
                                      BorderThickness="0"
                                      Padding="10"
                                      AcceptsReturn="True"
-                                     VerticalContentAlignment="Top"/>
+                                     VerticalAlignment="Stretch"
+                                     HorizontalAlignment="Stretch"
+                                     Height="Auto"/>
                         </Border>
 
                         <Grid Grid.Row="2" Margin="0,8,0,0">

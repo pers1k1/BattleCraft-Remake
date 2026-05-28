@@ -205,26 +205,6 @@ namespace CustomLauncher
 
         private void OnWindowMouseMove(object sender, MouseEventArgs e)
         {
-            var titlePos = e.GetPosition(TitleText);
-            double tw = TitleText.ActualWidth, th = TitleText.ActualHeight;
-            if (tw > 0 && th > 0)
-            {
-                double cx = tw / 2, cy = th / 2;
-                double nd = Math.Sqrt(Math.Pow((titlePos.X - cx) / (tw / 2 + 120), 2) + Math.Pow((titlePos.Y - cy) / 60, 2));
-                if (nd < 1.0)
-                {
-                    double p = 1.0 - nd;
-                    TitleTranslate.BeginAnimation(TranslateTransform.XProperty, null);
-                    TitleTranslate.BeginAnimation(TranslateTransform.YProperty, null);
-                    TitleTranslate.X += ((cx - titlePos.X) / cx * 6 * p - TitleTranslate.X) * 0.15;
-                    TitleTranslate.Y += ((cy - titlePos.Y) / cy * 4 * p - TitleTranslate.Y) * 0.15;
-                }
-                else
-                {
-                    TitleTranslate.X *= 0.92;
-                    TitleTranslate.Y *= 0.92;
-                }
-            }
         }
 
         private void InitializeLauncherCore()
@@ -251,7 +231,7 @@ namespace CustomLauncher
             LoginPanel.Visibility = Visibility.Hidden;
             MainPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Collapsed;
-            TitleContainer.Visibility = Visibility.Collapsed;
+
             SetupPathBox.Text = _settings.GamePath;
 
             SetupPanel.Opacity = 0;
@@ -692,14 +672,10 @@ namespace CustomLauncher
         {
             SetupPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Hidden;
             MainPanel.Visibility = Visibility.Visible; TopButtons.Visibility = Visibility.Visible;
-            TitleContainer.Visibility = Visibility.Visible;
 
             WelcomeText.Text = ""; VersionText.Text = "";
-            TitleText.Text = "BATTLECRAFT REMAKE";
 
             var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
-            TitleContainer.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
-            TitleEntranceTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1000)) { EasingFunction = ease });
 
             TopButtons.Opacity = 0;
             TopButtons.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(300) });
@@ -919,7 +895,7 @@ namespace CustomLauncher
             UpdateNavHighlight();
             PlayContentPanel.Visibility = Visibility.Visible;
             ServerContentPanel.Visibility = Visibility.Collapsed;
-            TitleContainer.Visibility = Visibility.Visible;
+
             TopButtons.Visibility = Visibility.Visible;
             BtnGitHub.Visibility = Visibility.Visible;
             SysMonitorRich.Visibility = Visibility.Visible;
@@ -932,7 +908,7 @@ namespace CustomLauncher
             UpdateNavHighlight();
             PlayContentPanel.Visibility = Visibility.Collapsed;
             ServerContentPanel.Visibility = Visibility.Visible;
-            TitleContainer.Visibility = Visibility.Collapsed;
+
             TopButtons.Visibility = Visibility.Collapsed;
             BtnGitHub.Visibility = Visibility.Collapsed;
             SysMonitorRich.Visibility = Visibility.Collapsed;
