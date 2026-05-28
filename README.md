@@ -1,6 +1,8 @@
 # BattleCraft Remake. Custom Launcher
 
-
+## Версии
+- **Minecraft**: 1.20.1
+- **Forge**: 47.4.20 (с автоматической очисткой старых версий)
 
 ## Сборка
 
