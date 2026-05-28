@@ -46,7 +46,7 @@ namespace CustomLauncher
 
         private const string VER = "4.0";
         private const string MC = "1.20.1";
-        private const string FORGE = "47.4.11";
+        private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
         private const string DefPrimary = "#0D0D1E";
         private const string DefAccent = "#BB86FC";
@@ -139,7 +139,7 @@ namespace CustomLauncher
                 double appMem = Process.GetCurrentProcess().WorkingSet64 / 1048576.0;
 
                 var accentColor = (Color)FindResource("AccentColor");
-                var dimAccent = Color.FromArgb(180, accentColor.R, accentColor.G, accentColor.B);
+                var dimAccent = Color.FromArgb(140, accentColor.R, accentColor.G, accentColor.B);
                 var accentBrush = new SolidColorBrush(dimAccent);
                 var dimBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255));
                 var textBrush = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255));
@@ -210,6 +210,9 @@ namespace CustomLauncher
             TopButtons.Visibility = Visibility.Collapsed;
             TitleContainer.Visibility = Visibility.Collapsed;
             SetupPathBox.Text = _settings.GamePath;
+
+            SetupPanel.Opacity = 0;
+            SetupPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut }, BeginTime = TimeSpan.FromMilliseconds(200) });
         }
 
         private void BtnSetupSelectFolder_Click(object s, RoutedEventArgs e)
@@ -343,8 +346,24 @@ namespace CustomLauncher
                 InitializeLauncher();
 
                 string vDir = Path.Combine(_settings.GamePath, "versions");
-                bool hasForge = Directory.Exists(vDir) && Directory.GetDirectories(vDir).Any(d => d.Contains(MC) && d.ToLower().Contains("forge"));
-                if (!hasForge) { didInstall = true; await InstallForgeSilent(); }
+                bool hasForge = Directory.Exists(vDir) && Directory.Exists(Path.Combine(vDir, FULL_ID));
+                
+                if (!hasForge) 
+                { 
+                    if (Directory.Exists(vDir))
+                    {
+                        foreach (var d in Directory.GetDirectories(vDir))
+                        {
+                            string dName = Path.GetFileName(d);
+                            if (dName.Contains(MC) && dName.ToLower().Contains("forge") && dName != FULL_ID)
+                            {
+                                try { Directory.Delete(d, true); } catch { }
+                            }
+                        }
+                    }
+                    didInstall = true; 
+                    await InstallForgeSilent(); 
+                }
                 if (!_settings.IsModpackInstalled) { didInstall = true; await InstallModpack(true); }
                 else if (_needsModpackUpdate) { didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
 

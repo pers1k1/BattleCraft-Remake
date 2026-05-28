@@ -499,7 +499,7 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <RichTextBox x:Name="SysMonitorRich" FontFamily="Consolas, Courier New" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,115,20,0" IsHitTestVisible="False" Background="Transparent" BorderThickness="0" IsReadOnly="True" Focusable="False">
+        <RichTextBox x:Name="SysMonitorRich" FontFamily="Consolas, Courier New" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,115,20,0" IsHitTestVisible="False" Background="Transparent" BorderThickness="0" IsReadOnly="True" Focusable="False" VerticalScrollBarVisibility="Disabled">
             <RichTextBox.Resources>
                 <Style TargetType="Paragraph">
                     <Setter Property="Margin" Value="0"/>
