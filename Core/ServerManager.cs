@@ -40,12 +40,6 @@ namespace CustomLauncher.Core
 
             GenerateEula(config);
             GenerateUserJvmArgs(config, serverDir);
-
-            bool isFirstRun = !File.Exists(Path.Combine(serverDir, "server.properties"));
-
-            if (isFirstRun)
-                await PerformFirstRunSetup(config, javaPath, serverDir);
-
             GenerateServerProperties(config);
 
             if (config.WhitelistEnabled)
@@ -103,62 +97,7 @@ namespace CustomLauncher.Core
             return string.IsNullOrWhiteSpace(sanitized) ? "server" : sanitized;
         }
 
-        private async Task PerformFirstRunSetup(ServerConfig config, string javaPath, string serverDir)
-        {
-            OutputReceived?.Invoke("[SYS] Первый запуск: генерация файлов...");
-            SetState(ServerState.Starting);
 
-            var serverReadySignal = new TaskCompletionSource<bool>();
-
-            Process firstRunProcess = CreateServerProcess(javaPath, serverDir);
-            firstRunProcess.OutputDataReceived += (s, e) =>
-            {
-                if (e.Data == null) return;
-                OutputReceived?.Invoke(e.Data);
-                if (e.Data.Contains("Done") && e.Data.Contains("For help"))
-                    serverReadySignal.TrySetResult(true);
-            };
-            firstRunProcess.ErrorDataReceived += (s, e) =>
-            {
-                if (e.Data != null) OutputReceived?.Invoke(e.Data);
-            };
-
-            firstRunProcess.Start();
-            var firstRunInput = firstRunProcess.StandardInput;
-            firstRunProcess.BeginOutputReadLine();
-            firstRunProcess.BeginErrorReadLine();
-
-            SetState(ServerState.Running);
-
-            Task processExitTask = firstRunProcess.WaitForExitAsync();
-            var readyTimeout = Task.Delay(TimeSpan.FromMinutes(5));
-            var completedTask = await Task.WhenAny(serverReadySignal.Task, processExitTask, readyTimeout);
-
-            if (completedTask == processExitTask)
-            {
-                OutputReceived?.Invoke("[WARN] Процесс завершился до полной готовности.");
-                SetState(ServerState.Stopped);
-                await Task.Delay(1500);
-                return;
-            }
-
-            if (completedTask == readyTimeout)
-                OutputReceived?.Invoke("[WARN] Таймаут первого запуска, принудительная остановка...");
-
-            OutputReceived?.Invoke("[SYS] Остановка для конфигурации...");
-            try { firstRunInput.WriteLine("stop"); firstRunInput.Flush(); } catch { }
-
-            var exitTimeout = Task.Delay(TimeSpan.FromSeconds(30));
-            if (await Task.WhenAny(processExitTask, exitTimeout) == exitTimeout)
-            {
-                try { firstRunProcess.Kill(entireProcessTree: true); } catch { }
-            }
-
-            SetState(ServerState.Stopped);
-
-            OutputReceived?.Invoke("[SYS] Применение настроек...");
-            await Task.Delay(2000);
-        }
 
         private void LaunchServerProcess(string javaPath, string serverDir)
         {
