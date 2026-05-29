@@ -22,6 +22,9 @@ namespace CustomLauncher
         public bool? BloomEnabled { get; set; } = true;
         public double? BloomStrength { get; set; } = 60.0;
         public string Username { get; set; } = "";
+        public string AccessToken { get; set; } = "";
+        public string UUID { get; set; } = "";
+        public string UserType { get; set; } = "";
         public int RamMb { get; set; } = 4096;
         public string GamePath { get; set; } = "";
         public string JavaPath { get; set; } = "";
