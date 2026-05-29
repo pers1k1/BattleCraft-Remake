@@ -1,5 +1,7 @@
 using CmlLib.Core;
 using CmlLib.Core.Auth;
+using CmlLib.Core.Auth.Microsoft;
+using CmlLib.Core.Auth.Microsoft.UI.Wpf;
 using CmlLib.Core.ProcessBuilder;
 using CustomLauncher.Core;
 using Microsoft.Win32;
@@ -222,7 +224,6 @@ namespace CustomLauncher
             if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); }
             else
             {
-                UsernameBox.Text = _settings.Username;
                 RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
                 PathBox.Text = _settings.GamePath;
                 if (!Version.TryParse(_settings.ModpackVersion, out _)) _settings.ModpackVersion = "0.0";
@@ -248,15 +249,34 @@ namespace CustomLauncher
 
         private async void BtnSetupComplete_Click(object s, RoutedEventArgs e)
         {
-            string nick = SetupUsernameBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog("Введите никнейм!"); return; }
             string path = SetupPathBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog("Выберите папку для игры!"); return; }
-            _settings.Username = nick; _settings.GamePath = path; _settings.RamMb = 4096;
+            _settings.GamePath = path; _settings.RamMb = 4096;
             AppSettings.Save(_settings);
+
+            try
+            {
+                var handler = JELoginHandlerBuilder.BuildDefault();
+                dynamic window = new MicrosoftLoginWindow();
+                dynamic sObj = await window.ShowLoginDialog(handler);
+                
+                if (sObj == null || string.IsNullOrEmpty(sObj.Username)) return;
+                
+                _settings.Username = sObj.Username;
+                _settings.AccessToken = sObj.AccessToken;
+                _settings.UUID = sObj.UUID;
+                _settings.UserType = "msa";
+                AppSettings.Save(_settings);
+            }
+            catch (Exception ex)
+            {
+                await ShowCustomDialog($"Ошибка авторизации: {ex.Message}");
+                return;
+            }
+
             SetupPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Visible;
-            UsernameBox.Text = nick; RamSlider.Value = 4096; PathBox.Text = path;
+            RamSlider.Value = 4096; PathBox.Text = path;
             _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             SwitchToMain();
         }
@@ -402,7 +422,25 @@ namespace CustomLauncher
                 var ver = vers.FirstOrDefault(v => v.Name == FULL_ID) ?? vers.FirstOrDefault(v => v.Name.Contains(MC) && v.Name.ToLower().Contains("forge"));
                 if (ver == null) { await ShowCustomDialog("Forge не найден!"); return; }
 
-                var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = MSession.CreateOfflineSession(_settings.Username), JavaPath = FindJava() };
+                var handler = JELoginHandlerBuilder.BuildDefault();
+                dynamic sessionObj = null;
+                try { sessionObj = await handler.AuthenticateSilently(); } catch { }
+                
+                MSession? mSession = null;
+                if (sessionObj != null && !string.IsNullOrEmpty(sessionObj.Username))
+                {
+                    mSession = new MSession();
+                    mSession.Username = sessionObj.Username;
+                    mSession.AccessToken = sessionObj.AccessToken;
+                    mSession.UUID = sessionObj.UUID;
+                    mSession.UserType = "msa";
+                }
+                else
+                {
+                    mSession = MSession.CreateOfflineSession(_settings.Username);
+                }
+
+                var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = FindJava() };
                 _gameProcess = await _launcher.CreateProcessAsync(ver.Name, opt);
                 InjectJvmArgs(_gameProcess);
 
@@ -702,10 +740,30 @@ namespace CustomLauncher
             StartWelcomeTextLoop();
         }
 
-        private void LoginGridState() { MainPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Visible; UsernameBox.Clear(); }
+        private void LoginGridState() { MainPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Visible; }
 
-        private void BtnLogin_Click(object s, RoutedEventArgs e)
-        { var n = UsernameBox.Text.Trim(); if (string.IsNullOrWhiteSpace(n)) return; _settings.Username = n; AppSettings.Save(_settings); SwitchToMain(); }
+        private async void BtnLogin_Click(object s, RoutedEventArgs e)
+        {
+            try
+            {
+                var handler = JELoginHandlerBuilder.BuildDefault();
+                dynamic window = new MicrosoftLoginWindow();
+                dynamic sObj = await window.ShowLoginDialog(handler);
+                
+                if (sObj == null || string.IsNullOrEmpty(sObj.Username)) return;
+                
+                _settings.Username = sObj.Username;
+                _settings.AccessToken = sObj.AccessToken;
+                _settings.UUID = sObj.UUID;
+                _settings.UserType = "msa";
+                AppSettings.Save(_settings);
+                SwitchToMain();
+            }
+            catch (Exception ex)
+            {
+                await ShowCustomDialog($"Ошибка авторизации: {ex.Message}");
+            }
+        }
 
         private void BtnGitHub_Click(object s, RoutedEventArgs e)
         {

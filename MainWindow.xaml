@@ -570,9 +570,7 @@
         </StackPanel>
 
         <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-            <TextBlock Text="Никнейм:" Foreground="White" FontSize="14" Margin="0,0,0,8"/>
-            <TextBox x:Name="UsernameBox"/>
-            <Button Content="Войти" Margin="0,20,0,0" Height="45" Click="BtnLogin_Click" Style="{StaticResource GlowButton}"/>
+            <Button Content="Войти через Microsoft" Margin="0,20,0,0" Height="45" Click="BtnLogin_Click" Style="{StaticResource GlowButton}"/>
         </StackPanel>
 
         <Grid x:Name="MainPanel" Visibility="Hidden">
