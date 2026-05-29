@@ -8,6 +8,7 @@
         Height="650" Width="1100"
         MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterScreen" 
+        Icon="app_icon.ico"
         ResizeMode="NoResize"
         Background="{DynamicResource PrimaryBrush}"
         WindowStyle="None"
@@ -570,7 +571,12 @@
         </StackPanel>
 
         <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-            <Button Content="Войти через Microsoft" Margin="0,20,0,0" Height="45" Click="BtnLogin_Click" Style="{StaticResource GlowButton}"/>
+            <TextBlock Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <Button Content="Войти через Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+            
+            <TextBlock Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
+            <TextBox x:Name="UsernameBox"/>
+            <Button Content="Войти оффлайн" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
         </StackPanel>
 
         <Grid x:Name="MainPanel" Visibility="Hidden">
@@ -767,7 +773,10 @@
                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,35" Opacity="0.7"/>
 
         <StackPanel x:Name="SetupPanel" Visibility="Hidden" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
-            <TextBlock Text="Никнейм:" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <TextBlock Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <Button Content="Войти через Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+            
+            <TextBlock Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <TextBox x:Name="SetupUsernameBox"/>
             <TextBlock Text="Папка для Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <Grid>
