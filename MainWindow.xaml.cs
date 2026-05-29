@@ -60,7 +60,7 @@ namespace CustomLauncher
         private const string MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/modpack_version.txt";
         private const string LAUNCHER_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/launcher_version.txt";
         private const string MODPACK_URL = "https://github.com/pers1k1/modpack/releases/download/main/release.zip";
-        private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/CustomLauncher.exe";
+        private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
         private static readonly string FORGE_JAR_URL = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{MC}-{FORGE}/forge-{MC}-{FORGE}-installer.jar";
         private string _onlineModpackVer = "0.0";
 
@@ -994,8 +994,12 @@ namespace CustomLauncher
             ServerMotdBox.Text = _activeServerConfig.Motd;
             ServerMaxPlayersBox.Text = _activeServerConfig.MaxPlayers.ToString();
             ServerPortBox.Text = _activeServerConfig.ServerPort.ToString();
+            ServerIpBox.Text = _activeServerConfig.ServerIp;
             ServerViewDistanceSlider.Value = _activeServerConfig.ViewDistance;
             ServerRamSlider.Value = _activeServerConfig.ServerRamMb;
+            ServerSpawnAnimalsCheck.IsChecked = _activeServerConfig.SpawnAnimals;
+            ServerSpawnMonstersCheck.IsChecked = _activeServerConfig.SpawnMonsters;
+            ServerOnlineModeCheck.IsChecked = _activeServerConfig.OnlineMode;
             ServerWhitelistCheck.IsChecked = _activeServerConfig.WhitelistEnabled;
             ServerEulaCheck.IsChecked = _activeServerConfig.EulaAccepted;
 
@@ -1019,12 +1023,23 @@ namespace CustomLauncher
             if (int.TryParse(ServerPortBox.Text, out int port))
                 _activeServerConfig.ServerPort = port;
 
+            _activeServerConfig.ServerIp = ServerIpBox.Text.Trim();
             _activeServerConfig.ViewDistance = (int)ServerViewDistanceSlider.Value;
             _activeServerConfig.ServerRamMb = (int)ServerRamSlider.Value;
+            _activeServerConfig.SpawnAnimals = ServerSpawnAnimalsCheck.IsChecked == true;
+            _activeServerConfig.SpawnMonsters = ServerSpawnMonstersCheck.IsChecked == true;
+            _activeServerConfig.OnlineMode = ServerOnlineModeCheck.IsChecked == true;
             _activeServerConfig.WhitelistEnabled = ServerWhitelistCheck.IsChecked == true;
             _activeServerConfig.EulaAccepted = ServerEulaCheck.IsChecked == true;
 
             AppSettings.Save(_settings);
+
+            if (_activeServerConfig.IsInstalled)
+            {
+                ServerManager.GenerateServerProperties(_activeServerConfig);
+                if (_activeServerConfig.WhitelistEnabled)
+                    ServerManager.GenerateWhitelistJson(_activeServerConfig);
+            }
         }
 
         private async void BtnCreateServer_Click(object s, RoutedEventArgs e)
@@ -1367,6 +1382,20 @@ namespace CustomLauncher
             WhitelistPanel.Visibility = ServerWhitelistCheck.IsChecked == true
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+            
+            SaveActiveServerConfig();
+        }
+
+        private void TabGeneralBtn_Click(object s, RoutedEventArgs e)
+        {
+            TabGeneralContent.Visibility = Visibility.Visible;
+            TabWhitelistContent.Visibility = Visibility.Collapsed;
+        }
+
+        private void TabWhitelistBtn_Click(object s, RoutedEventArgs e)
+        {
+            TabGeneralContent.Visibility = Visibility.Collapsed;
+            TabWhitelistContent.Visibility = Visibility.Visible;
         }
 
         private void ServerEulaCheck_Changed(object s, RoutedEventArgs e)
