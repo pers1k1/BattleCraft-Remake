@@ -1,7 +1,7 @@
 using CmlLib.Core;
 using CmlLib.Core.Auth;
 using CmlLib.Core.Auth.Microsoft;
-using CmlLib.Core.Auth.Microsoft.UI.Wpf;
+
 using CmlLib.Core.ProcessBuilder;
 using CustomLauncher.Core;
 using Microsoft.Win32;
@@ -42,6 +42,7 @@ namespace CustomLauncher
         private bool _isServerTab;
         private bool _isServerBusy;
         private const int MAX_CONSOLE_CHARS = 100000;
+        private DiscordManager _discordManager = new();
 
         private class StatusTextDummy
         {
@@ -53,7 +54,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "6.0";
+        private const string VER = "6.2";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -164,6 +165,12 @@ namespace CustomLauncher
             InitializeLauncherCore();
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            _discordManager?.Dispose();
+            base.OnClosed(e);
+        }
+
         private void Log(string message)
         {
             if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Log(message)); return; }
@@ -221,9 +228,14 @@ namespace CustomLauncher
             ApplyThemeFromSettings();
             ApplyCustomTheme();
             StartTimers();
+            
+            _discordManager.Initialize();
+
+
             if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); }
             else
             {
+                UsernameBox.Text = _settings.Username;
                 RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
                 PathBox.Text = _settings.GamePath;
                 if (!Version.TryParse(_settings.ModpackVersion, out _)) _settings.ModpackVersion = "0.0";
@@ -247,36 +259,54 @@ namespace CustomLauncher
         private void BtnSetupSelectFolder_Click(object s, RoutedEventArgs e)
         { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) SetupPathBox.Text = d.FolderName; }
 
-        private async void BtnSetupComplete_Click(object s, RoutedEventArgs e)
+        private async void BtnSetupMicrosoft_Click(object s, RoutedEventArgs e)
         {
-            string path = SetupPathBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog("Выберите папку для игры!"); return; }
-            _settings.GamePath = path; _settings.RamMb = 4096;
-            AppSettings.Save(_settings);
-
             try
             {
                 var handler = JELoginHandlerBuilder.BuildDefault();
-                dynamic window = new MicrosoftLoginWindow();
-                dynamic sObj = await window.ShowLoginDialog(handler);
+                var sessionObj = await handler.AuthenticateInteractively();
                 
-                if (sObj == null || string.IsNullOrEmpty(sObj.Username)) return;
+                if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
                 
-                _settings.Username = sObj.Username;
-                _settings.AccessToken = sObj.AccessToken;
-                _settings.UUID = sObj.UUID;
+                _settings.Username = sessionObj.Username;
+                _settings.AccessToken = sessionObj.AccessToken;
+                _settings.UUID = sessionObj.UUID;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
+                
+                SetupUsernameBox.Text = sessionObj.Username;
+                SetupUsernameBox.IsEnabled = false;
+                SetupUsernameBox.Opacity = 0.5;
+                await ShowCustomDialog($"Авторизован как: {sessionObj.Username}");
             }
             catch (Exception ex)
             {
                 await ShowCustomDialog($"Ошибка авторизации: {ex.Message}");
-                return;
             }
+        }
+
+        private async void BtnSetupComplete_Click(object s, RoutedEventArgs e)
+        {
+            string nick = SetupUsernameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog("Авторизуйтесь через Microsoft или введите никнейм!"); return; }
+            string path = SetupPathBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog("Выберите папку для игры!"); return; }
+            
+            _settings.GamePath = path; _settings.RamMb = 4096;
+            
+            if (_settings.UserType != "msa" || _settings.Username != nick)
+            {
+                _settings.Username = nick;
+                _settings.UserType = "offline";
+                _settings.AccessToken = "";
+                _settings.UUID = "";
+            }
+            
+            AppSettings.Save(_settings);
 
             SetupPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Visible;
-            RamSlider.Value = 4096; PathBox.Text = path;
+            UsernameBox.Text = nick; RamSlider.Value = 4096; PathBox.Text = path;
             _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             SwitchToMain();
         }
@@ -383,7 +413,17 @@ namespace CustomLauncher
 
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
-            if (_gameProcess != null) { try { _gameProcess.Kill(); } catch { } _gameProcess = null; Show(); SetPlayState("idle"); StatusText.Text = "Готов"; SetProgress(0); return; }
+            if (_gameProcess != null) 
+            { 
+                try { _gameProcess.Kill(); } catch { } 
+                _gameProcess = null; 
+                Show(); 
+                SetPlayState("idle"); 
+                StatusText.Text = "Готов"; 
+                SetProgress(0); 
+                _discordManager.SetMenuState();
+                return; 
+            }
             if (!_settings.HasGamePath) { await ShowCustomDialog("Выберите папку для игры в настройках!"); return; }
 
             BtnPlay.IsEnabled = false; SetBusy(true);
@@ -422,18 +462,28 @@ namespace CustomLauncher
                 var ver = vers.FirstOrDefault(v => v.Name == FULL_ID) ?? vers.FirstOrDefault(v => v.Name.Contains(MC) && v.Name.ToLower().Contains("forge"));
                 if (ver == null) { await ShowCustomDialog("Forge не найден!"); return; }
 
-                var handler = JELoginHandlerBuilder.BuildDefault();
-                dynamic sessionObj = null;
-                try { sessionObj = await handler.AuthenticateSilently(); } catch { }
-                
                 MSession? mSession = null;
-                if (sessionObj != null && !string.IsNullOrEmpty(sessionObj.Username))
+                if (_settings.UserType == "msa")
                 {
-                    mSession = new MSession();
-                    mSession.Username = sessionObj.Username;
-                    mSession.AccessToken = sessionObj.AccessToken;
-                    mSession.UUID = sessionObj.UUID;
-                    mSession.UserType = "msa";
+                    var handler = JELoginHandlerBuilder.BuildDefault();
+                    dynamic sessionObj = null;
+                    try { sessionObj = await handler.AuthenticateSilently(); } catch { }
+                    
+                    if (sessionObj != null && !string.IsNullOrEmpty(sessionObj.Username))
+                    {
+                        mSession = new MSession();
+                        mSession.Username = sessionObj.Username;
+                        mSession.AccessToken = sessionObj.AccessToken;
+                        mSession.UUID = sessionObj.UUID;
+                        mSession.UserType = "msa";
+                    }
+                    else
+                    {
+                        await ShowCustomDialog("Срок действия сессии истек. Пожалуйста, авторизуйтесь заново.");
+                        SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); 
+                        LoginGridState();
+                        return;
+                    }
                 }
                 else
                 {
@@ -450,11 +500,16 @@ namespace CustomLauncher
                 _gameProcess.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); 
+                _discordManager.SetPlayingState(_activeServerConfig?.Name ?? "Одиночная игра");
                 
                 bool isServerRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
                 if (!isServerRunning) Hide();
                 await _gameProcess.WaitForExitAsync();
-                _gameProcess = null; Show(); SetPlayState("idle"); StatusText.Text = "Готов";
+                _gameProcess = null; 
+                Show(); 
+                SetPlayState("idle"); 
+                StatusText.Text = "Готов";
+                _discordManager.SetMenuState();
             }
             catch (Exception ex) { await ShowCustomDialog($"Ошибка: {ex.Message}"); }
             finally { SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
@@ -740,21 +795,26 @@ namespace CustomLauncher
             StartWelcomeTextLoop();
         }
 
-        private void LoginGridState() { MainPanel.Visibility = Visibility.Hidden; LoginPanel.Visibility = Visibility.Visible; }
+        private void LoginGridState() 
+        { 
+            MainPanel.Visibility = Visibility.Hidden; 
+            LoginPanel.Visibility = Visibility.Visible; 
+            if (_settings.UserType == "msa") UsernameBox.Text = "";
+            else UsernameBox.Text = _settings.Username;
+        }
 
-        private async void BtnLogin_Click(object s, RoutedEventArgs e)
+        private async void BtnLoginMicrosoft_Click(object s, RoutedEventArgs e)
         {
             try
             {
                 var handler = JELoginHandlerBuilder.BuildDefault();
-                dynamic window = new MicrosoftLoginWindow();
-                dynamic sObj = await window.ShowLoginDialog(handler);
+                var sessionObj = await handler.AuthenticateInteractively();
                 
-                if (sObj == null || string.IsNullOrEmpty(sObj.Username)) return;
+                if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
                 
-                _settings.Username = sObj.Username;
-                _settings.AccessToken = sObj.AccessToken;
-                _settings.UUID = sObj.UUID;
+                _settings.Username = sessionObj.Username;
+                _settings.AccessToken = sessionObj.AccessToken;
+                _settings.UUID = sessionObj.UUID;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
                 SwitchToMain();
@@ -763,6 +823,18 @@ namespace CustomLauncher
             {
                 await ShowCustomDialog($"Ошибка авторизации: {ex.Message}");
             }
+        }
+
+        private async void BtnLoginOffline_Click(object s, RoutedEventArgs e)
+        {
+            var n = UsernameBox.Text.Trim(); 
+            if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog("Введите никнейм!"); return; }
+            _settings.Username = n; 
+            _settings.UserType = "offline";
+            _settings.AccessToken = "";
+            _settings.UUID = "";
+            AppSettings.Save(_settings); 
+            SwitchToMain(); 
         }
 
         private void BtnGitHub_Click(object s, RoutedEventArgs e)
@@ -1548,6 +1620,7 @@ namespace CustomLauncher
         {
             if (!IsLoaded || _activeServerConfig == null) return;
             _activeServerConfig.EulaAccepted = ServerEulaCheck.IsChecked == true;
+            AppSettings.Save(_settings);
             UpdateServerButtons();
         }
 
