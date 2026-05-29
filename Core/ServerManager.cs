@@ -254,7 +254,8 @@ namespace CustomLauncher.Core
                 $"spawn-monsters={BoolToString(config.SpawnMonsters)}",
                 "spawn-npcs=true",
                 $"white-list={BoolToString(config.WhitelistEnabled)}",
-                $"enforce-whitelist={BoolToString(config.WhitelistEnabled)}"
+                $"enforce-whitelist={BoolToString(config.WhitelistEnabled)}",
+                "enable-command-block=true"
             };
 
             if (!string.IsNullOrWhiteSpace(config.ServerIp))
