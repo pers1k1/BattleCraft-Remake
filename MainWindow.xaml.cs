@@ -59,10 +59,13 @@ namespace CustomLauncher
         private const string DefAccent = "#BB86FC";
         private const string MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/modpack_version.txt";
         private const string LAUNCHER_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/launcher_version.txt";
+        private const string SERVER_MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/server_modpack_version.txt";
         private const string MODPACK_URL = "https://github.com/pers1k1/modpack/releases/download/main/release.zip";
         private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
         private static readonly string FORGE_JAR_URL = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{MC}-{FORGE}/forge-{MC}-{FORGE}-installer.jar";
         private string _onlineModpackVer = "0.0";
+        private string _onlineServerModpackVer = "0.0";
+        private bool _needsServerModpackUpdate = false;
 
         private readonly string[] _jvmArgs = {
             "-XX:+UseG1GC","-XX:+ParallelRefProcEnabled","-XX:MaxGCPauseMillis=200",
@@ -407,7 +410,10 @@ namespace CustomLauncher
 
                 _gameProcess.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";
-                SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); Hide();
+                SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); 
+                
+                bool isServerRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
+                if (!isServerRunning) Hide();
                 await _gameProcess.WaitForExitAsync();
                 _gameProcess = null; Show(); SetPlayState("idle"); StatusText.Text = "Готов";
             }
@@ -794,10 +800,12 @@ namespace CustomLauncher
                 string ts = "?t=" + DateTime.Now.Ticks;
                 var t1 = _httpClient.GetStringAsync(MODPACK_VER_URL + ts);
                 var t2 = _httpClient.GetStringAsync(LAUNCHER_VER_URL + ts);
-                var results = await Task.WhenAll(t1, t2);
+                var t3 = _httpClient.GetStringAsync(SERVER_MODPACK_VER_URL + ts);
+                var results = await Task.WhenAll(t1, t2, t3);
                 
                 string modpackVerStr = results[0].Trim();
                 string launcherVerStr = results[1].Trim();
+                string serverModpackVerStr = results[2].Trim();
 
                 if (Version.TryParse(modpackVerStr, out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
                 {
@@ -805,6 +813,13 @@ namespace CustomLauncher
                     if (!_settings.IsModpackInstalled) { BtnPlay.Content = "УСТАНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = "ОБНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
+                }
+
+                if (Version.TryParse(serverModpackVerStr, out var onSV) && Version.TryParse(_settings.ServerModpackVersion, out var loSV))
+                {
+                    _onlineServerModpackVer = serverModpackVerStr;
+                    _needsServerModpackUpdate = onSV > loSV;
+                    UpdateServerButtons();
                 }
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
                 if (launcherVerStr != VER && await ShowCustomDialog($"Обновить лаунчер до {launcherVerStr}?", "Обновление", true)) await UpdateLauncher();
@@ -1133,7 +1148,11 @@ namespace CustomLauncher
                 await installer.InstallAsync(_activeServerConfig.ServerPath, javaPath, OnServerProgress);
 
                 _activeServerConfig.IsInstalled = true;
+                _settings.ServerModpackVersion = _onlineServerModpackVer;
+                _needsServerModpackUpdate = false;
                 AppSettings.Save(_settings);
+                
+                UpdateServerButtons();
 
                 AppendConsoleOutput("[SYS] Сервер установлен.");
             }
@@ -1158,6 +1177,31 @@ namespace CustomLauncher
 
             ServerStatusText.Text = statusMessage;
             AppendConsoleOutput($"[SYS] {statusMessage}");
+        }
+
+        private async void BtnUpdateServerMods_Click(object s, RoutedEventArgs e)
+        {
+            if (_activeServerConfig == null || _isServerBusy) return;
+            SetServerBusy(true, "Обновление модов...");
+            try
+            {
+                var installer = new ServerInstaller();
+                installer.StatusChanged += OnInstallerStatusChanged;
+                await installer.UpdateServerMods(_activeServerConfig.ServerPath, OnServerProgress);
+                _settings.ServerModpackVersion = _onlineServerModpackVer;
+                _needsServerModpackUpdate = false;
+                AppSettings.Save(_settings);
+                AppendConsoleOutput("[SYS] Моды сервера обновлены.");
+            }
+            catch (Exception ex)
+            {
+                AppendConsoleOutput($"[ERR] {ex.Message}");
+                await ShowCustomDialog($"Ошибка обновления модов: {ex.Message}");
+            }
+            finally
+            {
+                SetServerBusy(false);
+            }
         }
 
         private void EnsureServerManagerInitialized()
@@ -1356,6 +1400,9 @@ namespace CustomLauncher
             BtnInstallServer.Visibility = hasConfig && !isInstalled ? Visibility.Visible : Visibility.Collapsed;
             BtnInstallServer.IsEnabled = hasConfig && _activeServerConfig!.EulaAccepted && !_isServerBusy;
 
+            BtnUpdateServerMods.Visibility = hasConfig && isInstalled && isStopped && _needsServerModpackUpdate ? Visibility.Visible : Visibility.Collapsed;
+            BtnUpdateServerMods.IsEnabled = !_isServerBusy;
+
             BtnStartServer.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
             BtnStartServer.IsEnabled = !_isServerBusy;
             BtnStopServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
@@ -1364,7 +1411,9 @@ namespace CustomLauncher
             BtnRestoreBackup.IsEnabled = !_isServerBusy;
             BtnOpenServerFolder.Visibility = isInstalled ? Visibility.Visible : Visibility.Collapsed;
 
-            ServerConfigForm.IsEnabled = hasConfig && !isRunning && !isStopping && !_isServerBusy;
+            ServerConfigForm.IsEnabled = hasConfig && !_isServerBusy;
+            TabGeneralContent.IsEnabled = !isRunning && !isStopping;
+            TabGeneralContent.ToolTip = (isRunning || isStopping) ? "Остановите сервер, чтобы взаимодействовать" : null;
         }
 
         private void SetServerBusy(bool busy, string statusMessage = "")
@@ -1405,7 +1454,7 @@ namespace CustomLauncher
             UpdateServerButtons();
         }
 
-        private void BtnAddWhitelistPlayer_Click(object s, RoutedEventArgs e)
+        private async void BtnAddWhitelistPlayer_Click(object s, RoutedEventArgs e)
         {
             string playerName = WhitelistPlayerNameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(playerName) || _activeServerConfig == null) return;
@@ -1419,15 +1468,27 @@ namespace CustomLauncher
             WhitelistPlayerNameBox.Text = "";
             RebuildWhitelistUi();
             AppSettings.Save(_settings);
+
+            bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
+            if (isRunning)
+            {
+                await ShowCustomDialog("Перезапустите сервер, чтобы изменения применились");
+            }
         }
 
-        private void RemoveWhitelistPlayer(string playerName)
+        private async void RemoveWhitelistPlayer(string playerName)
         {
             if (_activeServerConfig == null) return;
             _activeServerConfig.WhitelistedPlayers.RemoveAll(
                 p => p.Equals(playerName, StringComparison.OrdinalIgnoreCase));
             RebuildWhitelistUi();
             AppSettings.Save(_settings);
+
+            bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
+            if (isRunning)
+            {
+                await ShowCustomDialog("Перезапустите сервер, чтобы изменения применились");
+            }
         }
 
         private void RebuildWhitelistUi()
