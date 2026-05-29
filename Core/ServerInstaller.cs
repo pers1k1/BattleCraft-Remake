@@ -52,24 +52,24 @@ namespace CustomLauncher.Core
 
         public async Task UpdateServerMods(string serverDirectory, Action<double>? onProgress = null)
         {
-            string temporaryZipPath = Path.Combine(Path.GetTempPath(), $"bcserver_mods_{Guid.NewGuid():N}.zip");
-            string temporaryExtractPath = Path.Combine(Path.GetTempPath(), $"bcserver_mods_extract_{Guid.NewGuid():N}");
+            string temporaryZipPath = Path.Combine(serverDirectory, $"mods_server_{Guid.NewGuid():N}.zip");
 
             try
             {
                 ReportStatus("Скачивание модов сервера...");
                 await DownloadFile(SERVER_MODS_ARCHIVE_URL, temporaryZipPath, onProgress);
 
-                ReportStatus("Распаковка модов сервера...");
-                await Task.Run(() => ZipFile.ExtractToDirectory(temporaryZipPath, temporaryExtractPath, true));
+                ReportStatus("Очистка старых модов...");
+                TryDeleteDirectory(Path.Combine(serverDirectory, "mods"));
+                TryDeleteDirectory(Path.Combine(serverDirectory, "tacz"));
+                TryDeleteDirectory(Path.Combine(serverDirectory, "tacz_backup"));
 
-                ReportStatus("Установка модов сервера...");
-                await Task.Run(() => CopyDirectoryContents(temporaryExtractPath, serverDirectory));
+                ReportStatus("Распаковка модов сервера...");
+                await Task.Run(() => ZipFile.ExtractToDirectory(temporaryZipPath, serverDirectory, true));
             }
             finally
             {
                 TryDeleteFile(temporaryZipPath);
-                TryDeleteDirectory(temporaryExtractPath);
             }
         }
 

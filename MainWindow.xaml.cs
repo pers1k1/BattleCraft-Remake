@@ -66,6 +66,7 @@ namespace CustomLauncher
         private string _onlineModpackVer = "0.0";
         private string _onlineServerModpackVer = "0.0";
         private bool _needsServerModpackUpdate = false;
+        private bool _waitingForPortKillConfirmation = false;
 
         private readonly string[] _jvmArgs = {
             "-XX:+UseG1GC","-XX:+ParallelRefProcEnabled","-XX:MaxGCPauseMillis=200",
@@ -1335,11 +1336,39 @@ namespace CustomLauncher
         private void SendConsoleCommand()
         {
             string command = ServerConsoleInput.Text.Trim();
-            if (string.IsNullOrWhiteSpace(command) || _serverManager == null) return;
+            if (string.IsNullOrWhiteSpace(command)) return;
 
             AppendConsoleOutput($"> {command}");
-            _serverManager.SendCommand(command);
             ServerConsoleInput.Text = "";
+
+            if (_waitingForPortKillConfirmation)
+            {
+                _waitingForPortKillConfirmation = false;
+                if (command.Equals("Y", StringComparison.OrdinalIgnoreCase))
+                {
+                    AppendConsoleOutput("[SYS] Принудительное завершение всех процессов Java...");
+                    try
+                    {
+                        foreach (var process in Process.GetProcessesByName("java"))
+                        {
+                            process.Kill();
+                        }
+                        AppendConsoleOutput("[SYS] Процессы завершены. Попробуйте запустить сервер снова.");
+                    }
+                    catch (Exception ex)
+                    {
+                        AppendConsoleOutput($"[ERR] Не удалось завершить процессы: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    AppendConsoleOutput("[SYS] Действие отменено.");
+                }
+                return;
+            }
+
+            if (_serverManager == null) return;
+            _serverManager.SendCommand(command);
         }
 
         private void AppendConsoleOutput(string line)
@@ -1351,6 +1380,16 @@ namespace CustomLauncher
             }
 
             ServerConsoleOutput.AppendText(line + "\n");
+
+            if (line.Contains("FAILED TO BIND TO PORT") || line.Contains("Address already in use"))
+            {
+                if (!_waitingForPortKillConfirmation)
+                {
+                    _waitingForPortKillConfirmation = true;
+                    ServerConsoleOutput.AppendText("[SYS] ОШИБКА: Порт занят! Убить зависшие процессы Java? Введите Y или N\n");
+                    ServerConsoleOutput.ScrollToEnd();
+                }
+            }
 
             if (ServerConsoleOutput.Text.Length > MAX_CONSOLE_CHARS)
                 ServerConsoleOutput.Text = ServerConsoleOutput.Text.Substring(ServerConsoleOutput.Text.Length - MAX_CONSOLE_CHARS / 2);
