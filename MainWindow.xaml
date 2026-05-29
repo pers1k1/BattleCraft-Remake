@@ -753,6 +753,7 @@
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
                     <Button x:Name="BtnInstallServer" Content="Создать сервер" Click="BtnInstallServer_Click" Style="{StaticResource ServerActionButton}" IsEnabled="False"/>
+                    <Button x:Name="BtnUpdateServerMods" Content="Обновить моды" Click="BtnUpdateServerMods_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
                     <Button x:Name="BtnStartServer" Content="Запустить" Click="BtnStartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
                     <Button x:Name="BtnStopServer" Content="Остановить" Click="BtnStopServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed" Foreground="#FF6B6B"/>
                     <Button x:Name="BtnRestartServer" Content="Перезапустить" Click="BtnRestartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>

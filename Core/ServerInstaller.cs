@@ -14,6 +14,9 @@ namespace CustomLauncher.Core
         private const string SERVER_DATA_ARCHIVE_URL =
             "https://github.com/pers1k1/server/releases/download/main/server.zip";
 
+        private const string SERVER_MODS_ARCHIVE_URL =
+            "https://github.com/pers1k1/server/releases/download/main/mods_server.zip";
+
         public event Action<string>? StatusChanged;
         public event Action<string>? LogReceived;
 
@@ -44,6 +47,30 @@ namespace CustomLauncher.Core
 
             await InstallForgeRuntime(serverDirectory, javaPath, onProgress);
             await DownloadAndApplyServerData(serverDirectory, backupDirectory, onProgress);
+            await UpdateServerMods(serverDirectory, onProgress);
+        }
+
+        public async Task UpdateServerMods(string serverDirectory, Action<double>? onProgress = null)
+        {
+            string temporaryZipPath = Path.Combine(Path.GetTempPath(), $"bcserver_mods_{Guid.NewGuid():N}.zip");
+            string temporaryExtractPath = Path.Combine(Path.GetTempPath(), $"bcserver_mods_extract_{Guid.NewGuid():N}");
+
+            try
+            {
+                ReportStatus("Скачивание модов сервера...");
+                await DownloadFile(SERVER_MODS_ARCHIVE_URL, temporaryZipPath, onProgress);
+
+                ReportStatus("Распаковка модов сервера...");
+                await Task.Run(() => ZipFile.ExtractToDirectory(temporaryZipPath, temporaryExtractPath, true));
+
+                ReportStatus("Установка модов сервера...");
+                await Task.Run(() => CopyDirectoryContents(temporaryExtractPath, serverDirectory));
+            }
+            finally
+            {
+                TryDeleteFile(temporaryZipPath);
+                TryDeleteDirectory(temporaryExtractPath);
+            }
         }
 
         private async Task InstallForgeRuntime(string serverDirectory, string javaPath, Action<double>? onProgress)
