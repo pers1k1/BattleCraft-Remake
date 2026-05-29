@@ -235,7 +235,7 @@ namespace CustomLauncher.Core
 
             string propertiesPath = Path.Combine(serverDir, "server.properties");
 
-            string[] propertyLines =
+            var propertyLines = new List<string>
             {
                 "level-name=sigma",
                 $"motd={config.Motd}",
@@ -246,13 +246,21 @@ namespace CustomLauncher.Core
                 "gamemode=survival",
                 "difficulty=normal",
                 "pvp=true",
-                "online-mode=false",
+                $"online-mode={BoolToString(config.OnlineMode)}",
                 "allow-nether=false",
                 "allow-flight=true",
                 "spawn-protection=0",
+                $"spawn-animals={BoolToString(config.SpawnAnimals)}",
+                $"spawn-monsters={BoolToString(config.SpawnMonsters)}",
+                "spawn-npcs=true",
                 $"white-list={BoolToString(config.WhitelistEnabled)}",
                 $"enforce-whitelist={BoolToString(config.WhitelistEnabled)}"
             };
+
+            if (!string.IsNullOrWhiteSpace(config.ServerIp))
+            {
+                propertyLines.Add($"server-ip={config.ServerIp}");
+            }
 
             File.WriteAllLines(propertiesPath, propertyLines);
         }

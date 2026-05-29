@@ -14,6 +14,10 @@ namespace CustomLauncher.Core
         public bool WhitelistEnabled { get; set; } = false;
         public bool EulaAccepted { get; set; } = false;
         public bool IsInstalled { get; set; } = false;
+        public bool SpawnAnimals { get; set; } = true;
+        public bool SpawnMonsters { get; set; } = true;
+        public bool OnlineMode { get; set; } = false;
+        public string ServerIp { get; set; } = "";
         public List<string> WhitelistedPlayers { get; set; } = new();
     }
 }
