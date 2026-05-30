@@ -54,7 +54,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "6.3";
+        private const string VER = "6.4";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -224,6 +224,8 @@ namespace CustomLauncher
             ApplyCustomTheme();
             StartTimers();
             
+            _discordManager.LauncherVersion = VER;
+            _discordManager.ModpackVersion = _settings.ModpackVersion;
             _discordManager.Initialize();
 
 
@@ -504,11 +506,8 @@ namespace CustomLauncher
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); 
                 _discordManager.SetPlayingState(_activeServerConfig?.Name ?? "Одиночная игра");
                 
-                bool isServerRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
-                if (!isServerRunning) Hide();
                 await _gameProcess.WaitForExitAsync();
                 _gameProcess = null; 
-                Show(); 
                 SetPlayState("idle"); 
                 StatusText.Text = "Готов";
                 _discordManager.SetMenuState();
@@ -603,6 +602,8 @@ namespace CustomLauncher
             Log("Распаковка завершена!");
             _settings.IsModpackInstalled = true;
             _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
+            _discordManager.ModpackVersion = _settings.ModpackVersion;
+            if (_gameProcess == null) _discordManager.SetMenuState();
             AppSettings.Save(_settings);
         }
 
@@ -1355,6 +1356,12 @@ namespace CustomLauncher
         private async void BtnStartServer_Click(object s, RoutedEventArgs e)
         {
             if (_activeServerConfig == null || _isServerBusy) return;
+
+            if (_needsServerModpackUpdate)
+            {
+                await ShowCustomDialog("Сначала обновите моды сервера!");
+                return;
+            }
 
             try
             {

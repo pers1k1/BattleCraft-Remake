@@ -13,6 +13,9 @@ namespace CustomLauncher.Core
         private string _currentServer = "";
 
         private const string ClientId = "1510061496590401688"; 
+        
+        public string LauncherVersion { get; set; } = "";
+        public string ModpackVersion { get; set; } = "";
 
         public void Initialize()
         {
@@ -44,7 +47,7 @@ namespace CustomLauncher.Core
 
             var presence = new RichPresence()
             {
-                Details = "В главном меню",
+                Details = $"В главном меню | v{LauncherVersion} (Моды: v{ModpackVersion})",
                 State = _isOwner ? "Owner" : "User",
                 Assets = new Assets()
                 {
@@ -65,10 +68,12 @@ namespace CustomLauncher.Core
             _currentServer = serverName;
             if (_client == null || !_client.IsInitialized) return;
 
+            string stateText = (serverName == "Одиночная игра" || string.IsNullOrEmpty(serverName)) ? "Одиночная игра" : $"Сервер: {serverName}";
+
             var presence = new RichPresence()
             {
-                Details = "Играет в BattleCraft",
-                State = _isOwner ? $"Owner | Сервер: {serverName}" : $"User | Сервер: {serverName}",
+                Details = $"Играет в BattleCraft | v{LauncherVersion} (Моды: v{ModpackVersion})",
+                State = _isOwner ? $"Owner | {stateText}" : $"User | {stateText}",
                 Assets = new Assets()
                 {
                     LargeImageKey = "rpc_icon",
