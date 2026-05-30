@@ -54,7 +54,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "6.2";
+        private const string VER = "6.3";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -586,6 +586,12 @@ namespace CustomLauncher
                 {
                     string p = Path.Combine(_settings.GamePath, dir);
                     try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
+                }
+                string[] optFiles = { "options.txt", "optionsof.txt", "optionsshaders.txt" };
+                foreach (var f in optFiles)
+                {
+                    string p = Path.Combine(_settings.GamePath, f);
+                    try { if (File.Exists(p)) File.Delete(p); } catch { }
                 }
             }
             string zip = Path.Combine(Path.GetTempPath(), "modpack_download.zip");
