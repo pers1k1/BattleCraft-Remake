@@ -255,7 +255,8 @@ namespace CustomLauncher.Core
                 "spawn-npcs=true",
                 $"white-list={BoolToString(config.WhitelistEnabled)}",
                 $"enforce-whitelist={BoolToString(config.WhitelistEnabled)}",
-                "enable-command-block=true"
+                "enable-command-block=true",
+                "enforce-secure-profile=false"
             };
 
             if (!string.IsNullOrWhiteSpace(config.ServerIp))
