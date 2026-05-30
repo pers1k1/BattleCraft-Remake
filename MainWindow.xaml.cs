@@ -426,6 +426,13 @@ namespace CustomLauncher
             try
             {
                 if (!Directory.Exists(_settings.GamePath)) Directory.CreateDirectory(_settings.GamePath);
+
+                string dhServerDataPath = Path.Combine(_settings.GamePath, "Distant_Horizons_server_data");
+                if (Directory.Exists(dhServerDataPath))
+                {
+                    try { Directory.Delete(dhServerDataPath, true); } catch { }
+                }
+
                 InitializeLauncher();
 
                 string vDir = Path.Combine(_settings.GamePath, "versions");
