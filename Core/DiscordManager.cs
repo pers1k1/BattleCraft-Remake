@@ -11,6 +11,7 @@ namespace CustomLauncher.Core
         private bool _isOwner = false;
         private string _currentState = "menu";
         private string _currentServer = "";
+
         private const string ClientId = "1510061496590401688"; 
 
         public void Initialize()

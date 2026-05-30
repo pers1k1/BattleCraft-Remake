@@ -8,8 +8,6 @@ namespace CustomLauncher
 {
     public class AppSettings
     {
-        public static readonly string DefaultGamePath = "";
-
         private static readonly string ConfigDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "CustomLauncher");

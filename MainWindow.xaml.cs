@@ -161,7 +161,6 @@ namespace CustomLauncher
         public MainWindow()
         {
             InitializeComponent();
-            MouseMove += OnWindowMouseMove;
             InitializeLauncherCore();
         }
 
@@ -216,10 +215,6 @@ namespace CustomLauncher
             catch { }
         }
 
-
-        private void OnWindowMouseMove(object sender, MouseEventArgs e)
-        {
-        }
 
         private void InitializeLauncherCore()
         {

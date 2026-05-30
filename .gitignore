@@ -3,5 +3,5 @@ obj/
 .vs/
 *.user
 publish/
-.gitignore
 GEMINI.md
+discord_rpc_icon.ico
