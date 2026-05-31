@@ -54,7 +54,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "6.4";
+        private const string VER = "6.5";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1327,7 +1327,7 @@ namespace CustomLauncher
             {
                 var installer = new ServerInstaller();
                 installer.StatusChanged += OnInstallerStatusChanged;
-                await installer.UpdateServerMods(_activeServerConfig.ServerPath, OnServerProgress);
+                await installer.UpdateServerMods(Path.Combine(_activeServerConfig.ServerPath, "server"), OnServerProgress);
                 _settings.ServerModpackVersion = _onlineServerModpackVer;
                 _needsServerModpackUpdate = false;
                 AppSettings.Save(_settings);
@@ -1587,7 +1587,7 @@ namespace CustomLauncher
             BtnUpdateServerMods.Visibility = hasConfig && isInstalled && isStopped && _needsServerModpackUpdate ? Visibility.Visible : Visibility.Collapsed;
             BtnUpdateServerMods.IsEnabled = !_isServerBusy;
 
-            BtnStartServer.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
+            BtnStartServer.Visibility = isInstalled && isStopped && !_needsServerModpackUpdate ? Visibility.Visible : Visibility.Collapsed;
             BtnStartServer.IsEnabled = !_isServerBusy;
             BtnStopServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
             BtnRestartServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
