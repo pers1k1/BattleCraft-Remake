@@ -63,12 +63,15 @@ namespace CustomLauncher
         private const string MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/modpack_version.txt";
         private const string LAUNCHER_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/launcher_version.txt";
         private const string SERVER_MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/server_modpack_version.txt";
+        private const string SERVER_MAP_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/server_map_version.txt";
         private const string MODPACK_URL = "https://github.com/pers1k1/modpack/releases/download/main/release.zip";
         private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
         private static readonly string FORGE_JAR_URL = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{MC}-{FORGE}/forge-{MC}-{FORGE}-installer.jar";
         private string _onlineModpackVer = "0.0";
         private string _onlineServerModpackVer = "0.0";
+        private string _onlineServerMapVer = "0.0";
         private bool _needsServerModpackUpdate = false;
+        private bool _needsServerMapUpdate = false;
         private bool _waitingForPortKillConfirmation = false;
 
         private readonly string[] _jvmArgs = {
@@ -218,6 +221,13 @@ namespace CustomLauncher
 
         private void InitializeLauncherCore()
         {
+            try
+            {
+                string oldFile = Process.GetCurrentProcess().MainModule!.FileName + ".old";
+                if (File.Exists(oldFile)) File.Delete(oldFile);
+            }
+            catch { }
+
             _settings = AppSettings.Load();
             FillColorPresets();
             ApplyThemeFromSettings();
@@ -593,18 +603,45 @@ namespace CustomLauncher
                     try { if (File.Exists(p)) File.Delete(p); } catch { }
                 }
             }
-            string zip = Path.Combine(Path.GetTempPath(), "modpack_download.zip");
-            var dl = new FileDownloader();
-            dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { SetProgress(v); StatusText.Text = $"Скачивание {v:F0}%"; });
-            await dl.DownloadFileAsync(MODPACK_URL, zip);
-            StatusText.Text = "Распаковка...";
-            await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
-            Log("Распаковка завершена!");
-            _settings.IsModpackInstalled = true;
-            _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
-            _discordManager.ModpackVersion = _settings.ModpackVersion;
-            if (_gameProcess == null) _discordManager.SetMenuState();
-            AppSettings.Save(_settings);
+
+            bool success = false;
+            while (!success)
+            {
+                string zip = Path.Combine(Path.GetTempPath(), "modpack_download.zip");
+                try
+                {
+                    var dl = new FileDownloader();
+                    dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { SetProgress(v); StatusText.Text = $"Скачивание {v:F0}%"; });
+                    await dl.DownloadFileAsync(MODPACK_URL, zip);
+                    StatusText.Text = "Распаковка...";
+                    await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
+                    Log("Распаковка завершена!");
+                    _settings.IsModpackInstalled = true;
+                    _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
+                    _discordManager.ModpackVersion = _settings.ModpackVersion;
+                    if (_gameProcess == null) _discordManager.SetMenuState();
+                    AppSettings.Save(_settings);
+                    success = true;
+                }
+                catch (Exception ex)
+                {
+                    try { if (File.Exists(zip)) File.Delete(zip); } catch { }
+                    bool retry = await ShowCustomDialog(
+                        $"Загрузка клиента оборвалась.\nОшибка: {ex.Message}\nПродолжить скачивание?",
+                        "Ошибка скачивания", true);
+
+                    if (!retry)
+                    {
+                        Log("Установка отменена. Очистка файлов...");
+                        foreach (var dir in ModpackDirs)
+                        {
+                            string p = Path.Combine(_settings.GamePath, dir);
+                            try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
+                        }
+                        throw new Exception("Установка отменена пользователем.");
+                    }
+                }
+            }
         }
 
         private async Task AnimateTerminalText(TextBlock tb, string targetText)
@@ -941,11 +978,13 @@ namespace CustomLauncher
                 var t1 = _httpClient.GetStringAsync(MODPACK_VER_URL + ts);
                 var t2 = _httpClient.GetStringAsync(LAUNCHER_VER_URL + ts);
                 var t3 = _httpClient.GetStringAsync(SERVER_MODPACK_VER_URL + ts);
-                var results = await Task.WhenAll(t1, t2, t3);
+                var t4 = _httpClient.GetStringAsync(SERVER_MAP_VER_URL + ts);
+                var results = await Task.WhenAll(t1, t2, t3, t4);
                 
                 string modpackVerStr = results[0].Trim();
                 string launcherVerStr = results[1].Trim();
                 string serverModpackVerStr = results[2].Trim();
+                string serverMapVerStr = results[3].Trim();
 
                 if (Version.TryParse(modpackVerStr, out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
                 {
@@ -959,8 +998,15 @@ namespace CustomLauncher
                 {
                     _onlineServerModpackVer = serverModpackVerStr;
                     _needsServerModpackUpdate = onSV > loSV;
-                    UpdateServerButtons();
                 }
+
+                if (Version.TryParse(serverMapVerStr, out var onMV) && Version.TryParse(_settings.ServerMapVersion, out var loMV))
+                {
+                    _onlineServerMapVer = serverMapVerStr;
+                    _needsServerMapUpdate = onMV > loMV;
+                }
+                
+                UpdateServerButtons();
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
                 if (launcherVerStr != VER && await ShowCustomDialog($"Обновить лаунчер до {launcherVerStr}?", "Обновление", true)) await UpdateLauncher();
             }
@@ -1278,33 +1324,67 @@ namespace CustomLauncher
             }
 
             SetServerBusy(true, "Установка сервера...");
+            string javaPath = FindJava();
+            var installer = new ServerInstaller();
+            installer.StatusChanged += OnInstallerStatusChanged;
+            installer.LogReceived += AppendConsoleOutput;
 
-            try
-            {
-                string javaPath = FindJava();
-                var installer = new ServerInstaller();
-                installer.StatusChanged += OnInstallerStatusChanged;
-                installer.LogReceived += AppendConsoleOutput;
-                await installer.InstallAsync(_activeServerConfig.ServerPath, javaPath, OnServerProgress);
+            string serverDir = Path.Combine(_activeServerConfig.ServerPath, "server");
+            string backupDir = Path.Combine(_activeServerConfig.ServerPath, "backup");
+            if (!Directory.Exists(serverDir)) Directory.CreateDirectory(serverDir);
+            if (!Directory.Exists(backupDir)) Directory.CreateDirectory(backupDir);
 
-                _activeServerConfig.IsInstalled = true;
-                _settings.ServerModpackVersion = _onlineServerModpackVer;
-                _needsServerModpackUpdate = false;
-                AppSettings.Save(_settings);
-                
-                UpdateServerButtons();
+            int currentStage = 0;
+            bool success = false;
 
-                AppendConsoleOutput("[SYS] Сервер установлен.");
-            }
-            catch (Exception ex)
+            while (!success)
             {
-                AppendConsoleOutput($"[ERR] {ex.Message}");
-                await ShowCustomDialog($"Ошибка установки: {ex.Message}");
+                try
+                {
+                    if (currentStage == 0)
+                    {
+                        await installer.InstallForgeRuntime(serverDir, javaPath, OnServerProgress);
+                        currentStage++;
+                    }
+                    if (currentStage == 1)
+                    {
+                        await installer.DownloadAndApplyServerData(serverDir, backupDir, OnServerProgress);
+                        currentStage++;
+                    }
+                    if (currentStage == 2)
+                    {
+                        await installer.UpdateServerMods(serverDir, OnServerProgress);
+                        currentStage++;
+                    }
+                    success = true;
+                }
+                catch (Exception ex)
+                {
+                    AppendConsoleOutput($"[ERR] Ошибка на этапе {currentStage + 1}: {ex.Message}");
+                    bool retry = await ShowCustomDialog(
+                        $"Загрузка оборвалась на этапе {currentStage + 1}.\nОшибка: {ex.Message}\nПродолжить скачивание этого этапа?",
+                        "Ошибка скачивания", true);
+
+                    if (!retry)
+                    {
+                        AppendConsoleOutput("[SYS] Установка отменена. Удаление файлов...");
+                        try { Directory.Delete(_activeServerConfig.ServerPath, true); } catch { }
+                        SetServerBusy(false);
+                        return;
+                    }
+                }
             }
-            finally
-            {
-                SetServerBusy(false);
-            }
+
+            _activeServerConfig.IsInstalled = true;
+            _settings.ServerModpackVersion = _onlineServerModpackVer;
+            _settings.ServerMapVersion = _onlineServerMapVer;
+            _needsServerModpackUpdate = false;
+            _needsServerMapUpdate = false;
+            AppSettings.Save(_settings);
+            
+            UpdateServerButtons();
+            AppendConsoleOutput("[SYS] Сервер установлен.");
+            SetServerBusy(false);
         }
 
         private void OnInstallerStatusChanged(string statusMessage)
@@ -1361,6 +1441,44 @@ namespace CustomLauncher
             {
                 await ShowCustomDialog("Сначала обновите моды сервера!");
                 return;
+            }
+
+            if (_needsServerMapUpdate)
+            {
+                bool updateMap = await ShowCustomDialog("Доступно обновление карты сервера. Хотите обновить? (Текущая карта будет сброшена!)", "Обновление карты", true);
+                if (updateMap)
+                {
+                    SetServerBusy(true, "Обновление карты...");
+                    try
+                    {
+                        var installer = new ServerInstaller();
+                        installer.StatusChanged += OnInstallerStatusChanged;
+                        string serverDir = Path.Combine(_activeServerConfig.ServerPath, "server");
+                        string backupDir = Path.Combine(_activeServerConfig.ServerPath, "backup");
+                        await installer.UpdateServerMap(serverDir, backupDir, OnServerProgress);
+                        _settings.ServerMapVersion = _onlineServerMapVer;
+                        _needsServerMapUpdate = false;
+                        AppSettings.Save(_settings);
+                        AppendConsoleOutput("[SYS] Карта сервера обновлена.");
+                    }
+                    catch (Exception ex)
+                    {
+                        AppendConsoleOutput($"[ERR] Ошибка обновления карты: {ex.Message}");
+                        SetServerBusy(false);
+                        return;
+                    }
+                    finally
+                    {
+                        SetServerBusy(false);
+                    }
+                }
+                else
+                {
+                    // If user declines, we can just clear the flag to stop asking.
+                    _settings.ServerMapVersion = _onlineServerMapVer;
+                    _needsServerMapUpdate = false;
+                    AppSettings.Save(_settings);
+                }
             }
 
             try
@@ -1443,7 +1561,23 @@ namespace CustomLauncher
             try
             {
                 string serverDir = Path.Combine(_activeServerConfig.ServerPath, "server");
-                await Task.Run(() => ServerInstaller.CopyDirectoryContents(backupDir, serverDir));
+                await Task.Run(() => 
+                {
+                    if (Directory.Exists(backupDir) && Directory.Exists(serverDir))
+                    {
+                        foreach (var dir in Directory.GetDirectories(backupDir))
+                        {
+                            string targetDir = Path.Combine(serverDir, Path.GetFileName(dir));
+                            if (Directory.Exists(targetDir)) Directory.Delete(targetDir, true);
+                        }
+                        foreach (var file in Directory.GetFiles(backupDir))
+                        {
+                            string targetFile = Path.Combine(serverDir, Path.GetFileName(file));
+                            if (File.Exists(targetFile)) File.Delete(targetFile);
+                        }
+                    }
+                    ServerInstaller.CopyDirectoryContents(backupDir, serverDir);
+                });
                 AppendConsoleOutput("[SYS] Мир восстановлен из локального бэкапа.");
             }
             catch (Exception ex)

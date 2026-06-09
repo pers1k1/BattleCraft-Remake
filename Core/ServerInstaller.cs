@@ -73,7 +73,7 @@ namespace CustomLauncher.Core
             }
         }
 
-        private async Task InstallForgeRuntime(string serverDirectory, string javaPath, Action<double>? onProgress)
+        public async Task InstallForgeRuntime(string serverDirectory, string javaPath, Action<double>? onProgress)
         {
             string installerJarPath = Path.Combine(
                 Path.GetTempPath(),
@@ -144,7 +144,7 @@ namespace CustomLauncher.Core
                 TryDeleteFile(logFile);
         }
 
-        private async Task DownloadAndApplyServerData(
+        public async Task DownloadAndApplyServerData(
             string serverDirectory, string backupDirectory, Action<double>? onProgress)
         {
             string temporaryZipPath = Path.Combine(
@@ -174,6 +174,11 @@ namespace CustomLauncher.Core
                 TryDeleteFile(temporaryZipPath);
                 TryDeleteDirectory(temporaryExtractPath);
             }
+        }
+
+        public async Task UpdateServerMap(string serverDirectory, string backupDirectory, Action<double>? onProgress)
+        {
+            await DownloadAndApplyServerData(serverDirectory, backupDirectory, onProgress);
         }
 
         public static void CopyDirectoryContents(string sourceDirectory, string destinationDirectory)
