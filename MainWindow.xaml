@@ -607,7 +607,7 @@
 
             <Grid x:Name="PlayContentPanel" Grid.Column="1">
                 <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
-                <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v6.6" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
+                <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v6.7" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
                 <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
                     <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="0,0,0,10" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
                     <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
