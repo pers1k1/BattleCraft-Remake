@@ -1,7 +1,7 @@
 using CmlLib.Core;
 using CmlLib.Core.Auth;
 using CmlLib.Core.Auth.Microsoft;
-
+using CmlLib.Core.Installers;
 using CmlLib.Core.ProcessBuilder;
 using CustomLauncher.Core;
 using Microsoft.Win32;
@@ -413,7 +413,10 @@ namespace CustomLauncher
         private void InitializeLauncher()
         {
             _minecraftPath = new MinecraftPath(_settings.GamePath);
-            _launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(_minecraftPath));
+            var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath);
+            if (parameters.GameInstaller is GameInstallerBase installerBase)
+                installerBase.CheckFileChecksum = false;
+            _launcher = new MinecraftLauncher(parameters);
             _launcher.FileProgressChanged += (s, e) => Dispatcher.BeginInvoke(() =>
             { StatusText.Text = e.Name; if (e.TotalTasks > 0) SetProgress((double)e.ProgressedTasks / e.TotalTasks * 100); });
         }
