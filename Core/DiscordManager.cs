@@ -12,7 +12,10 @@ namespace CustomLauncher.Core
         private string _currentState = "menu";
         private string _currentServer = "";
 
-        private const string ClientId = "1510061496590401688"; 
+        // Не секреты: и ClientId приложения, и Discord-ID всё равно публичны в RPC-хендшейке.
+        // Вынесены в константы только ради читаемости/замены без правок по коду.
+        private const string ClientId = "1510061496590401688";
+        private const ulong OwnerDiscordId = 650390226643976213;
         
         public string LauncherVersion { get; set; } = "";
         public string ModpackVersion { get; set; } = "";
@@ -26,7 +29,7 @@ namespace CustomLauncher.Core
 
             _client.OnReady += (sender, e) =>
             {
-                if (e.User.ID == 650390226643976213)
+                if (e.User.ID == OwnerDiscordId)
                 {
                     _isOwner = true;
                     if (_currentState == "menu") SetMenuState();

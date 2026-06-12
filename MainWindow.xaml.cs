@@ -73,6 +73,8 @@ namespace CustomLauncher
         private bool _needsServerModpackUpdate = false;
         private bool _needsServerMapUpdate = false;
         private bool _waitingForPortKillConfirmation = false;
+        private bool _welcomeLoopStarted = false;
+        private static readonly Random _rnd = new();
 
         private readonly string[] _jvmArgs = {
             "-XX:+UseG1GC","-XX:+ParallelRefProcEnabled","-XX:MaxGCPauseMillis=200",
@@ -184,7 +186,7 @@ namespace CustomLauncher
 
         private void StartTimers()
         {
-            try { _sysMonTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) }; _sysMonTimer.Tick += (s, e) => UpdateSysMonitor(); _sysMonTimer.Start(); UpdateSysMonitor(); } catch { }
+            try { if (_sysMonTimer != null) { _sysMonTimer.Stop(); _sysMonTimer = null; } _sysMonTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) }; _sysMonTimer.Tick += (s, e) => UpdateSysMonitor(); _sysMonTimer.Start(); UpdateSysMonitor(); } catch { }
         }
 
         private void UpdateSysMonitor()
@@ -274,13 +276,11 @@ namespace CustomLauncher
                 var sessionObj = await handler.AuthenticateInteractively();
                 
                 if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
-                
+
                 _settings.Username = sessionObj.Username;
-                _settings.AccessToken = sessionObj.AccessToken;
-                _settings.UUID = sessionObj.UUID;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
-                
+
                 SetupUsernameBox.Text = sessionObj.Username;
                 SetupUsernameBox.IsEnabled = false;
                 SetupUsernameBox.Opacity = 0.5;
@@ -305,8 +305,6 @@ namespace CustomLauncher
             {
                 _settings.Username = nick;
                 _settings.UserType = "offline";
-                _settings.AccessToken = "";
-                _settings.UUID = "";
             }
             
             AppSettings.Save(_settings);
@@ -418,7 +416,7 @@ namespace CustomLauncher
                 installerBase.CheckFileChecksum = false;
             _launcher = new MinecraftLauncher(parameters);
             _launcher.FileProgressChanged += (s, e) => Dispatcher.BeginInvoke(() =>
-            { StatusText.Text = e.Name; if (e.TotalTasks > 0) SetProgress((double)e.ProgressedTasks / e.TotalTasks * 100); });
+            { StatusText.Text = e.Name ?? ""; if (e.TotalTasks > 0) SetProgress((double)e.ProgressedTasks / e.TotalTasks * 100); });
         }
 
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
@@ -483,7 +481,7 @@ namespace CustomLauncher
                 if (_settings.UserType == "msa")
                 {
                     var handler = JELoginHandlerBuilder.BuildDefault();
-                    dynamic sessionObj = null;
+                    dynamic? sessionObj = null;
                     try { sessionObj = await handler.AuthenticateSilently(); } catch { }
                     
                     if (sessionObj != null && !string.IsNullOrEmpty(sessionObj.Username))
@@ -525,6 +523,7 @@ namespace CustomLauncher
                 StatusText.Text = "Готов";
                 _discordManager.SetMenuState();
             }
+            catch (OperationCanceledException) { Log("Установка отменена."); StatusText.Text = "Отменено"; SetPlayState("idle"); }
             catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка запуска"); }
             finally { SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
         }
@@ -592,7 +591,9 @@ namespace CustomLauncher
             string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash-log.txt");
             try { File.WriteAllText(logPath, $"[{DateTime.Now}] {context}\r\n{ex.ToString()}\r\n"); } catch { }
 
-            bool isJavaError = ex.Message.Contains("не удается найти") || ex.Message.Contains("cannot find the file") || ex.Message.ToLower().Contains("java");
+            bool isJavaError = ex is System.ComponentModel.Win32Exception
+                || ex.Message.Contains("не удается найти")
+                || ex.Message.Contains("cannot find the file");
             
             if (isJavaError)
             {
@@ -716,7 +717,7 @@ namespace CustomLauncher
                             string p = Path.Combine(_settings.GamePath, dir);
                             try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
                         }
-                        throw new Exception("Установка отменена пользователем.");
+                        throw new OperationCanceledException("Установка отменена пользователем.");
                     }
                 }
             }
@@ -726,7 +727,7 @@ namespace CustomLauncher
         {
             tb.Text = "";
             string chars = "$?#!*%@^&~";
-            var rnd = new Random();
+            var rnd = _rnd;
             for (int i = 0; i < targetText.Length; i++)
             {
                 tb.Text = targetText.Substring(0, i) + chars[rnd.Next(chars.Length)] + "_";
@@ -740,8 +741,8 @@ namespace CustomLauncher
         private string GetRandomGreeting(string username)
         {
             int hour = DateTime.Now.Hour;
-            var rnd = new Random();
-            
+            var rnd = _rnd;
+
             if (hour >= 4 && hour < 12)
             {
                 string[] p = {
@@ -837,7 +838,7 @@ namespace CustomLauncher
         private string GetRandomQuestion()
         {
             int hour = DateTime.Now.Hour;
-            var rnd = new Random();
+            var rnd = _rnd;
             var q = new System.Collections.Generic.List<string> {
                 "Как дела?", "Что нового?", "Готов к игре?", "Какие планы на игру?",
                 "Скилл наточен?", "Готов побеждать?", "Все системы в норме?",
@@ -862,10 +863,13 @@ namespace CustomLauncher
 
         private async void StartWelcomeTextLoop()
         {
+            if (_welcomeLoopStarted) return;
+            _welcomeLoopStarted = true;
+
             string chars = "$?#!*%@^&~";
-            var rnd = new Random();
+            var rnd = _rnd;
             bool showGreeting = true;
-            
+
             while (true)
             {
                 string phrase = showGreeting ? GetRandomGreeting(_settings.Username) : GetRandomQuestion();
@@ -935,10 +939,8 @@ namespace CustomLauncher
                 var sessionObj = await handler.AuthenticateInteractively();
                 
                 if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
-                
+
                 _settings.Username = sessionObj.Username;
-                _settings.AccessToken = sessionObj.AccessToken;
-                _settings.UUID = sessionObj.UUID;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
                 SwitchToMain();
@@ -953,11 +955,9 @@ namespace CustomLauncher
         {
             var n = UsernameBox.Text.Trim(); 
             if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog("Введите никнейм!"); return; }
-            _settings.Username = n; 
+            _settings.Username = n;
             _settings.UserType = "offline";
-            _settings.AccessToken = "";
-            _settings.UUID = "";
-            AppSettings.Save(_settings); 
+            AppSettings.Save(_settings);
             SwitchToMain(); 
         }
 
@@ -1086,7 +1086,9 @@ namespace CustomLauncher
                 
                 UpdateServerButtons();
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
-                if (launcherVerStr != VER && await ShowCustomDialog($"Обновить лаунчер до {launcherVerStr}?", "Обновление", true)) await UpdateLauncher();
+                if (Version.TryParse(launcherVerStr, out var onlineLauncherV) && Version.TryParse(VER, out var currentLauncherV)
+                    && onlineLauncherV > currentLauncherV
+                    && await ShowCustomDialog($"Обновить лаунчер до {launcherVerStr}?", "Обновление", true)) await UpdateLauncher();
             }
             catch { StatusText.Text = "Ошибка сети"; }
         }
@@ -1116,7 +1118,13 @@ namespace CustomLauncher
             if (_isBusy) return;
             if (!_settings.HasGamePath) { await ShowCustomDialog("Сначала выберите папку!"); return; }
             if (await ShowCustomDialog("Перекачать моды?", "Подтверждение", true))
-            { SetBusy(true); await InstallModpack(true); Log("Готово!"); StatusText.Text = "Моды переустановлены"; SetPlayState("idle"); SetBusy(false); }
+            {
+                SetBusy(true);
+                try { await InstallModpack(true); Log("Готово!"); StatusText.Text = "Моды переустановлены"; SetPlayState("idle"); }
+                catch (OperationCanceledException) { Log("Установка отменена."); StatusText.Text = "Отменено"; }
+                catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка переустановки"); }
+                finally { SetBusy(false); }
+            }
         }
 
         private void BtnChangeIcon_Click(object s, RoutedEventArgs e)
@@ -1199,6 +1207,10 @@ namespace CustomLauncher
             TopButtons.Visibility = Visibility.Collapsed;
             BtnGitHub.Visibility = Visibility.Collapsed;
             SysMonitorRich.Visibility = Visibility.Collapsed;
+
+            try { int maxRam = (int)(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1048576L); ServerRamSlider.Maximum = Math.Max(2048, maxRam); }
+            catch { ServerRamSlider.Maximum = 8192; }
+
             LoadServerList();
         }
 
@@ -1569,7 +1581,7 @@ namespace CustomLauncher
                 UpdateServerButtons();
 
                 string javaPath = FindJava();
-                await _serverManager.StartAsync(_activeServerConfig, javaPath);
+                await _serverManager!.StartAsync(_activeServerConfig, javaPath);
             }
             catch (Exception ex)
             {
@@ -1790,8 +1802,10 @@ namespace CustomLauncher
             bool hasConfig = _activeServerConfig != null;
             bool isInstalled = hasConfig && (_activeServerConfig!.IsInstalled || ServerInstaller.IsInstalled(_activeServerConfig.ServerPath));
             bool isRunning = _serverManager != null && _serverManager.CurrentState == ServerState.Running;
+            bool isStarting = _serverManager != null && _serverManager.CurrentState == ServerState.Starting;
             bool isStopping = _serverManager != null && _serverManager.CurrentState == ServerState.Stopping;
             bool isStopped = _serverManager == null || _serverManager.CurrentState == ServerState.Stopped;
+            bool isActive = isRunning || isStarting;
 
             BtnInstallServer.Visibility = hasConfig && !isInstalled ? Visibility.Visible : Visibility.Collapsed;
             BtnInstallServer.IsEnabled = hasConfig && _activeServerConfig!.EulaAccepted && !_isServerBusy;
@@ -1801,15 +1815,15 @@ namespace CustomLauncher
 
             BtnStartServer.Visibility = isInstalled && isStopped && !_needsServerModpackUpdate ? Visibility.Visible : Visibility.Collapsed;
             BtnStartServer.IsEnabled = !_isServerBusy;
-            BtnStopServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
-            BtnRestartServer.Visibility = isRunning ? Visibility.Visible : Visibility.Collapsed;
+            BtnStopServer.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+            BtnRestartServer.Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
             BtnRestoreBackup.Visibility = isInstalled && isStopped ? Visibility.Visible : Visibility.Collapsed;
             BtnRestoreBackup.IsEnabled = !_isServerBusy;
             BtnOpenServerFolder.Visibility = isInstalled ? Visibility.Visible : Visibility.Collapsed;
 
             ServerConfigForm.IsEnabled = hasConfig && !_isServerBusy;
-            TabGeneralContent.IsEnabled = !isRunning && !isStopping;
-            TabGeneralContent.ToolTip = (isRunning || isStopping) ? "Остановите сервер, чтобы взаимодействовать" : null;
+            TabGeneralContent.IsEnabled = isStopped && !_isServerBusy;
+            TabGeneralContent.ToolTip = !isStopped ? "Остановите сервер, чтобы взаимодействовать" : null;
         }
 
         private void SetServerBusy(bool busy, string statusMessage = "")

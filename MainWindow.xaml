@@ -901,7 +901,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="60"/>
                                 </Grid.ColumnDefinitions>
-                                <Slider x:Name="RamSlider" Minimum="1024" Maximum="8192" Value="4096" VerticalAlignment="Center" Margin="0,0,15,0" LargeChange="1024" SmallChange="512" Ticks="2048,4096,6144,8192,12288,16384,24576,32768,49152,65536" TickPlacement="BottomRight" ValueChanged="RamSlider_ValueChanged"/>
+                                <Slider x:Name="RamSlider" Minimum="1024" Maximum="8192" Value="4096" VerticalAlignment="Center" Margin="0,0,15,0" LargeChange="1024" SmallChange="512" Ticks="2048,4096,6144,8192,10240,12288,14336,16384,24576,32768,49152,65536" TickPlacement="BottomRight" ValueChanged="RamSlider_ValueChanged"/>
                                 <TextBox x:Name="RamBox" Text="{Binding Value, ElementName=RamSlider, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat={}{0:0}}" Grid.Column="1" TextAlignment="Center" IsReadOnly="True" Focusable="False" Cursor="Arrow"/>
                             </Grid>
 

@@ -28,10 +28,10 @@ namespace CustomLauncher.Core
         public event Action<string>? OutputReceived;
         public event Action<ServerState>? StateChanged;
 
-        public async Task StartAsync(ServerConfig config, string javaPath)
+        public Task StartAsync(ServerConfig config, string javaPath)
         {
             if (CurrentState != ServerState.Stopped)
-                return;
+                return Task.CompletedTask;
 
             string serverDir = ResolveServerDirectory(config);
             EnsureDirectoryExists(serverDir);
@@ -46,16 +46,27 @@ namespace CustomLauncher.Core
                 GenerateWhitelistJson(config);
 
             LaunchServerProcess(javaPath, serverDir);
+            return Task.CompletedTask;
         }
 
         public async Task StopAsync()
         {
             var process = _serverProcess;
-            if (CurrentState != ServerState.Running || process == null)
+            if (process == null || CurrentState == ServerState.Stopped || CurrentState == ServerState.Stopping)
                 return;
 
+            bool wasRunning = CurrentState == ServerState.Running;
             SetState(ServerState.Stopping);
-            SendCommand("stop");
+
+            // Сервер ещё стартует и не принимает команды — корректно завершить нельзя, гасим процесс.
+            if (!wasRunning)
+            {
+                ForceKillProcess();
+                return;
+            }
+
+            // Пишем напрямую: SendCommand отбрасывает команды в состоянии Stopping.
+            WriteToServer("stop");
 
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
             try
@@ -85,8 +96,16 @@ namespace CustomLauncher.Core
 
         public void SendCommand(string command)
         {
+            if (CurrentState != ServerState.Running)
+                return;
+
+            WriteToServer(command);
+        }
+
+        private void WriteToServer(string command)
+        {
             var input = _serverInput;
-            if (input == null || CurrentState != ServerState.Running)
+            if (input == null)
                 return;
 
             try
@@ -118,8 +137,7 @@ namespace CustomLauncher.Core
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
 
-            SetState(ServerState.Running);
-
+            // Остаёмся в Starting; перейдём в Running, когда сервер сообщит о готовности (см. OnDataReceived).
             _ = MonitorProcessExitAsync();
         }
 
@@ -328,8 +346,14 @@ namespace CustomLauncher.Core
 
         private void OnDataReceived(object sender, DataReceivedEventArgs eventArgs)
         {
-            if (eventArgs.Data != null)
-                OutputReceived?.Invoke(eventArgs.Data);
+            if (eventArgs.Data == null)
+                return;
+
+            // Forge/Minecraft печатает "Done (XX.XXXs)! For help, type ..." по завершении старта.
+            if (CurrentState == ServerState.Starting && eventArgs.Data.Contains("Done ("))
+                SetState(ServerState.Running);
+
+            OutputReceived?.Invoke(eventArgs.Data);
         }
 
         private void SetState(ServerState newState)

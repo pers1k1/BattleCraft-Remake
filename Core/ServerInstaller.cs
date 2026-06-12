@@ -35,21 +35,6 @@ namespace CustomLauncher.Core
             return hasArgsFile || hasForgeJar;
         }
 
-        public async Task InstallAsync(string targetPath, string javaPath, Action<double>? onProgress = null)
-        {
-            EnsureDirectoryExists(targetPath);
-
-            string serverDirectory = Path.Combine(targetPath, "server");
-            string backupDirectory = Path.Combine(targetPath, "backup");
-
-            EnsureDirectoryExists(serverDirectory);
-            EnsureDirectoryExists(backupDirectory);
-
-            await InstallForgeRuntime(serverDirectory, javaPath, onProgress);
-            await DownloadAndApplyServerData(serverDirectory, backupDirectory, onProgress);
-            await UpdateServerMods(serverDirectory, onProgress);
-        }
-
         public async Task UpdateServerMods(string serverDirectory, Action<double>? onProgress = null)
         {
             string temporaryZipPath = Path.Combine(serverDirectory, $"mods_server_{Guid.NewGuid():N}.zip");
