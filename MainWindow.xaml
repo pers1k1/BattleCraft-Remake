@@ -784,7 +784,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="SetupPathBox" Grid.Column="0"/>
+                <TextBox x:Name="SetupPathBox" Grid.Column="0" IsReadOnly="True"/>
                 <Button Content="..." Click="BtnSetupSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
             </Grid>
             <Button Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
@@ -911,7 +911,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox x:Name="PathBox" Grid.Column="0"/>
+                                <TextBox x:Name="PathBox" Grid.Column="0" IsReadOnly="True"/>
                                 <Button Content="..." Click="BtnSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
                             </Grid>
 

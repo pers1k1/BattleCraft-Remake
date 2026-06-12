@@ -522,7 +522,7 @@ namespace CustomLauncher
                 StatusText.Text = "Готов";
                 _discordManager.SetMenuState();
             }
-            catch (Exception ex) { await ShowCustomDialog($"Ошибка: {ex.Message}"); }
+            catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка запуска"); }
             finally { SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
         }
 
@@ -573,7 +573,7 @@ namespace CustomLauncher
                 try { File.Delete(jar); } catch { }
                 CleanForgeLog();
             }
-            catch (Exception ex) { await ShowCustomDialog($"Ошибка Forge: {ex.Message}"); }
+            catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка Forge"); }
             finally { GameProgressBar.IsIndeterminate = false; }
         }
 
@@ -582,6 +582,81 @@ namespace CustomLauncher
             try { foreach (var dir in new[] { Path.GetTempPath(), _settings.GamePath, AppDomain.CurrentDomain.BaseDirectory })
                 foreach (var f in Directory.GetFiles(dir, "*.jar.log")) try { File.Delete(f); } catch { }
             } catch { }
+        }
+
+        private async Task HandleErrorAsync(Exception ex, string context)
+        {
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash-log.txt");
+            try { File.WriteAllText(logPath, $"[{DateTime.Now}] {context}\r\n{ex.ToString()}\r\n"); } catch { }
+
+            bool isJavaError = ex.Message.Contains("не удается найти") || ex.Message.Contains("cannot find the file") || ex.Message.ToLower().Contains("java");
+            
+            if (isJavaError)
+            {
+                if (await ShowCustomDialog("Похоже, что отсутствует Java. Скачать и установить Java 17 автоматически?", "Ошибка Java", true))
+                {
+                    await DownloadAndInstallJava();
+                    return;
+                }
+            }
+
+            if (await ShowCustomDialog($"{context}: {ex.Message}\n\nОткрыть файл с логами?", "Ошибка", true))
+            {
+                try { Process.Start(new ProcessStartInfo(logPath) { UseShellExecute = true }); } catch { }
+            }
+        }
+
+        private async Task DownloadAndInstallJava()
+        {
+            try
+            {
+                SetBusy(true);
+                GameProgressBar.IsIndeterminate = true;
+                StatusText.Text = "Скачивание Java 17...";
+                
+                string tempZip = Path.Combine(Path.GetTempPath(), "jre17.zip");
+                if (File.Exists(tempZip)) File.Delete(tempZip);
+                
+                var downloader = new FileDownloader();
+                downloader.ProgressChanged += (p) => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; GameProgressBar.Value = p; });
+                downloader.StatusChanged += (s) => Dispatcher.BeginInvoke(() => StatusText.Text = $"Скачивание Java 17... {s}");
+                
+                await downloader.DownloadFileAsync("https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse", tempZip);
+                
+                StatusText.Text = "Установка Java 17...";
+                GameProgressBar.IsIndeterminate = true;
+                await Task.Run(() => 
+                {
+                    string targetDir = Path.Combine(_settings.GamePath, "runtime", "java-runtime-gamma", "windows-x64", "java-runtime-gamma");
+                    if (Directory.Exists(targetDir)) Directory.Delete(targetDir, true);
+                    Directory.CreateDirectory(targetDir);
+                    
+                    System.IO.Compression.ZipFile.ExtractToDirectory(tempZip, targetDir);
+                    File.Delete(tempZip);
+                    
+                    var subDirs = Directory.GetDirectories(targetDir);
+                    if (subDirs.Length == 1)
+                    {
+                        string extractedDir = subDirs[0];
+                        foreach (var file in Directory.GetFiles(extractedDir)) File.Move(file, Path.Combine(targetDir, Path.GetFileName(file)));
+                        foreach (var dir in Directory.GetDirectories(extractedDir)) Directory.Move(dir, Path.Combine(targetDir, Path.GetFileName(dir)));
+                        Directory.Delete(extractedDir);
+                    }
+                });
+                
+                await ShowCustomDialog("Java 17 успешно установлена! Попробуйте запустить игру снова.", "Успех");
+            }
+            catch (Exception ex)
+            {
+                await ShowCustomDialog($"Ошибка установки Java: {ex.Message}");
+            }
+            finally
+            {
+                SetBusy(false);
+                GameProgressBar.IsIndeterminate = false;
+                GameProgressBar.Value = 0;
+                StatusText.Text = "Готов";
+            }
         }
 
         private static readonly string[] ModpackDirs = { "mods", "config", "scripts", "kubejs", "resourcepacks", "shaderpacks", "defaultconfigs", "tacz", "tacz_backup" };
