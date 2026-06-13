@@ -54,7 +54,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "6.7";
+        private const string VER = "6.8";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -167,6 +167,8 @@ namespace CustomLauncher
         {
             InitializeComponent();
             InitializeLauncherCore();
+            // Зависшие загрузки библиотек теперь повторяются — показываем это в консоли.
+            ResilientHttpClientFactory.DownloadRetry += notice => Log(notice);
         }
 
         protected override void OnClosed(EventArgs e)
@@ -411,7 +413,9 @@ namespace CustomLauncher
         private void InitializeLauncher()
         {
             _minecraftPath = new MinecraftPath(_settings.GamePath);
-            var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath);
+            // Свой HttpClient передаём прямо в CreateDefault: иначе GameInstaller, который
+            // собирается тут же, останется на дефолтном клиенте без защиты от зависаний.
+            var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath, ResilientHttpClientFactory.Shared);
             if (parameters.GameInstaller is GameInstallerBase installerBase)
                 installerBase.CheckFileChecksum = false;
             _launcher = new MinecraftLauncher(parameters);
@@ -1095,22 +1099,63 @@ namespace CustomLauncher
 
         private async Task UpdateLauncher()
         {
-            StatusText.Text = "Обновление...";
+            ShowUpdateOverlay();
             try
             {
                 string dir = AppDomain.CurrentDomain.BaseDirectory, cur = Process.GetCurrentProcess().MainModule!.FileName;
                 string tmp = Path.Combine(dir, "upd.exe");
                 string old = cur + ".old";
-                await new FileDownloader().DownloadFileAsync(LAUNCHER_EXE_URL, tmp);
-                
+
+                var dl = new FileDownloader();
+                dl.ProgressChanged += p => Dispatcher.BeginInvoke(() => SetUpdateProgress(p));
+                await dl.DownloadFileAsync(LAUNCHER_EXE_URL, tmp);
+
+                SetUpdateProgress(100);
+                UpdateSubText.Text = "Перезапуск…";
+                await Task.Delay(400);
+
                 try { if (File.Exists(old)) File.Delete(old); } catch { }
                 File.Move(cur, old);
                 File.Move(tmp, cur);
-                
-                Process.Start(new ProcessStartInfo(cur) { UseShellExecute = true }); 
+
+                Process.Start(new ProcessStartInfo(cur) { UseShellExecute = true });
                 Application.Current.Shutdown();
             }
-            catch { StatusText.Text = "Ошибка обновления"; }
+            catch { HideUpdateOverlay(); StatusText.Text = "Ошибка обновления"; }
+        }
+
+        private void ShowUpdateOverlay()
+        {
+            UpdateProgressBar.BeginAnimation(ProgressBar.ValueProperty, null);
+            UpdateProgressBar.Value = 0;
+            UpdatePercentText.Text = "0%";
+            UpdateSubText.Text = "Скачивание новой версии…";
+
+            UpdateOverlay.Visibility = Visibility.Visible;
+            UpdateOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            UpdateCardScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.92, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
+            UpdateCardScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.92, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
+            UpdateCardTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(24, 0, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
+
+            // Бесконечное вращение кольца-спиннера.
+            UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty,
+                new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.1)) { RepeatBehavior = RepeatBehavior.Forever });
+        }
+
+        private void HideUpdateOverlay()
+        {
+            UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            UpdateOverlay.BeginAnimation(OpacityProperty, null);
+            UpdateOverlay.Visibility = Visibility.Hidden;
+        }
+
+        private void SetUpdateProgress(double percent)
+        {
+            UpdateProgressBar.BeginAnimation(ProgressBar.ValueProperty,
+                new DoubleAnimation { To = percent, Duration = TimeSpan.FromMilliseconds(200), EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+            UpdatePercentText.Text = $"{percent:F0}%";
         }
 
         private async void BtnReinstall_Click(object s, RoutedEventArgs e)

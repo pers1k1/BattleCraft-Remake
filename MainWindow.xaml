@@ -607,7 +607,7 @@
 
             <Grid x:Name="PlayContentPanel" Grid.Column="1">
                 <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
-                <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v6.7" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
+                <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v6.8" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
                 <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
                     <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="0,0,0,10" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
                     <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
@@ -944,6 +944,38 @@
                         <Button x:Name="CustomDialogBtnCancel" Content="Отмена" Width="100" Margin="0,0,10,0" Style="{StaticResource GlowButton}" Click="CustomDialogCancel_Click"/>
                         <Button x:Name="CustomDialogBtnOk" Content="OK" Width="100" Style="{StaticResource GlowButton}" Click="CustomDialogOk_Click"/>
                     </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="UpdateOverlay" Visibility="Hidden" Background="#DD000000">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource PrimaryBrush}" BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="16" Width="360" Padding="34" RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="UpdateCardScale" ScaleX="0.92" ScaleY="0.92"/>
+                        <TranslateTransform x:Name="UpdateCardTranslate" Y="24"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="35" ShadowDepth="0" Opacity="0.45"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="92" Height="92" Margin="0,0,0,24">
+                        <Ellipse Width="92" Height="92" Stroke="#1AFFFFFF" StrokeThickness="6"/>
+                        <Ellipse x:Name="UpdateSpinnerArc" Width="92" Height="92" Stroke="{DynamicResource AccentBrush}" StrokeThickness="6"
+                                 StrokeDashArray="34 12" StrokeDashCap="Round" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <RotateTransform x:Name="UpdateSpinnerRotate" Angle="0"/>
+                            </Ellipse.RenderTransform>
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="14" ShadowDepth="0" Opacity="0.7"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <TextBlock x:Name="UpdatePercentText" Text="0%" FontFamily="Consolas, Courier New" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Text="Обновление лаунчера" FontSize="17" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="UpdateSubText" Text="Скачивание новой версии…" FontSize="12" Foreground="#AAFFFFFF" HorizontalAlignment="Center" Margin="0,0,0,18"/>
+                    <ProgressBar x:Name="UpdateProgressBar" Width="270" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
                 </StackPanel>
             </Border>
         </Grid>
