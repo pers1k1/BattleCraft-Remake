@@ -59,7 +59,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.4";
+        private const string VER = "7.5";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -991,7 +991,30 @@ namespace CustomLauncher
         }
 
         private void BtnSetupSelectFolder_Click(object s, RoutedEventArgs e)
-        { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) SetupPathBox.Text = d.FolderName; }
+        { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) SetupPathBox.Text = ResolveGamePath(d.FolderName); }
+
+        private static string ResolveGamePath(string chosen)
+        {
+            if (string.IsNullOrWhiteSpace(chosen)) return "";
+            chosen = chosen.Trim();
+            string trimmed = chosen.TrimEnd('\\', '/');
+            if (string.Equals(Path.GetFileName(trimmed), "BattleCraft", StringComparison.OrdinalIgnoreCase))
+                return trimmed;
+            return Path.Combine(chosen, "BattleCraft");
+        }
+
+        private async Task PrepareGameFolderAsync(string path)
+        {
+            try
+            {
+                await Task.Run(() =>
+                {
+                    if (Directory.Exists(path)) Directory.Delete(path, true);
+                    Directory.CreateDirectory(path);
+                });
+            }
+            catch (Exception ex) { Log($"Ошибка подготовки папки игры: {ex.Message}"); }
+        }
 
         private async void BtnSetupMicrosoft_Click(object s, RoutedEventArgs e)
         {
@@ -1021,8 +1044,15 @@ namespace CustomLauncher
         {
             string nick = SetupUsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog("Авторизуйтесь через Microsoft или введите никнейм!"); return; }
-            string path = SetupPathBox.Text.Trim();
+            string path = ResolveGamePath(SetupPathBox.Text);
             if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog("Выберите папку для игры!"); return; }
+
+            if (!string.Equals(path, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
+            {
+                await PrepareGameFolderAsync(path);
+                _settings.IsModpackInstalled = false;
+                _settings.ModpackVersion = "0.0";
+            }
 
             _settings.GamePath = path; _settings.RamMb = 4096;
 
@@ -1036,7 +1066,7 @@ namespace CustomLauncher
 
             SetupPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Visible;
-            UsernameBox.Text = nick; RamSlider.Value = 4096; PathBox.Text = path;
+            UsernameBox.Text = nick; RamSlider.Value = 4096; SetupPathBox.Text = path; PathBox.Text = path;
             _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             SwitchToMain();
         }
@@ -1758,10 +1788,18 @@ namespace CustomLauncher
             SettingsTitleTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(800)) { EasingFunction = titleEase, BeginTime = TimeSpan.FromMilliseconds(150) });
         }
 
-        private void BtnCloseSettings_Click(object s, RoutedEventArgs e)
+        private async void BtnCloseSettings_Click(object s, RoutedEventArgs e)
         {
             if (int.TryParse(RamBox.Text, out int ram)) _settings.RamMb = ram;
-            string np = PathBox.Text.Trim(); if (!string.IsNullOrWhiteSpace(np)) _settings.GamePath = np;
+            string np = ResolveGamePath(PathBox.Text);
+            if (!string.IsNullOrWhiteSpace(np) && !string.Equals(np, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
+            {
+                await PrepareGameFolderAsync(np);
+                _settings.IsModpackInstalled = false;
+                _settings.ModpackVersion = "0.0";
+                _settings.GamePath = np;
+                PathBox.Text = np;
+            }
             AppSettings.Save(_settings); if (_settings.HasGamePath) InitializeLauncher();
             var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150));
             fade.Completed += (s2, e2) => { SettingsPanel.Visibility = Visibility.Hidden; SettingsPanel.BeginAnimation(OpacityProperty, null); SettingsPanel.Opacity = 1; };
@@ -1770,7 +1808,7 @@ namespace CustomLauncher
 
         private void BtnSaveSettings_Click(object s, RoutedEventArgs e) => BtnCloseSettings_Click(s, e);
         private void DebugCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) { _settings.DebugConsole = DebugCheck.IsChecked == true; AppSettings.Save(_settings); } }
-        private void BtnSelectFolder_Click(object s, RoutedEventArgs e) { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) PathBox.Text = d.FolderName; }
+        private void BtnSelectFolder_Click(object s, RoutedEventArgs e) { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) PathBox.Text = ResolveGamePath(d.FolderName); }
 
         private void RamSlider_ValueChanged(object s, RoutedPropertyChangedEventArgs<double> e)
         {
