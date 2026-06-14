@@ -56,7 +56,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.0";
+        private const string VER = "7.1";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -889,8 +889,9 @@ namespace CustomLauncher
             if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Log(message)); return; }
             string prefix = message.Contains("Ошибка") ? "[ERR]" : "[SYS]";
             _logLines.Add($"{prefix} {message}");
-            if (_logLines.Count > 6) _logLines.RemoveAt(0);
+            if (_logLines.Count > 200) _logLines.RemoveAt(0);
             LogTerminalText.Text = string.Join("\n", _logLines);
+            if (LogScroll != null) { LogScroll.UpdateLayout(); LogScroll.ScrollToBottom(); }
         }
 
         private void StartTimers()
