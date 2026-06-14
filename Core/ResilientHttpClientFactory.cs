@@ -52,6 +52,8 @@ namespace CustomLauncher.Core
 
         private sealed class StallGuardHandler : DelegatingHandler
         {
+            private const long MaxBufferBytes = 8L * 1024 * 1024;
+
             public TimeSpan IdleReadTimeout { get; set; } = TimeSpan.FromSeconds(20);
             public int MaxAttempts { get; set; } = 5;
 
@@ -88,6 +90,10 @@ namespace CustomLauncher.Core
                         // CmlLib сам бросит EnsureSuccessStatusCode.
                         if (!response.IsSuccessStatusCode)
                             return response;
+
+                        long? length = response.Content.Headers.ContentLength;
+                        if (length > MaxBufferBytes)
+                            return await BuildStreamingResponse(response).ConfigureAwait(false);
 
                         byte[] body = await ReadWithIdleTimeout(response, cancellationToken).ConfigureAwait(false);
                         return BuildBufferedResponse(response, body);
@@ -148,6 +154,29 @@ namespace CustomLauncher.Core
                 }
 
                 return buffer.ToArray();
+            }
+
+            private async Task<HttpResponseMessage> BuildStreamingResponse(HttpResponseMessage original)
+            {
+                var networkStream = await original.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var guarded = new IdleTimeoutStream(networkStream, original, IdleReadTimeout);
+
+                var message = new HttpResponseMessage(original.StatusCode)
+                {
+                    Version = original.Version,
+                    ReasonPhrase = original.ReasonPhrase,
+                    RequestMessage = original.RequestMessage
+                };
+
+                foreach (var header in original.Headers)
+                    message.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+                var content = new StreamContent(guarded);
+                foreach (var header in original.Content.Headers)
+                    content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                message.Content = content;
+
+                return message;
             }
 
             private static HttpResponseMessage BuildBufferedResponse(HttpResponseMessage original, byte[] body)
@@ -221,6 +250,61 @@ namespace CustomLauncher.Core
                 HttpStatusCode.GatewayTimeout => true,        // 504
                 _ => false
             };
+        }
+
+        private sealed class IdleTimeoutStream : Stream
+        {
+            private readonly Stream _inner;
+            private readonly HttpResponseMessage _response;
+            private readonly TimeSpan _idleTimeout;
+
+            public IdleTimeoutStream(Stream inner, HttpResponseMessage response, TimeSpan idleTimeout)
+            {
+                _inner = inner;
+                _response = response;
+                _idleTimeout = idleTimeout;
+            }
+
+            public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            {
+                using var idleCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                idleCts.CancelAfter(_idleTimeout);
+                try
+                {
+                    return await _inner.ReadAsync(buffer, idleCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    throw new IOException(
+                        $"Соединение зависло: нет данных дольше {_idleTimeout.TotalSeconds:F0} с.");
+                }
+            }
+
+            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+                => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+            public override int Read(byte[] buffer, int offset, int count)
+                => ReadAsync(buffer.AsMemory(offset, count), CancellationToken.None).AsTask().GetAwaiter().GetResult();
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+            public override void Flush() { }
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _inner.Dispose();
+                    _response.Dispose();
+                }
+                base.Dispose(disposing);
+            }
         }
     }
 }

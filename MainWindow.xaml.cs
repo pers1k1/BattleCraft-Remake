@@ -38,11 +38,14 @@ namespace CustomLauncher
 
         private System.Windows.Threading.DispatcherTimer? _sysMonTimer;
         private System.Collections.Generic.List<string> _logLines = new();
+        private long _lastProgressTick;
 
         private ServerManager? _serverManager;
         private ServerConfig? _activeServerConfig;
         private bool _isServerTab;
         private bool _isServerBusy;
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _consoleQueue = new();
+        private System.Windows.Threading.DispatcherTimer? _consoleFlushTimer;
         private const int MAX_CONSOLE_CHARS = 100000;
         private DiscordManager _discordManager = new();
 
@@ -56,7 +59,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.3";
+        private const string VER = "7.4";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -168,6 +171,9 @@ namespace CustomLauncher
         public MainWindow()
         {
             InitializeComponent();
+            _consoleFlushTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
+            _consoleFlushTimer.Tick += (s, e) => FlushConsoleQueue();
+            _consoleFlushTimer.Start();
             InitializeLauncherCore();
             InitPixelWorld();
             StateChanged += (s, e) => UpdateSceneAnimation();
@@ -1164,8 +1170,26 @@ namespace CustomLauncher
             if (parameters.GameInstaller is GameInstallerBase installerBase)
                 installerBase.CheckFileChecksum = false;
             _launcher = new MinecraftLauncher(parameters);
-            _launcher.FileProgressChanged += (s, e) => Dispatcher.BeginInvoke(() =>
-            { StatusText.Text = e.Name ?? ""; if (e.TotalTasks > 0) SetProgress((double)e.ProgressedTasks / e.TotalTasks * 100); });
+            _launcher.FileProgressChanged += (s, e) =>
+            {
+                string name = e.Name ?? "";
+                int done = e.ProgressedTasks;
+                int total = e.TotalTasks;
+
+                long now = Environment.TickCount64;
+                long prev = System.Threading.Interlocked.Read(ref _lastProgressTick);
+                if (now - prev < 120) return;
+                if (System.Threading.Interlocked.CompareExchange(ref _lastProgressTick, now, prev) != prev) return;
+
+                double percent = total > 0 ? (double)done / total * 100 : -1;
+                bool debug = _settings.DebugConsole;
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (debug && !string.IsNullOrEmpty(name)) Log($"Файл: {name} ({done}/{total})");
+                    else StatusText.Text = name;
+                    if (percent >= 0) SetProgress(percent);
+                }, System.Windows.Threading.DispatcherPriority.Background);
+            };
         }
 
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
@@ -2491,22 +2515,28 @@ namespace CustomLauncher
 
         private void AppendConsoleOutput(string line)
         {
-            if (!Dispatcher.CheckAccess())
+            _consoleQueue.Enqueue(line);
+        }
+
+        private void FlushConsoleQueue()
+        {
+            if (_consoleQueue.IsEmpty) return;
+
+            var builder = new System.Text.StringBuilder();
+            bool portBusy = false;
+            while (_consoleQueue.TryDequeue(out var line))
             {
-                Dispatcher.BeginInvoke(() => AppendConsoleOutput(line));
-                return;
+                builder.Append(line).Append('\n');
+                if (line.Contains("FAILED TO BIND TO PORT") || line.Contains("Address already in use"))
+                    portBusy = true;
             }
 
-            ServerConsoleOutput.AppendText(line + "\n");
+            ServerConsoleOutput.AppendText(builder.ToString());
 
-            if (line.Contains("FAILED TO BIND TO PORT") || line.Contains("Address already in use"))
+            if (portBusy && !_waitingForPortKillConfirmation)
             {
-                if (!_waitingForPortKillConfirmation)
-                {
-                    _waitingForPortKillConfirmation = true;
-                    ServerConsoleOutput.AppendText("[SYS] ОШИБКА: Порт занят! Убить зависшие процессы Java? Введите Y или N\n");
-                    ServerConsoleOutput.ScrollToEnd();
-                }
+                _waitingForPortKillConfirmation = true;
+                ServerConsoleOutput.AppendText("[SYS] ОШИБКА: Порт занят! Убить зависшие процессы Java? Введите Y или N\n");
             }
 
             if (ServerConsoleOutput.Text.Length > MAX_CONSOLE_CHARS)
