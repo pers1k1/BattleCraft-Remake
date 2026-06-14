@@ -3,7 +3,7 @@
 ## Версии
 - **Minecraft**: 1.20.1
 - **Forge**: 47.4.20
-- **Launcher Version**: 7.0
+- **Launcher Version**: 7.1
 
 ## Особенности клиента
 - Загрузка и запуск Minecraft и Forge в один клик
