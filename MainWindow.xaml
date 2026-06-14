@@ -525,7 +525,7 @@
             <Image x:Name="PixelSceneImage" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" SnapsToDevicePixels="True"/>
         </Grid>
 
-        <Rectangle IsHitTestVisible="False" Opacity="0.04" Panel.ZIndex="-1">
+        <Rectangle IsHitTestVisible="False" Opacity="0.04" Panel.ZIndex="-1" CacheMode="BitmapCache">
             <Rectangle.Fill>
                 <VisualBrush TileMode="Tile" Viewport="0,0,4,4" ViewportUnits="Absolute">
                     <VisualBrush.Visual>
@@ -628,10 +628,13 @@
 
             <Grid x:Name="PlayContentPanel" Grid.Column="1" Margin="22,48,22,20">
 
-                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
                     <Border.Effect>
                         <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
                     </Border.Effect>
+                </Border>
+
+                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -693,7 +696,7 @@
                                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="OS" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="Windows 10 · WPF .NET 8" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="LAUNCHER" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.1" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.2" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="MINECRAFT" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 · Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="MODPACK" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
@@ -734,10 +737,13 @@
             </Grid>
 
             <Grid x:Name="ServerContentPanel" Grid.Column="1" Visibility="Collapsed" Margin="22,48,22,20">
-                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
                     <Border.Effect>
                         <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
                     </Border.Effect>
+                </Border>
+
+                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -1059,7 +1065,7 @@
             </Border>
         </Grid>
         <Grid x:Name="CustomDialogOverlay" Visibility="Hidden" Background="#AA000000">
-            <Border x:Name="CustomDialogBox" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource PrimaryBrush}" BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="12" MinWidth="350" MaxWidth="500" Padding="25" RenderTransformOrigin="0.5,0.5">
+            <Border x:Name="CustomDialogBox" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource PrimaryBrush}" BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="12" MinWidth="350" MaxWidth="500" Padding="25" RenderTransformOrigin="0.5,0.5" CacheMode="BitmapCache">
                 <Border.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="CustomDialogScale" ScaleX="0.9" ScaleY="0.9"/>

@@ -56,7 +56,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.1";
+        private const string VER = "7.2";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -170,6 +170,9 @@ namespace CustomLauncher
             InitializeComponent();
             InitializeLauncherCore();
             InitPixelWorld();
+            StateChanged += (s, e) => UpdateSceneAnimation();
+            Activated += (s, e) => UpdateSceneAnimation();
+            Deactivated += (s, e) => UpdateSceneAnimation();
             _ = BootSequenceAsync();
 
             ResilientHttpClientFactory.DownloadRetry += notice => Log(notice);
@@ -196,6 +199,7 @@ namespace CustomLauncher
         private byte[] _sceneBuf = new byte[SCN_W * SCN_H * 4];
         private System.Windows.Threading.DispatcherTimer? _worldTimer;
         private System.Windows.Threading.DispatcherTimer? _weatherTimer;
+        private bool _sceneRunning = true;
         private int _frame;
         private double CurHour() => DateTime.Now.Hour + DateTime.Now.Minute / 60.0;
 
@@ -246,6 +250,15 @@ namespace CustomLauncher
                 WorldTick();
             }
             catch { }
+        }
+
+        private void UpdateSceneAnimation()
+        {
+            bool shouldRun = WindowState != WindowState.Minimized && IsActive;
+            if (shouldRun == _sceneRunning) return;
+            _sceneRunning = shouldRun;
+            if (shouldRun) { _worldTimer?.Start(); _weatherTimer?.Start(); }
+            else { _worldTimer?.Stop(); _weatherTimer?.Stop(); }
         }
 
         private void RollWeather()
