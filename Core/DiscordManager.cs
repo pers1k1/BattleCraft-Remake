@@ -10,13 +10,10 @@ namespace CustomLauncher.Core
         private bool _isInitialized;
         private bool _isOwner = false;
         private string _currentState = "menu";
-        private string _currentServer = "";
 
-        // Не секреты: и ClientId приложения, и Discord-ID всё равно публичны в RPC-хендшейке.
-        // Вынесены в константы только ради читаемости/замены без правок по коду.
         private const string ClientId = "1510061496590401688";
         private const ulong OwnerDiscordId = 650390226643976213;
-        
+
         public string LauncherVersion { get; set; } = "";
         public string ModpackVersion { get; set; } = "";
 
@@ -33,20 +30,25 @@ namespace CustomLauncher.Core
                 {
                     _isOwner = true;
                     if (_currentState == "menu") SetMenuState();
-                    else if (_currentState == "playing") SetPlayingState(_currentServer);
                 }
             };
 
             _client.Initialize();
-            
-            SetMenuState();
+
             _isInitialized = true;
+            SetMenuState();
         }
 
         public void SetMenuState()
         {
             _currentState = "menu";
-            if (_client == null || !_client.IsInitialized) return;
+
+            if (_client == null)
+            {
+                Initialize();
+                return;
+            }
+            if (!_client.IsInitialized) return;
 
             var presence = new RichPresence()
             {
@@ -54,7 +56,7 @@ namespace CustomLauncher.Core
                 State = _isOwner ? "Owner" : "User",
                 Assets = new Assets()
                 {
-                    LargeImageKey = "rpc_icon", 
+                    LargeImageKey = "rpc_icon",
                     LargeImageText = "BattleCraft Remake"
                 },
                 Buttons = new Button[]
@@ -68,27 +70,14 @@ namespace CustomLauncher.Core
         public void SetPlayingState(string serverName)
         {
             _currentState = "playing";
-            _currentServer = serverName;
-            if (_client == null || !_client.IsInitialized) return;
 
-            string stateText = (serverName == "Одиночная игра" || string.IsNullOrEmpty(serverName)) ? "Одиночная игра" : $"Сервер: {serverName}";
-
-            var presence = new RichPresence()
+            if (_client != null)
             {
-                Details = $"Играет в BattleCraft | v{LauncherVersion} (Моды: v{ModpackVersion})",
-                State = _isOwner ? $"Owner | {stateText}" : $"User | {stateText}",
-                Assets = new Assets()
-                {
-                    LargeImageKey = "rpc_icon",
-                    LargeImageText = "BattleCraft Remake"
-                },
-                Timestamps = Timestamps.Now,
-                Buttons = new Button[]
-                {
-                    new Button() { Label = "GitHub", Url = "https://github.com/pers1k1/BattleCraft-Remake" }
-                }
-            };
-            _client.SetPresence(presence);
+                try { _client.ClearPresence(); } catch { }
+                _client.Dispose();
+                _client = null;
+            }
+            _isInitialized = false;
         }
 
         public void Dispose()
@@ -98,6 +87,7 @@ namespace CustomLauncher.Core
                 _client.Dispose();
                 _client = null;
             }
+            _isInitialized = false;
         }
     }
 }

@@ -18,7 +18,9 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Runtime.InteropServices;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 
 namespace CustomLauncher
@@ -54,7 +56,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "6.8";
+        private const string VER = "7.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -167,15 +169,720 @@ namespace CustomLauncher
         {
             InitializeComponent();
             InitializeLauncherCore();
-            // Зависшие загрузки библиотек теперь повторяются — показываем это в консоли.
+            InitPixelWorld();
+            _ = BootSequenceAsync();
+
             ResilientHttpClientFactory.DownloadRetry += notice => Log(notice);
         }
 
         protected override void OnClosed(EventArgs e)
         {
+            try { _worldTimer?.Stop(); _weatherTimer?.Stop(); } catch { }
             _discordManager?.Dispose();
             base.OnClosed(e);
         }
+
+        #region Пиксельный мир (фон, время суток, погода)
+
+        private readonly Random _sceneRng = new();
+
+        private enum Weather { Clear, Wind, Rain, Snow, Fog, Comets, Sakura, Leaves }
+        private Weather _weather = Weather.Clear;
+
+        private const int SCN_W = 200;
+        private const int SCN_H = 118;
+        private const int HORIZON = 74;
+        private WriteableBitmap? _sceneBmp;
+        private byte[] _sceneBuf = new byte[SCN_W * SCN_H * 4];
+        private System.Windows.Threading.DispatcherTimer? _worldTimer;
+        private System.Windows.Threading.DispatcherTimer? _weatherTimer;
+        private int _frame;
+        private double CurHour() => DateTime.Now.Hour + DateTime.Now.Minute / 60.0;
+
+        private readonly int[] _mtnFar = new int[SCN_W];
+        private readonly int[] _mtnNear = new int[SCN_W];
+        private readonly int[] _forest = new int[SCN_W];
+
+        private int[] _starX = Array.Empty<int>(), _starY = Array.Empty<int>();
+        private double[] _starP = Array.Empty<double>();
+
+        private double[] _cloudX = Array.Empty<double>(), _cloudY = Array.Empty<double>(), _cloudW = Array.Empty<double>();
+
+        private double[] _pX = Array.Empty<double>(), _pY = Array.Empty<double>(), _pP = Array.Empty<double>();
+
+        private double _cometX, _cometY; private int _cometLife;
+
+        private void InitPixelWorld()
+        {
+            try
+            {
+                _sceneBmp = new WriteableBitmap(SCN_W, SCN_H, 96, 96, PixelFormats.Bgra32, null);
+                if (PixelSceneImage != null) PixelSceneImage.Source = _sceneBmp;
+                InitBlob();
+
+                for (int x = 0; x < SCN_W; x++)
+                {
+                    _mtnFar[x] = (int)(HORIZON - 18 - 12 * Math.Sin(x * 0.045) - 6 * Math.Sin(x * 0.11 + 2));
+                    _mtnNear[x] = (int)(HORIZON - 6 - 9 * Math.Sin(x * 0.06 + 1.3) - 5 * Math.Sin(x * 0.15 + 4));
+                    _forest[x] = (int)(SCN_H - 14 - 4 * Math.Sin(x * 0.5) - 3 * Math.Sin(x * 0.9 + 1) - (_sceneRng.NextDouble() < 0.12 ? 4 : 0));
+                }
+
+                int sc = 70; _starX = new int[sc]; _starY = new int[sc]; _starP = new double[sc];
+                for (int i = 0; i < sc; i++) { _starX[i] = _sceneRng.Next(SCN_W); _starY[i] = _sceneRng.Next(HORIZON - 14); _starP[i] = _sceneRng.NextDouble() * 6.28; }
+
+                int cc = 4; _cloudX = new double[cc]; _cloudY = new double[cc]; _cloudW = new double[cc];
+                for (int i = 0; i < cc; i++) { _cloudX[i] = _sceneRng.Next(SCN_W); _cloudY[i] = 10 + _sceneRng.Next(28); _cloudW[i] = 14 + _sceneRng.Next(16); }
+
+                RollWeather();
+
+                _worldTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+                _worldTimer.Tick += (s, e) => WorldTick();
+                _worldTimer.Start();
+
+                _weatherTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
+                _weatherTimer.Tick += (s, e) => RollWeather();
+                _weatherTimer.Start();
+
+                WorldTick();
+            }
+            catch { }
+        }
+
+        private void RollWeather()
+        {
+            int hour = DateTime.Now.Hour;
+            bool night = hour >= 21 || hour < 4;
+            int month = DateTime.Now.Month;
+            bool winter = month == 12 || month <= 2;
+            bool autumn = month >= 9 && month <= 11;
+            bool spring = month >= 3 && month <= 5;
+
+            if (night && _sceneRng.NextDouble() < 0.18) { _weather = Weather.Comets; SetupParticles(); return; }
+
+            var pool = new List<Weather>();
+            void Add(Weather w, int n) { for (int i = 0; i < n; i++) pool.Add(w); }
+            Add(Weather.Clear, 34);
+            Add(Weather.Wind, 16);
+            Add(Weather.Fog, 8 + (autumn ? 8 : 0) + (hour >= 5 && hour < 9 ? 6 : 0));
+            Add(Weather.Rain, winter ? 4 : (spring || autumn ? 22 : 15));
+            Add(Weather.Snow, winter ? 32 : (month == 11 ? 12 : 0));
+            Add(Weather.Sakura, spring ? 22 : 0);
+            Add(Weather.Leaves, autumn ? 24 : (month == 9 ? 10 : 0));
+            _weather = pool[_sceneRng.Next(pool.Count)];
+            SetupParticles();
+        }
+
+        private void SetupParticles()
+        {
+            int n = _weather switch { Weather.Rain => 95, Weather.Snow => 70, Weather.Sakura => 55, Weather.Leaves => 50, _ => 0 };
+            _pX = new double[n]; _pY = new double[n]; _pP = new double[n];
+            bool leaves = _weather == Weather.Leaves;
+            for (int i = 0; i < n; i++)
+            {
+                _pX[i] = _sceneRng.Next(SCN_W);
+
+                _pY[i] = leaves ? (HORIZON - 8 + _sceneRng.NextDouble() * (SCN_H - HORIZON + 8)) : _sceneRng.Next(SCN_H);
+                _pP[i] = _sceneRng.NextDouble() * 6.28;
+            }
+            _cometLife = 0;
+        }
+
+        private void WorldTick()
+        {
+            _frame++;
+            _blobT += 0.08;
+            RenderScene();
+            RenderBlob();
+        }
+
+        private void TimeColors(out (int r, int g, int b) top, out (int r, int g, int b) horiz, out double bright, out bool night)
+        {
+            double h = CurHour();
+
+            if (h >= 4 && h < 12)        { top = (42, 35, 86); horiz = (236, 132, 78); bright = 0.84; night = false; }
+            else if (h >= 12 && h < 16)  { top = (58, 104, 170); horiz = (150, 188, 224); bright = 1.0; night = false; }
+            else if (h >= 16 && h < 21)  { top = (40, 28, 78); horiz = (224, 92, 40); bright = 0.82; night = false; }
+            else                         { top = (10, 10, 32); horiz = (30, 24, 64); bright = 0.5; night = true; }
+        }
+
+        private void RenderScene()
+        {
+            if (_sceneBmp == null) return;
+            try
+            {
+                TimeColors(out var top, out var horiz, out var bright, out var night);
+
+                for (int y = 0; y < HORIZON; y++)
+                {
+                    double t = (double)y / HORIZON;
+                    byte r = (byte)(top.r + (horiz.r - top.r) * t);
+                    byte g = (byte)(top.g + (horiz.g - top.g) * t);
+                    byte b = (byte)(top.b + (horiz.b - top.b) * t);
+                    for (int x = 0; x < SCN_W; x++) SP(x, y, r, g, b);
+                }
+
+                for (int y = HORIZON; y < SCN_H; y++)
+                    for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(20 * bright), (byte)(16 * bright), (byte)(30 * bright));
+
+                if (night)
+                {
+                    for (int i = 0; i < _starX.Length; i++)
+                    {
+                        double tw = 0.4 + 0.6 * Math.Abs(Math.Sin(_frame * 0.12 + _starP[i]));
+                        byte v = (byte)(220 * tw);
+                        SP(_starX[i], _starY[i], v, v, (byte)(255 * tw));
+                    }
+                }
+
+                DrawSunMoon(night);
+
+                double cloudSpd = _weather == Weather.Wind ? 0.9 : 0.18;
+                for (int i = 0; i < _cloudX.Length; i++)
+                {
+                    _cloudX[i] += cloudSpd;
+                    if (_cloudX[i] > SCN_W + _cloudW[i]) _cloudX[i] = -_cloudW[i];
+                    DrawCloud((int)_cloudX[i], (int)_cloudY[i], (int)_cloudW[i], bright, night);
+                }
+
+                for (int x = 0; x < SCN_W; x++)
+                {
+                    for (int y = Math.Max(0, _mtnFar[x]); y < HORIZON; y++) SP(x, y, (byte)(70 * bright), (byte)(58 * bright), (byte)(104 * bright));
+                    for (int y = Math.Max(0, _mtnNear[x]); y < HORIZON; y++) SP(x, y, (byte)(40 * bright), (byte)(30 * bright), (byte)(66 * bright));
+                }
+                for (int y = HORIZON; y < SCN_H; y++)
+                    for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(18 * bright), (byte)(14 * bright), (byte)(28 * bright));
+                for (int x = 0; x < SCN_W; x++)
+                    for (int y = Math.Max(HORIZON, _forest[x]); y < SCN_H; y++) SP(x, y, (byte)(8 * bright), (byte)(7 * bright), (byte)(16 * bright));
+
+                bool badWeather = _weather == Weather.Rain || _weather == Weather.Snow;
+                if (!badWeather) DrawKite();
+
+                switch (_weather)
+                {
+                    case Weather.Rain: UpdateRain(); break;
+                    case Weather.Snow: UpdateSnow(); break;
+                    case Weather.Wind: UpdateWind(); break;
+                    case Weather.Fog: DrawFog(); break;
+                    case Weather.Comets: if (night) UpdateComets(); break;
+                    case Weather.Sakura: UpdateSakura(); break;
+                    case Weather.Leaves: UpdateLeaves(); break;
+                }
+
+                if (badWeather) DrawUmbrellaPerson(night);
+
+                _sceneBmp.WritePixels(new Int32Rect(0, 0, SCN_W, SCN_H), _sceneBuf, SCN_W * 4, 0);
+            }
+            catch { }
+        }
+
+        private void DrawSunMoon(bool night)
+        {
+            double h = CurHour();
+            if (!night)
+            {
+
+                double frac = Math.Min(1, Math.Max(0, (h - 4) / 17.0));
+                int cx = (int)(frac * (SCN_W - 1));
+                int cy = (int)(HORIZON - Math.Sin(frac * Math.PI) * (HORIZON - 10));
+                double pulse = (Math.Sin(_frame * 0.13) + 1) / 2.0;
+                bool dawn = h < 12.0;
+                bool sunset = h >= 16.0;
+
+                if (dawn)
+                {
+
+                    HorizonGlow(cx, 255, 180, 120, 0.5);
+                    DrawDisc(cx, cy, 9, 255, 236, 170, 0.20 + 0.10 * pulse);
+                    int rays = 9; double len = 4 + pulse * 5;
+                    for (int i = 0; i < rays; i++)
+                    {
+                        double a = i * Math.PI * 2 / rays + _frame * 0.02;
+                        DrawRay(cx, cy, 5, len, a, 255, 236, 165, 0.45 + 0.45 * pulse);
+                    }
+                    DrawDisc(cx, cy, 4, 255, 238, 175, 1.0);
+                }
+                else if (sunset)
+                {
+
+                    double prog = Math.Min(1, Math.Max(0, (h - 16) / 5.0));
+                    byte r = 255, g = (byte)(150 - prog * 80), b = (byte)(80 - prog * 45);
+                    double flick = 0.16 + 0.10 * pulse + _sceneRng.NextDouble() * 0.05;
+                    HorizonGlow(cx, 230, 90, 40, 0.55 - prog * 0.2);
+                    DrawDisc(cx, cy, 10, 240, 110, 50, flick);
+                    DrawDisc(cx, cy, 5, r, g, b, 1.0);
+
+                    if (_sceneRng.NextDouble() < 0.5)
+                        BP(cx + _sceneRng.Next(-5, 6), cy - _sceneRng.Next(0, 7), 255, 170, 90, 0.6);
+                }
+                else
+                {
+                    DrawDisc(cx, cy, 7, 255, 244, 196, 0.22);
+                    DrawDisc(cx, cy, 4, 255, 226, 150, 1.0);
+                }
+            }
+            else
+            {
+                double nf = ((h + (h < 4 ? 24 : 0)) - 21) / 7.0;
+                int cx = (int)(nf * (SCN_W - 1));
+                int cy = (int)(HORIZON - Math.Sin(Math.Max(0, Math.Min(1, nf)) * Math.PI) * (HORIZON - 12));
+                DrawDisc(cx, cy, 6, 200, 205, 235, 0.18);
+                DrawDisc(cx, cy, 4, 226, 230, 245, 1.0);
+                SP(cx + 1, cy - 1, 180, 186, 210); SP(cx - 1, cy + 1, 180, 186, 210);
+            }
+        }
+
+        private void HorizonGlow(int cx, byte r, byte g, byte b, double strength)
+        {
+            for (int y = HORIZON - 14; y < HORIZON; y++)
+            {
+                double vy = 1.0 - (HORIZON - y) / 14.0;
+                for (int x = 0; x < SCN_W; x++)
+                {
+                    double dx = Math.Abs(x - cx) / 70.0;
+                    double a = strength * vy * Math.Max(0, 1 - dx);
+                    if (a > 0.01) BP(x, y, r, g, b, a);
+                }
+            }
+        }
+
+        private void DrawRay(int cx, int cy, double r0, double len, double angle, byte r, byte g, byte b, double a)
+        {
+            double dxs = Math.Cos(angle), dys = Math.Sin(angle);
+            for (double d = r0; d < r0 + len; d += 1.0)
+                BP((int)(cx + dxs * d), (int)(cy + dys * d), r, g, b, a * (1 - (d - r0) / len));
+        }
+
+        private void DrawKite()
+        {
+            double wind = _weather == Weather.Wind ? 1.0 : 0.0;
+            double bx = SCN_W * 0.26 + Math.Sin(_frame * 0.04) * (6 + wind * 14) + wind * 10;
+            double by = 22 + Math.Sin(_frame * 0.06 + 1) * (3 + wind * 4);
+            int kx = (int)bx, ky = (int)by;
+
+            var col = (Color)FindResource("AccentColor");
+            byte r = col.R, g = col.G, b = col.B;
+            SP(kx, ky - 3, r, g, b);
+            SP(kx - 1, ky - 2, r, g, b); SP(kx, ky - 2, 255, 255, 255); SP(kx + 1, ky - 2, r, g, b);
+            SP(kx - 2, ky, r, g, b); SP(kx - 1, ky, 255, 255, 255); SP(kx, ky, 255, 255, 255); SP(kx + 1, ky, r, g, b); SP(kx + 2, ky, r, g, b);
+            SP(kx - 1, ky + 2, r, g, b); SP(kx, ky + 2, r, g, b); SP(kx + 1, ky + 2, r, g, b);
+            SP(kx, ky + 3, r, g, b);
+
+            for (int i = 1; i <= 6; i++)
+            {
+                int tx = kx + (int)(Math.Sin(_frame * 0.1 + i * 0.7) * (1 + wind));
+                int ty = ky + 3 + i * 2;
+                SP(tx, ty, 240, 200, 220);
+            }
+        }
+
+        private void DrawUmbrellaPerson(bool night)
+        {
+            int px = (int)(SCN_W * 0.40);
+            int gy = _forest[px] - 1;
+            if (gy < HORIZON) gy = HORIZON;
+            byte sr = 18, sg = 16, sb = 26;
+
+            SP(px, gy, sr, sg, sb); SP(px, gy - 1, sr, sg, sb); SP(px, gy - 2, sr, sg, sb);
+            SP(px - 1, gy, sr, sg, sb); SP(px + 1, gy, sr, sg, sb);
+
+            SP(px, gy - 3, sr, sg, sb);
+
+            SP(px, gy - 4, sr, sg, sb); SP(px, gy - 5, sr, sg, sb);
+
+            var col = (Color)FindResource("AccentColor");
+            for (int dx = -3; dx <= 3; dx++) SP(px + dx, gy - 6, col.R, col.G, col.B);
+            SP(px - 2, gy - 7, col.R, col.G, col.B); SP(px + 2, gy - 7, col.R, col.G, col.B);
+            SP(px - 1, gy - 7, col.R, col.G, col.B); SP(px, gy - 7, col.R, col.G, col.B); SP(px + 1, gy - 7, col.R, col.G, col.B);
+        }
+
+        private void UpdateRain()
+        {
+            for (int i = 0; i < _pX.Length; i++)
+            {
+                _pX[i] -= 1.6; _pY[i] += 7;
+                if (_pY[i] >= SCN_H || _pX[i] < 0) { _pX[i] = _sceneRng.Next(SCN_W); _pY[i] = -2; }
+                int x = (int)_pX[i], y = (int)_pY[i];
+                BP(x, y, 150, 190, 235, 0.7); BP(x + 1, y - 1, 150, 190, 235, 0.45); BP(x + 1, y - 2, 150, 190, 235, 0.3);
+            }
+            DrawFog(0.06);
+        }
+
+        private void UpdateSnow()
+        {
+            for (int i = 0; i < _pX.Length; i++)
+            {
+                _pY[i] += 1.4; _pX[i] += Math.Sin(_pY[i] * 0.12 + _pP[i]) * 0.6;
+                if (_pY[i] >= SCN_H) { _pY[i] = -1; _pX[i] = _sceneRng.Next(SCN_W); }
+                int x = ((int)_pX[i] + SCN_W) % SCN_W, y = (int)_pY[i];
+                BP(x, y, 245, 248, 255, 0.92);
+            }
+        }
+
+        private void UpdateWind()
+        {
+            const int gusts = 6;
+            for (int g = 0; g < gusts; g++)
+            {
+                double baseY = 12 + g * 9 + Math.Sin(_frame * 0.03 + g) * 2;
+                double amp = 2.2 + Math.Sin(_frame * 0.045 + g * 1.7) * 1.8;
+                double phase = _frame * 0.16 + g * 2.0;
+                double head = ((_frame * 2.4 + g * 47) % (SCN_W + 80)) - 40;
+                int len = 34 + g * 4;
+                for (int k = 0; k < len; k++)
+                {
+                    double xx = head - k;
+                    double yy = baseY + Math.Sin(xx * 0.22 + phase) * amp
+                                      + Math.Sin(xx * 0.07 - _frame * 0.05) * 1.2;
+                    double edge = Math.Sin((double)k / len * Math.PI);
+                    BP((int)xx, (int)yy, 225, 226, 240, 0.5 * edge);
+                    BP((int)xx, (int)yy + 1, 210, 212, 230, 0.22 * edge);
+                }
+            }
+        }
+
+        private void UpdateSakura()
+        {
+            for (int i = 0; i < _pX.Length; i++)
+            {
+                _pY[i] += 0.9; _pX[i] += Math.Sin(_pY[i] * 0.10 + _pP[i]) * 1.1;
+                if (_pY[i] >= SCN_H) { _pY[i] = -1; _pX[i] = _sceneRng.Next(SCN_W); }
+                int x = ((int)_pX[i] + SCN_W) % SCN_W, y = (int)_pY[i];
+                bool flip = ((int)(_pY[i] * 0.3 + _pP[i] * 3) & 1) == 0;
+                BP(x, y, 248, 196, 222, 0.92);
+                BP(flip ? x + 1 : x - 1, y, 240, 170, 205, 0.7);
+            }
+        }
+
+        private void UpdateLeaves()
+        {
+            for (int i = 0; i < _pX.Length; i++)
+            {
+                _pY[i] += 1.1; _pX[i] += Math.Sin(_pY[i] * 0.08 + _pP[i]) * 1.6;
+
+                if (_pY[i] >= SCN_H) { _pY[i] = HORIZON - 8 + _sceneRng.NextDouble() * 12; _pX[i] = _sceneRng.Next(SCN_W); }
+                int x = ((int)_pX[i] + SCN_W) % SCN_W, y = (int)_pY[i];
+
+                int kind = (int)(_pP[i] * 3) % 3;
+                (byte r, byte g, byte b) c = kind == 0 ? ((byte)214, (byte)120, (byte)42)
+                                          : kind == 1 ? ((byte)190, (byte)70, (byte)48)
+                                          :             ((byte)206, (byte)160, (byte)60);
+                bool flip = ((int)(_pY[i] * 0.25 + _pP[i] * 4) & 1) == 0;
+                BP(x, y, c.r, c.g, c.b, 0.95);
+                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.8);
+            }
+        }
+
+        private void DrawFog(double strength = 0.16)
+        {
+            for (int y = 0; y < SCN_H; y++)
+            {
+                double a = strength * (0.4 + 0.6 * y / SCN_H);
+                for (int x = 0; x < SCN_W; x++) BP(x, y, 200, 200, 214, a);
+            }
+        }
+
+        private void UpdateComets()
+        {
+            if (_cometLife <= 0 && _sceneRng.NextDouble() < 0.06)
+            {
+                _cometX = _sceneRng.Next(SCN_W / 2, SCN_W); _cometY = _sceneRng.Next(HORIZON - 20); _cometLife = 14;
+            }
+            if (_cometLife > 0)
+            {
+                _cometX -= 6; _cometY += 3; _cometLife--;
+                int x = (int)_cometX, y = (int)_cometY;
+                DrawDisc(x, y, 1, 255, 255, 255, 1.0);
+                for (int i = 1; i <= 7; i++) BP(x + i * 2, y - i, 200, 215, 255, Math.Max(0, 0.8 - i * 0.11));
+            }
+        }
+
+        private void SP(int x, int y, byte r, byte g, byte b)
+        {
+            if ((uint)x >= SCN_W || (uint)y >= SCN_H) return;
+            int i = (y * SCN_W + x) * 4;
+            _sceneBuf[i] = b; _sceneBuf[i + 1] = g; _sceneBuf[i + 2] = r; _sceneBuf[i + 3] = 255;
+        }
+
+        private void BP(int x, int y, byte r, byte g, byte b, double a)
+        {
+            if ((uint)x >= SCN_W || (uint)y >= SCN_H || a <= 0) return;
+            int i = (y * SCN_W + x) * 4;
+            _sceneBuf[i] = (byte)(_sceneBuf[i] * (1 - a) + b * a);
+            _sceneBuf[i + 1] = (byte)(_sceneBuf[i + 1] * (1 - a) + g * a);
+            _sceneBuf[i + 2] = (byte)(_sceneBuf[i + 2] * (1 - a) + r * a);
+            _sceneBuf[i + 3] = 255;
+        }
+
+        private void DrawDisc(int cx, int cy, int rad, byte r, byte g, byte b, double a)
+        {
+            for (int y = -rad; y <= rad; y++)
+                for (int x = -rad; x <= rad; x++)
+                    if (x * x + y * y <= rad * rad)
+                    {
+                        if (a >= 1.0) SP(cx + x, cy + y, r, g, b);
+                        else BP(cx + x, cy + y, r, g, b, a);
+                    }
+        }
+
+        private void DrawCloud(int cx, int cy, int w, double bright, bool night)
+        {
+            byte r = (byte)((night ? 60 : 210) * (night ? 1 : bright));
+            byte g = (byte)((night ? 62 : 214) * (night ? 1 : bright));
+            byte b = (byte)((night ? 86 : 228) * (night ? 1 : bright));
+            int h = w / 3;
+            for (int x = 0; x < w; x++)
+            {
+                double edge = Math.Sin((double)x / w * Math.PI);
+                int hh = (int)(h * edge);
+                for (int y = -hh; y <= hh / 2; y++) BP(cx + x - w / 2, cy + y, r, g, b, 0.5);
+            }
+        }
+
+        #endregion
+
+        #region Загрузочный экран (boot / pixel-art / terminal)
+
+        private static readonly string[] CreeperMap =
+        {
+            "00000000",
+            "00000000",
+            "01100110",
+            "01100110",
+            "00011000",
+            "00111100",
+            "00111100",
+            "00100100",
+        };
+
+        private void BuildBootPixelArt()
+        {
+            if (BootPixelCanvas == null) return;
+            BootPixelCanvas.Children.Clear();
+
+            const double cell = 18;
+            int rows = CreeperMap.Length;
+            int cols = CreeperMap[0].Length;
+            double offX = (BootPixelCanvas.Width - cols * cell) / 2.0;
+            double offY = (BootPixelCanvas.Height - rows * cell) / 2.0;
+
+            var faceMain = Color.FromRgb(0x5E, 0x9B, 0x3F);
+            var faceDark = Color.FromRgb(0x4A, 0x7C, 0x32);
+            var featureBrush = new SolidColorBrush(Color.FromRgb(0x18, 0x20, 0x10));
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    bool feature = CreeperMap[r][c] == '1';
+                    Brush fill = feature
+                        ? featureBrush
+                        : new SolidColorBrush(_sceneRng.NextDouble() < 0.4 ? faceDark : faceMain);
+
+                    var px = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = cell,
+                        Height = cell,
+                        Fill = fill,
+                        Opacity = 0,
+                        RenderTransformOrigin = new Point(0.5, 0.5)
+                    };
+                    var sc = new ScaleTransform(0, 0);
+                    px.RenderTransform = sc;
+                    Canvas.SetLeft(px, offX + c * cell);
+                    Canvas.SetTop(px, offY + r * cell);
+                    BootPixelCanvas.Children.Add(px);
+
+                    var begin = TimeSpan.FromMilliseconds((r + c) * 24);
+                    var fade = new DoubleAnimation(1, TimeSpan.FromMilliseconds(160)) { BeginTime = begin };
+                    var pop = new DoubleAnimation(1, TimeSpan.FromMilliseconds(240))
+                    {
+                        BeginTime = begin,
+                        EasingFunction = new BackEase { Amplitude = 0.6, EasingMode = EasingMode.EaseOut }
+                    };
+                    px.BeginAnimation(UIElement.OpacityProperty, fade);
+                    sc.BeginAnimation(ScaleTransform.ScaleXProperty, pop);
+                    sc.BeginAnimation(ScaleTransform.ScaleYProperty, pop.Clone());
+                }
+            }
+
+            var accent = (Color)FindResource("AccentColor");
+            var glow = new DropShadowEffect { Color = accent, BlurRadius = 26, ShadowDepth = 0, Opacity = 0 };
+            BootPixelCanvas.Effect = glow;
+            var glowIn = new DoubleAnimation(0, 0.7, TimeSpan.FromMilliseconds(450)) { BeginTime = TimeSpan.FromMilliseconds(380) };
+            glowIn.Completed += (s, e) =>
+            {
+                var pulse = new DoubleAnimation(0.45, 0.8, TimeSpan.FromSeconds(1.6))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                };
+                glow.BeginAnimation(DropShadowEffect.OpacityProperty, pulse);
+            };
+            glow.BeginAnimation(DropShadowEffect.OpacityProperty, glowIn);
+        }
+
+        private async Task BootSequenceAsync()
+        {
+            if (BootOverlay == null) return;
+            try
+            {
+                BuildBootPixelArt();
+                await Task.Delay(300);
+
+                if (BootTitle != null)
+                {
+                    BootTitle.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(400)));
+                    BootTitleTr?.BeginAnimation(TranslateTransform.YProperty,
+                        new DoubleAnimation(0, TimeSpan.FromMilliseconds(450)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                }
+                if (BootSubtitle != null)
+                    BootSubtitle.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(350)) { BeginTime = TimeSpan.FromMilliseconds(100) });
+
+                await Task.Delay(200);
+
+                var accentBrush = (Brush)FindResource("AccentBrush");
+                var okBrush = new SolidColorBrush(Color.FromRgb(0x7C, 0xDB, 0x6A));
+                var lines = new (string tag, Brush tagBrush, string msg)[]
+                {
+                    ("[BOOT] ", accentBrush, "BattleCraft Remake Launcher v" + VER),
+                    ("[ OK ] ", okBrush,     "Инициализация ядра"),
+                    ("[ OK ] ", okBrush,     "Загрузка конфигурации"),
+                    ("[ OK ] ", okBrush,     "Проверка целостности библиотек"),
+                    ("[ OK ] ", okBrush,     "Подключение Discord RPC"),
+                    ("[ OK ] ", okBrush,     "Подготовка интерфейса"),
+                    ("  >    ", accentBrush, "Запуск лаунчера"),
+                };
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    await TypeBootLineAsync(lines[i].tag, lines[i].tagBrush, lines[i].msg);
+                    SetBootProgress((i + 1) * 100.0 / lines.Length);
+                    await Task.Delay(45);
+                }
+
+                await Task.Delay(250);
+                await FadeOutBootAsync();
+            }
+            catch { }
+        }
+
+        private async Task TypeBootLineAsync(string tag, Brush tagBrush, string message)
+        {
+            if (BootLogText == null) return;
+            var tagRun = new Run(tag) { Foreground = tagBrush, FontWeight = FontWeights.Bold };
+            var msgRun = new Run("") { Foreground = new SolidColorBrush(Color.FromArgb(0xDD, 0xFF, 0xFF, 0xFF)) };
+            BootLogText.Inlines.Add(tagRun);
+            BootLogText.Inlines.Add(msgRun);
+            BootLogText.Inlines.Add(new LineBreak());
+
+            foreach (char ch in message)
+            {
+                msgRun.Text += ch;
+                await Task.Delay(6 + _sceneRng.Next(7));
+            }
+        }
+
+        private void SetBootProgress(double target)
+        {
+            if (BootProgress == null) return;
+            BootProgress.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty,
+                new DoubleAnimation(target, TimeSpan.FromMilliseconds(280)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            if (BootPercent != null) BootPercent.Text = $"{Math.Round(target)}%";
+        }
+
+        private Task FadeOutBootAsync()
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            if (BootOverlay == null) { tcs.SetResult(true); return tcs.Task; }
+            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(400)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            fade.Completed += (s, e) =>
+            {
+                BootOverlay.Visibility = Visibility.Collapsed;
+                tcs.TrySetResult(true);
+            };
+            BootOverlay.BeginAnimation(OpacityProperty, fade);
+            return tcs.Task;
+        }
+
+        #endregion
+
+        #region Пиксель-блоб справа (метаболлы)
+
+        private WriteableBitmap? _blobBmp;
+        private const int BLOB_W = 44;
+        private const int BLOB_H = 62;
+        private readonly byte[] _blobBuf = new byte[BLOB_W * BLOB_H * 4];
+        private double _blobT;
+
+        private void InitBlob()
+        {
+            try
+            {
+                _blobBmp = new WriteableBitmap(BLOB_W, BLOB_H, 96, 96, PixelFormats.Bgra32, null);
+                if (BlobImage != null) BlobImage.Source = _blobBmp;
+                RenderBlob();
+            }
+            catch { }
+        }
+
+        private void RenderBlob()
+        {
+            if (_blobBmp == null) return;
+            try
+            {
+                var accent = (Color)FindResource("AccentColor");
+                Color core = LerpColor(accent, Colors.White, 0.80);
+                Color rim = LerpColor(accent, Colors.White, 0.42);
+
+                double t = _blobT;
+
+                var balls = new (double cx, double cy, double r)[]
+                {
+                    (BLOB_W * 0.50 + Math.Sin(t * 0.50) * BLOB_W * 0.13,       BLOB_H * 0.50 + Math.Sin(t * 0.33) * BLOB_H * 0.40, BLOB_W * 0.22),
+                    (BLOB_W * 0.50 + Math.Sin(t * 0.40 + 2.0) * BLOB_W * 0.15, BLOB_H * 0.50 + Math.Sin(t * 0.28 + 2.0) * BLOB_H * 0.38, BLOB_W * 0.20),
+                    (BLOB_W * 0.50 + Math.Cos(t * 0.45 + 1.0) * BLOB_W * 0.12, BLOB_H * 0.50 + Math.Cos(t * 0.31 + 4.0) * BLOB_H * 0.42, BLOB_W * 0.19),
+                    (BLOB_W * 0.50 + Math.Sin(t * 0.60 + 3.0) * BLOB_W * 0.10, BLOB_H * 0.50 + Math.Sin(t * 0.37 + 1.0) * BLOB_H * 0.36, BLOB_W * 0.17),
+                    (BLOB_W * 0.50 + Math.Cos(t * 0.55 + 5.0) * BLOB_W * 0.14, BLOB_H * 0.50 + Math.Cos(t * 0.26 + 3.0) * BLOB_H * 0.44, BLOB_W * 0.18),
+                    (BLOB_W * 0.50 + Math.Sin(t * 0.48 + 4.0) * BLOB_W * 0.11, BLOB_H * 0.50 + Math.Sin(t * 0.30 + 5.0) * BLOB_H * 0.40, BLOB_W * 0.16),
+                };
+
+                int idx = 0;
+                for (int y = 0; y < BLOB_H; y++)
+                {
+                    for (int x = 0; x < BLOB_W; x++)
+                    {
+                        double f = 0;
+                        foreach (var b in balls)
+                        {
+                            double dx = x - b.cx, dy = y - b.cy;
+                            f += (b.r * b.r) / (dx * dx + dy * dy + 1.0);
+                        }
+
+                        byte rr, gg, bb, aa;
+                        if (f > 2.3) { rr = core.R; gg = core.G; bb = core.B; aa = 255; }
+                        else if (f > 1.5) { rr = rim.R; gg = rim.G; bb = rim.B; aa = 255; }
+                        else { rr = gg = bb = 0; aa = 0; }
+                        _blobBuf[idx++] = bb;
+                        _blobBuf[idx++] = gg;
+                        _blobBuf[idx++] = rr;
+                        _blobBuf[idx++] = aa;
+                    }
+                }
+                _blobBmp.WritePixels(new Int32Rect(0, 0, BLOB_W, BLOB_H), _blobBuf, BLOB_W * 4, 0);
+            }
+            catch { }
+        }
+
+        private static Color LerpColor(Color a, Color b, double t)
+        {
+            return Color.FromRgb(
+                (byte)(a.R + (b.R - a.R) * t),
+                (byte)(a.G + (b.G - a.G) * t),
+                (byte)(a.B + (b.B - a.B) * t));
+        }
+
+        #endregion
 
         private void Log(string message)
         {
@@ -191,37 +898,34 @@ namespace CustomLauncher
             try { if (_sysMonTimer != null) { _sysMonTimer.Stop(); _sysMonTimer = null; } _sysMonTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) }; _sysMonTimer.Tick += (s, e) => UpdateSysMonitor(); _sysMonTimer.Start(); UpdateSysMonitor(); } catch { }
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MEMORYSTATUSEX
+        {
+            public uint dwLength, dwMemoryLoad;
+            public ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile, ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
+        }
+        [DllImport("kernel32.dll")] private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX buf);
+
         private void UpdateSysMonitor()
         {
             try
             {
-                var memInfo = GC.GetGCMemoryInfo();
-                double totalMem = memInfo.TotalAvailableMemoryBytes / 1073741824.0;
-                double usedMem = memInfo.MemoryLoadBytes / 1073741824.0;
-                int memBars = (int)((usedMem / totalMem) * 10);
-                double appMem = Process.GetCurrentProcess().WorkingSet64 / 1048576.0;
-
-                var accentColor = (Color)FindResource("AccentColor");
-                var dimAccent = Color.FromArgb(140, accentColor.R, accentColor.G, accentColor.B);
-                var accentBrush = new SolidColorBrush(dimAccent);
-                var dimBrush = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255));
-                var textBrush = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255));
-
-                var doc = SysMonitorRich.Document;
-                doc.Blocks.Clear();
-                var p1 = new Paragraph();
-                p1.Inlines.Add(new Run("SYS RAM: [") { Foreground = textBrush });
-                for (int i = 0; i < 10; i++)
-                    p1.Inlines.Add(new Run("|") { Foreground = i < memBars ? accentBrush : dimBrush });
-                p1.Inlines.Add(new Run($"] {usedMem:F1}/{totalMem:F1} GB") { Foreground = textBrush });
-                doc.Blocks.Add(p1);
-                var p2 = new Paragraph();
-                p2.Inlines.Add(new Run($"APP RAM: {appMem:F0} MB") { Foreground = textBrush });
-                doc.Blocks.Add(p2);
+                if (MemoryText == null) return;
+                var ms = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+                if (GlobalMemoryStatusEx(ref ms) && ms.ullTotalPhys > 0)
+                {
+                    double total = ms.ullTotalPhys / 1073741824.0;
+                    double used = (ms.ullTotalPhys - ms.ullAvailPhys) / 1073741824.0;
+                    MemoryText.Text = $"{used:F1} / {total:F1} GiB";
+                }
+                else
+                {
+                    var mi = GC.GetGCMemoryInfo();
+                    MemoryText.Text = $"{mi.MemoryLoadBytes / 1073741824.0:F1} / {mi.TotalAvailableMemoryBytes / 1073741824.0:F1} GiB";
+                }
             }
             catch { }
         }
-
 
         private void InitializeLauncherCore()
         {
@@ -237,11 +941,10 @@ namespace CustomLauncher
             ApplyThemeFromSettings();
             ApplyCustomTheme();
             StartTimers();
-            
+
             _discordManager.LauncherVersion = VER;
             _discordManager.ModpackVersion = _settings.ModpackVersion;
             _discordManager.Initialize();
-
 
             if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); }
             else
@@ -276,7 +979,7 @@ namespace CustomLauncher
             {
                 var handler = JELoginHandlerBuilder.BuildDefault();
                 var sessionObj = await handler.AuthenticateInteractively();
-                
+
                 if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
 
                 _settings.Username = sessionObj.Username;
@@ -300,15 +1003,15 @@ namespace CustomLauncher
             if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog("Авторизуйтесь через Microsoft или введите никнейм!"); return; }
             string path = SetupPathBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog("Выберите папку для игры!"); return; }
-            
+
             _settings.GamePath = path; _settings.RamMb = 4096;
-            
+
             if (_settings.UserType != "msa" || _settings.Username != nick)
             {
                 _settings.Username = nick;
                 _settings.UserType = "offline";
             }
-            
+
             AppSettings.Save(_settings);
 
             SetupPanel.Visibility = Visibility.Hidden;
@@ -322,13 +1025,24 @@ namespace CustomLauncher
         {
             if (ColorPresetCombo == null) return;
             ColorPresetCombo.Items.Clear();
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Космический", Tag = "#0D0D1E|#BB86FC" });
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Темно-синий / Красный", Tag = "#1A1A2E|#E94560" });
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Океан / Бирюзовый", Tag = "#0A192F|#64FFDA" });
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Лесной / Зеленый", Tag = "#1B2631|#2ECC71" });
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Бордовый / Золотой", Tag = "#2C1810|#FFD700" });
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Шоколад / Оранжевый", Tag = "#1A1512|#FF9F43" });
-            ColorPresetCombo.Items.Add(new ComboBoxItem { Content = "Мята / Лайм", Tag = "#0F2027|#00F260" });
+            ColorPresetCombo.MaxDropDownHeight = 480;
+            (string name, string tag)[] presets =
+            {
+                ("Космос",    "#0D0D1E|#BB86FC"),
+                ("Малина",    "#1A1A2E|#E94560"),
+                ("Океан",     "#0A192F|#64FFDA"),
+                ("Лес",       "#1B2631|#2ECC71"),
+                ("Золото",    "#2C1810|#FFD700"),
+                ("Янтарь",    "#1A1512|#FF9F43"),
+                ("Мята",      "#0F2027|#00F260"),
+                ("Лаванда",   "#0E0B16|#E6D8F5"),
+                ("Роза",      "#120A16|#F3C6E6"),
+                ("Сакура",    "#14101A|#F7CAD0"),
+                ("Сирень",    "#0D0C18|#C9B6F0"),
+                ("Перламутр", "#100E18|#DCE3F0"),
+            };
+            foreach (var (name, tag) in presets)
+                ColorPresetCombo.Items.Add(new ComboBoxItem { Content = name, Tag = tag });
         }
 
         private void ApplyThemeFromSettings()
@@ -370,6 +1084,10 @@ namespace CustomLauncher
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 this.Resources["AccentColor"] = c; this.Resources["AccentBrush"] = new SolidColorBrush(c);
+
+                double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
+                var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
+                this.Resources["OnAccentBrush"] = new SolidColorBrush(onAccent);
                 if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); }
             } catch { }
         }
@@ -413,8 +1131,7 @@ namespace CustomLauncher
         private void InitializeLauncher()
         {
             _minecraftPath = new MinecraftPath(_settings.GamePath);
-            // Свой HttpClient передаём прямо в CreateDefault: иначе GameInstaller, который
-            // собирается тут же, останется на дефолтном клиенте без защиты от зависаний.
+
             var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath, ResilientHttpClientFactory.Shared);
             if (parameters.GameInstaller is GameInstallerBase installerBase)
                 installerBase.CheckFileChecksum = false;
@@ -425,16 +1142,16 @@ namespace CustomLauncher
 
         private async void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
-            if (_gameProcess != null) 
-            { 
-                try { _gameProcess.Kill(); } catch { } 
-                _gameProcess = null; 
-                Show(); 
-                SetPlayState("idle"); 
-                StatusText.Text = "Готов"; 
-                SetProgress(0); 
+            if (_gameProcess != null)
+            {
+                try { _gameProcess.Kill(); } catch { }
+                _gameProcess = null;
+                Show();
+                SetPlayState("idle");
+                StatusText.Text = "Готов";
+                SetProgress(0);
                 _discordManager.SetMenuState();
-                return; 
+                return;
             }
             if (!_settings.HasGamePath) { await ShowCustomDialog("Выберите папку для игры в настройках!"); return; }
 
@@ -454,9 +1171,9 @@ namespace CustomLauncher
 
                 string vDir = Path.Combine(_settings.GamePath, "versions");
                 bool hasForge = Directory.Exists(vDir) && Directory.Exists(Path.Combine(vDir, FULL_ID));
-                
-                if (!hasForge) 
-                { 
+
+                if (!hasForge)
+                {
                     if (Directory.Exists(vDir))
                     {
                         foreach (var d in Directory.GetDirectories(vDir))
@@ -468,8 +1185,8 @@ namespace CustomLauncher
                             }
                         }
                     }
-                    didInstall = true; 
-                    await InstallForgeSilent(); 
+                    didInstall = true;
+                    await InstallForgeSilent();
                 }
                 if (!_settings.IsModpackInstalled) { didInstall = true; await InstallModpack(true); }
                 else if (_needsModpackUpdate) { didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
@@ -487,7 +1204,7 @@ namespace CustomLauncher
                     var handler = JELoginHandlerBuilder.BuildDefault();
                     dynamic? sessionObj = null;
                     try { sessionObj = await handler.AuthenticateSilently(); } catch { }
-                    
+
                     if (sessionObj != null && !string.IsNullOrEmpty(sessionObj.Username))
                     {
                         mSession = new MSession();
@@ -499,7 +1216,7 @@ namespace CustomLauncher
                     else
                     {
                         await ShowCustomDialog("Срок действия сессии истек. Пожалуйста, авторизуйтесь заново.");
-                        SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); 
+                        SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false);
                         LoginGridState();
                         return;
                     }
@@ -518,12 +1235,12 @@ namespace CustomLauncher
 
                 _gameProcess.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";
-                SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false); 
+                SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
                 _discordManager.SetPlayingState(_activeServerConfig?.Name ?? "Одиночная игра");
-                
+
                 await _gameProcess.WaitForExitAsync();
-                _gameProcess = null; 
-                SetPlayState("idle"); 
+                _gameProcess = null;
+                SetPlayState("idle");
                 StatusText.Text = "Готов";
                 _discordManager.SetMenuState();
             }
@@ -598,7 +1315,7 @@ namespace CustomLauncher
             bool isJavaError = ex is System.ComponentModel.Win32Exception
                 || ex.Message.Contains("не удается найти")
                 || ex.Message.Contains("cannot find the file");
-            
+
             if (isJavaError)
             {
                 if (await ShowCustomDialog("Похоже, что отсутствует Java. Скачать и установить Java 17 автоматически?", "Ошибка Java", true))
@@ -621,27 +1338,27 @@ namespace CustomLauncher
                 SetBusy(true);
                 GameProgressBar.IsIndeterminate = true;
                 StatusText.Text = "Скачивание Java 17...";
-                
+
                 string tempZip = Path.Combine(Path.GetTempPath(), "jre17.zip");
                 if (File.Exists(tempZip)) File.Delete(tempZip);
-                
+
                 var downloader = new FileDownloader();
                 downloader.ProgressChanged += (p) => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; GameProgressBar.Value = p; });
                 downloader.StatusChanged += (s) => Dispatcher.BeginInvoke(() => StatusText.Text = $"Скачивание Java 17... {s}");
-                
+
                 await downloader.DownloadFileAsync("https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse", tempZip);
-                
+
                 StatusText.Text = "Установка Java 17...";
                 GameProgressBar.IsIndeterminate = true;
-                await Task.Run(() => 
+                await Task.Run(() =>
                 {
                     string targetDir = Path.Combine(_settings.GamePath, "runtime", "java-runtime-gamma", "windows-x64", "java-runtime-gamma");
                     if (Directory.Exists(targetDir)) Directory.Delete(targetDir, true);
                     Directory.CreateDirectory(targetDir);
-                    
+
                     System.IO.Compression.ZipFile.ExtractToDirectory(tempZip, targetDir);
                     File.Delete(tempZip);
-                    
+
                     var subDirs = Directory.GetDirectories(targetDir);
                     if (subDirs.Length == 1)
                     {
@@ -651,7 +1368,7 @@ namespace CustomLauncher
                         Directory.Delete(extractedDir);
                     }
                 });
-                
+
                 await ShowCustomDialog("Java 17 успешно установлена! Попробуйте запустить игру снова.", "Успех");
             }
             catch (Exception ex)
@@ -750,91 +1467,55 @@ namespace CustomLauncher
             if (hour >= 4 && hour < 12)
             {
                 string[] p = {
-                    $"Доброе утро, {username}!", $"Прекрасное утро, не так ли, {username}?", $"Просыпайся и пой, {username}!",
-                    $"С новым днем, {username}!", $"Утро добрым бывает, {username}!", $"Время свершений, {username}!",
-                    $"Утренний кофе готов, {username}?", $"Солнце встало, {username}!", $"Бодрого утра, {username}!",
-                    $"Ранняя пташка, {username}!", $"Начинаем день с улыбки, {username}!", $"Пусть утро будет легким, {username}!",
-                    $"Светлого утра, {username}!", $"Впереди отличный день, {username}!", $"Завтрак съеден, {username}?",
-                    $"Навстречу приключениям, {username}!", $"Утро магии, {username}!", $"Свежий старт, {username}!",
-                    $"С первыми лучами солнца, {username}!", $"День начинается сейчас, {username}!", $"Бодрость духа, {username}!",
-                    $"Доброе и теплое утро, {username}!", $"Заряжайся позитивом, {username}!", $"Мир просыпается, {username}!",
-                    $"Ясное утро, {username}!", $"Утро для великих дел, {username}!", $"Солнечного утра, {username}!",
-                    $"Готов свернуть горы, {username}?", $"Отличное начало дня, {username}!", $"Улыбнись новому дню, {username}!",
-                    $"Энергичного утра, {username}!", $"Утро туманное, но доброе, {username}!", $"Пора действовать, {username}!",
-                    $"Пробуждение системы, {username}!", $"Утро зовет к новым вершинам, {username}!", $"Свежий ветер, {username}!",
-                    $"С добрым утром и хорошим днем, {username}!", $"Утренняя прохлада, {username}!", $"Встречай рассвет, {username}!",
-                    $"Утренний заряд энергии получен, {username}?", $"На старт, внимание, утро, {username}!", $"Чистый лист, {username}!",
-                    $"Утро – время планов, {username}!", $"Позитивного утра, {username}!", $"Пусть все задуманное сбудется, {username}!",
-                    $"С первыми петухами, {username}!", $"Утро мудренее вечера, {username}!", $"Волшебного утра, {username}!",
-                    $"Лучшее время дня, {username}!", $"Утро приносит надежду, {username}!", $"Удачного старта, {username}!"
+                    $"утречко, {username}", $"о, проснулся, {username}", $"ну чё, выспался, {username}?",
+                    $"го фрагать с утра, {username}", $"утро кофе майн, {username}", $"доброе, {username}, как спалось",
+                    $"ранний вход, уважение, {username}", $"утренний вайб, {username}", $"просыпайся соня, {username}",
+                    $"новый день новые фраги, {username}", $"найс что зашёл с утра, {username}", $"го катку пока все спят, {username}",
+                    $"кста уже утро, {username}", $"чиллим с утреца, {username}", $"доброе утро легенда, {username}",
+                    $"ну ты и ранняя пташка, {username}", $"утро, {username}, врываемся", $"бодрого утра, {username}",
+                    $"с утра всегда лучше фрагается, {username}", $"проснись и пой, {username}", $"кофе врубил, {username}?",
+                    $"утро доброе бля, {username}", $"го пока пинг низкий, {username}", $"утренняя движуха, {username}"
                 };
                 return p[rnd.Next(p.Length)];
             }
             if (hour >= 12 && hour < 16)
             {
                 string[] p = {
-                    $"Добрый день, {username}!", $"Какой солнечный день, {username}!", $"Отличный день для игры, {username}!",
-                    $"День в самом разгаре, {username}!", $"Продуктивного дня, {username}!", $"Экватор дня пройден, {username}?",
-                    $"Хорошего дня, {username}!", $"Пусть день пройдет отлично, {username}!", $"Яркого дня, {username}!",
-                    $"Как проходит день, {username}?", $"Время обеда, {username}!", $"День полон возможностей, {username}!",
-                    $"Замечательный день, {username}!", $"Светлый день, {username}!", $"Середина пути, {username}!",
-                    $"Силы еще есть, {username}?", $"Дневной перерыв, {username}!", $"Вдохновляющий день, {username}!",
-                    $"Рабочий полдень, {username}!", $"День летит незаметно, {username}!", $"Прекрасный полдень, {username}!",
-                    $"Позитивного дня, {username}!", $"Успешного продолжения дня, {username}!", $"Солнце в зените, {username}!",
-                    $"Дневная суета, {username}!", $"Наслаждайся моментом, {username}!", $"Превосходный день, {username}!",
-                    $"Бодрого дня, {username}!", $"Энергичный день, {username}!", $"Время не ждет, {username}!",
-                    $"Твори и побеждай, {username}!", $"Солнечные лучи греют, {username}!", $"День для побед, {username}!",
-                    $"Системы работают в штатном режиме, {username}!", $"Хорошего настроения, {username}!", $"Отличного самочувствия, {username}!",
-                    $"Дневные задачи, {username}!", $"Время пить чай, {username}!", $"Полдень радует, {username}!",
-                    $"Не сбавляй темп, {username}!", $"Всё идет по плану, {username}?", $"Радостного дня, {username}!",
-                    $"Пусть день будет успешным, {username}!", $"Врываемся в игру, {username}!", $"Прекрасное время суток, {username}!",
-                    $"День наполнен светом, {username}!", $"Отличный настрой, {username}!", $"Дневная доза гейминга, {username}!",
-                    $"Сияющий день, {username}!", $"Продолжаем в том же духе, {username}!", $"Всё отлично, {username}!"
+                    $"даров, {username}", $"ну чё по катке, {username}", $"обеденный гейминг, {username}?",
+                    $"день в разгаре, {username}", $"го играть, {username}", $"как день проходит, {username}?",
+                    $"найс что зашёл, {username}", $"дневной чилл, {username}", $"врываемся, {username}",
+                    $"чё нового, {username}?", $"пора фрагать, {username}", $"дневная доза майна, {username}",
+                    $"ты сегодня в ударе, {username}?", $"день топ, {username}", $"погнали катку, {username}",
+                    $"кайфового дня, {username}", $"ну ты красавчик что зашёл, {username}", $"обед майн изии, {username}",
+                    $"солнце жарит а ты в майне, {username}", $"продуктивного дня, {username}", $"чё там по фрагам, {username}?",
+                    $"день норм проходит, {username}?", $"го врубаем, {username}", $"дневная движуха, {username}"
                 };
                 return p[rnd.Next(p.Length)];
             }
             if (hour >= 16 && hour < 21)
             {
                 string[] p = {
-                    $"Добрый вечер, {username}!", $"Красивый вечер, {username}!", $"Закат прекрасен, {username}?",
-                    $"Уютного вечера, {username}!", $"Вечер обещает быть интересным, {username}!", $"Время расслабиться, {username}!",
-                    $"Приятного вечера, {username}!", $"Замечательный вечер, {username}!", $"Вечерние игры - лучшее, {username}?",
-                    $"Спокойного вечера, {username}!", $"Вечер за окном, {username}!", $"Пора отдыхать, {username}!",
-                    $"Прекрасное завершение дня, {username}!", $"Темнеет, {username}!", $"Вечерняя прохлада, {username}!",
-                    $"Вечерние сумерки, {username}!", $"День подходит к концу, {username}!", $"Светлого вечера, {username}!",
-                    $"Тихий вечер, {username}!", $"Огни города зажигаются, {username}!", $"Чудесного вечера, {username}!",
-                    $"Теплого вечера, {username}!", $"Вечерняя атмосфера, {username}!", $"Звездный вечер, {username}!",
-                    $"Спокойствие и тишина, {username}!", $"Время итогов, {username}!", $"Отдыхай душой, {username}!",
-                    $"Добрый и уютный вечер, {username}!", $"Вечерние огни, {username}!", $"Вечер в кругу друзей, {username}!",
-                    $"Превосходный вечер, {username}!", $"Вечерний релакс, {username}!", $"Вечерняя медитация, {username}!",
-                    $"Запуск вечерних протоколов, {username}!", $"Система готова к вечеру, {username}!", $"Волшебный вечер, {username}!",
-                    $"Легкого вечера, {username}!", $"Снимаем напряжение, {username}!", $"Вечерний чай, {username}!",
-                    $"Тишина вечера, {username}!", $"Хорошего окончания дня, {username}!", $"Вечерний покой, {username}!",
-                    $"Радостного вечера, {username}!", $"Вечернее настроение, {username}!", $"Закат догорает, {username}!",
-                    $"Свет ночных фонарей, {username}!", $"Отличный вечер для побед, {username}!", $"Вечерние разговоры, {username}!",
-                    $"Наслаждайся вечером, {username}!", $"Вечерняя гармония, {username}!", $"Теплые мысли, {username}!"
+                    $"вечерочек, {username}", $"вечер топ для катки, {username}", $"ну чё вечерний раш, {username}?",
+                    $"закат красивый кста, {username}", $"чиллим вечером, {username}", $"вечер майн кайф, {username}",
+                    $"наконец вечер, {username}", $"го вечерние катки, {username}", $"уютного вечера, {username}",
+                    $"вечерний вайб поймал, {username}?", $"релакс врубаем, {username}", $"вечер для победителей, {username}",
+                    $"ну ты и засиделся, {username}", $"вечером всегда лучше фрагается, {username}", $"тёплого вечера, {username}",
+                    $"закат догорает а ты в строю, {username}", $"вечерний гейминг лучший, {username}", $"отдыхай вечером, {username}",
+                    $"вечер наш, {username}", $"найс вечер, {username}", $"вечерочек пздц уютный, {username}",
+                    $"как день прошёл, {username}?", $"вечерняя движуха, {username}", $"го пока не поздно, {username}"
                 };
                 return p[rnd.Next(p.Length)];
             }
-            
+
             string[] n = {
-                $"Доброй ночи, {username}!", $"Сверкающее небо, да, {username}?", $"Звезды ярко светят, {username}!",
-                $"Ночной дозор на связи, {username}!", $"Город засыпает, просыпается {username}!", $"Тихой ночи, {username}!",
-                $"Самое время для долгих сессий, {username}?", $"Ночь - время чудес, {username}!", $"Луна светит ярко, {username}!",
-                $"Спокойной ночи, {username}!", $"Ночные приключения ждут, {username}!", $"Темная ночь, {username}!",
-                $"Звездное небо зовет, {username}!", $"Не засиживайся допоздна, {username}!", $"Полуночный гейминг, {username}?",
-                $"Ночная тишина, {username}!", $"Ночь глубока, {username}!", $"Мистика ночи, {username}!",
-                $"Одинокая луна, {username}!", $"Ночные тени, {username}!", $"Сладких снов, {username}!",
-                $"Ночной режим активирован, {username}!", $"Темнота друг молодежи, {username}!", $"Бессонница, {username}?",
-                $"Таинственная ночь, {username}!", $"Тихая ночь, {username}!", $"Спокойствие ночи, {username}!",
-                $"Ночные огни, {username}!", $"Ночная смена, {username}!", $"Глубокая ночь, {username}!",
-                $"Звезды наблюдают, {username}!", $"Млечный путь, {username}!", $"Ночная атмосфера, {username}!",
-                $"Переход в ночной режим, {username}...", $"Сон для слабаков, {username}?", $"Волшебной ночи, {username}!",
-                $"Ночной бриз, {username}!", $"Середина ночи, {username}!", $"Ночь спокойна, {username}!",
-                $"Безмятежной ночи, {username}!", $"Ночной пейзаж, {username}!", $"Уютной ночи, {username}!",
-                $"Ночные раздумья, {username}!", $"Ночной эфир, {username}!", $"Свет во тьме, {username}!",
-                $"Ночная мгла, {username}!", $"Лунный свет, {username}!", $"Спокойной и тихой ночи, {username}!",
-                $"Ночь принадлежит нам, {username}!", $"Ночные тайны, {username}!", $"Звездная пыль, {username}!"
+                $"ну ты и полуночник, {username}", $"ночные катки топ, {username}", $"не спишь, {username}? рил",
+                $"звёзды светят а ты в майне, {username}", $"ночь тишина фраги, {username}", $"доброй ночи но ещё одна катка, {username}",
+                $"ночной вайб, {username}", $"спать? пфф ещё рано, {username}", $"луна светит, {username}",
+                $"ночь наша, {username}", $"ну ещё чуть чуть и спать, {username}?", $"бессонница, {username}? го играть",
+                $"тихой ночи, {username}", $"ночные приключения ждут, {username}", $"сон для слабых, {username}?",
+                $"глубокая ночь а мы тут, {username}", $"звёздное небо кайф, {username}", $"ночная смена, {username}",
+                $"не засиживайся сильно, {username}", $"сладких снов потом, {username}", $"ночью пинг ниже, го, {username}",
+                $"тёмная ночь, {username}", $"ночь пздц длинная, ещё катка, {username}", $"полуночный гейминг, {username}?"
             };
             return n[rnd.Next(n.Length)];
         }
@@ -844,23 +1525,24 @@ namespace CustomLauncher
             int hour = DateTime.Now.Hour;
             var rnd = _rnd;
             var q = new System.Collections.Generic.List<string> {
-                "Как дела?", "Что нового?", "Готов к игре?", "Какие планы на игру?",
-                "Скилл наточен?", "Готов побеждать?", "Все системы в норме?",
-                "Настроение боевое?", "Кликай на ИГРАТЬ!", "Время писать историю!",
-                "Ждем только тебя!", "Проверка пинга...", "Инжект модов...", "Синхронизация..."
+                "чё как", "чё нового", "го катку?", "ну чё играем?",
+                "скилл на месте?", "готов фрагать?", "всё ровно?",
+                "настрой боевой?", "жми играть, изии", "го писать историю",
+                "ждём только тебя", "пинг норм?", "грузим моды...", "синхрон...",
+                "вайб поймал?", "ну чё там по планам?"
             };
-            
+
             if (hour >= 16 || hour < 4)
             {
-                q.Add("Как прошел день?");
-                q.Add("Много фрагов сегодня?");
-                q.Add("Устал за день?");
+                q.Add("как день прошёл?");
+                q.Add("много нафрагал?");
+                q.Add("устал поди?");
             }
             if (hour >= 4 && hour < 12)
             {
-                q.Add("Как спалось?");
-                q.Add("Готов к новому дню?");
-                q.Add("Утренний раш?");
+                q.Add("как спалось?");
+                q.Add("готов к дню?");
+                q.Add("утренний раш?");
             }
             return q[rnd.Next(q.Count)];
         }
@@ -878,9 +1560,9 @@ namespace CustomLauncher
             {
                 string phrase = showGreeting ? GetRandomGreeting(_settings.Username) : GetRandomQuestion();
                 showGreeting = !showGreeting;
-                
+
                 await AnimateTerminalText(WelcomeText, phrase);
-                
+
                 for (int w = 0; w < 8; w++)
                 {
                     WelcomeText.Text = phrase + "_";
@@ -888,7 +1570,7 @@ namespace CustomLauncher
                     WelcomeText.Text = phrase + " ";
                     await Task.Delay(500);
                 }
-                
+
                 for (int i = phrase.Length - 1; i >= 0; i--)
                 {
                     WelcomeText.Text = phrase.Substring(0, i) + chars[rnd.Next(chars.Length)] + "_";
@@ -924,13 +1606,14 @@ namespace CustomLauncher
             if (TopLeftTitleText.Text != "BattleCraft Remake Launcher")
                 _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             _ = AnimateTerminalText(VersionText, $"v{VER}");
+            if (ModpackVerText != null) ModpackVerText.Text = $"v{_settings.ModpackVersion}";
             StartWelcomeTextLoop();
         }
 
-        private void LoginGridState() 
-        { 
-            MainPanel.Visibility = Visibility.Hidden; 
-            LoginPanel.Visibility = Visibility.Visible; 
+        private void LoginGridState()
+        {
+            MainPanel.Visibility = Visibility.Hidden;
+            LoginPanel.Visibility = Visibility.Visible;
             if (_settings.UserType == "msa") UsernameBox.Text = "";
             else UsernameBox.Text = _settings.Username;
         }
@@ -941,7 +1624,7 @@ namespace CustomLauncher
             {
                 var handler = JELoginHandlerBuilder.BuildDefault();
                 var sessionObj = await handler.AuthenticateInteractively();
-                
+
                 if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
 
                 _settings.Username = sessionObj.Username;
@@ -957,12 +1640,12 @@ namespace CustomLauncher
 
         private async void BtnLoginOffline_Click(object s, RoutedEventArgs e)
         {
-            var n = UsernameBox.Text.Trim(); 
+            var n = UsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog("Введите никнейм!"); return; }
             _settings.Username = n;
             _settings.UserType = "offline";
             AppSettings.Save(_settings);
-            SwitchToMain(); 
+            SwitchToMain();
         }
 
         private void BtnGitHub_Click(object s, RoutedEventArgs e)
@@ -1000,11 +1683,11 @@ namespace CustomLauncher
         {
             SettingsPanel.Visibility = Visibility.Visible; _scrollTarget = -1;
 
-            try 
-            { 
-                int maxRam = (int)(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1048576L); 
-                RamSlider.Maximum = Math.Max(2048, maxRam); 
-            } 
+            try
+            {
+                int maxRam = (int)(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1048576L);
+                RamSlider.Maximum = Math.Max(2048, maxRam);
+            }
             catch { RamSlider.Maximum = 8192; }
 
             RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
@@ -1062,7 +1745,7 @@ namespace CustomLauncher
                 var t3 = _httpClient.GetStringAsync(SERVER_MODPACK_VER_URL + ts);
                 var t4 = _httpClient.GetStringAsync(SERVER_MAP_VER_URL + ts);
                 var results = await Task.WhenAll(t1, t2, t3, t4);
-                
+
                 string modpackVerStr = results[0].Trim();
                 string launcherVerStr = results[1].Trim();
                 string serverModpackVerStr = results[2].Trim();
@@ -1087,7 +1770,7 @@ namespace CustomLauncher
                     _onlineServerMapVer = serverMapVerStr;
                     _needsServerMapUpdate = onMV > loMV;
                 }
-                
+
                 UpdateServerButtons();
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
                 if (Version.TryParse(launcherVerStr, out var onlineLauncherV) && Version.TryParse(VER, out var currentLauncherV)
@@ -1139,7 +1822,6 @@ namespace CustomLauncher
             UpdateCardScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.92, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
             UpdateCardTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(24, 0, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
 
-            // Бесконечное вращение кольца-спиннера.
             UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty,
                 new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.1)) { RepeatBehavior = RepeatBehavior.Forever });
         }
@@ -1180,6 +1862,8 @@ namespace CustomLauncher
 
         private void SettingsScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+
+            if (ColorPresetCombo != null && ColorPresetCombo.IsDropDownOpen) return;
             e.Handled = true;
             var sv = SettingsScrollViewer;
             if (_scrollTarget < 0 || !_scrolling) _scrollTarget = sv.VerticalOffset;
@@ -1235,10 +1919,6 @@ namespace CustomLauncher
             UpdateNavHighlight();
             PlayContentPanel.Visibility = Visibility.Visible;
             ServerContentPanel.Visibility = Visibility.Collapsed;
-
-            TopButtons.Visibility = Visibility.Visible;
-            BtnGitHub.Visibility = Visibility.Visible;
-            SysMonitorRich.Visibility = Visibility.Visible;
         }
 
         private void NavServer_Click(object s, RoutedEventArgs e)
@@ -1248,10 +1928,6 @@ namespace CustomLauncher
             UpdateNavHighlight();
             PlayContentPanel.Visibility = Visibility.Collapsed;
             ServerContentPanel.Visibility = Visibility.Visible;
-
-            TopButtons.Visibility = Visibility.Collapsed;
-            BtnGitHub.Visibility = Visibility.Collapsed;
-            SysMonitorRich.Visibility = Visibility.Collapsed;
 
             try { int maxRam = (int)(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1048576L); ServerRamSlider.Maximum = Math.Max(2048, maxRam); }
             catch { ServerRamSlider.Maximum = 8192; }
@@ -1516,7 +2192,7 @@ namespace CustomLauncher
             _needsServerModpackUpdate = false;
             _needsServerMapUpdate = false;
             AppSettings.Save(_settings);
-            
+
             UpdateServerButtons();
             AppendConsoleOutput("[SYS] Сервер установлен.");
             SetServerBusy(false);
@@ -1609,7 +2285,7 @@ namespace CustomLauncher
                 }
                 else
                 {
-                    // If user declines, we can just clear the flag to stop asking.
+
                     _settings.ServerMapVersion = _onlineServerMapVer;
                     _needsServerMapUpdate = false;
                     AppSettings.Save(_settings);
@@ -1696,7 +2372,7 @@ namespace CustomLauncher
             try
             {
                 string serverDir = Path.Combine(_activeServerConfig.ServerPath, "server");
-                await Task.Run(() => 
+                await Task.Run(() =>
                 {
                     if (Directory.Exists(backupDir) && Directory.Exists(serverDir))
                     {
@@ -1886,7 +2562,7 @@ namespace CustomLauncher
             WhitelistPanel.Visibility = ServerWhitelistCheck.IsChecked == true
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-            
+
             SaveActiveServerConfig();
         }
 

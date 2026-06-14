@@ -4,10 +4,10 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         x:Name="MainWnd"
-        Title="BCR" 
+        Title="BCR"
         Height="650" Width="1100"
         MinWidth="800" MinHeight="500"
-        WindowStartupLocation="CenterScreen" 
+        WindowStartupLocation="CenterScreen"
         Icon="app_icon.ico"
         ResizeMode="NoResize"
         Background="{DynamicResource PrimaryBrush}"
@@ -21,9 +21,9 @@
         TextOptions.TextRenderingMode="ClearType">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40"  
-                      ResizeBorderThickness="5" 
-                      GlassFrameThickness="0" 
+        <WindowChrome CaptionHeight="40"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
                       CornerRadius="0"/>
     </WindowChrome.WindowChrome>
 
@@ -33,12 +33,12 @@
 
         <Color x:Key="AccentColor">#BB86FC</Color>
         <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}"/>
+        <SolidColorBrush x:Key="OnAccentBrush" Color="White"/>
 
         <sys:Double x:Key="BloomBlurRadius">15</sys:Double>
         <sys:Double x:Key="BloomOpacity">0.6</sys:Double>
         <sys:Double x:Key="TitleBloomBlurRadius">30</sys:Double>
         <sys:Double x:Key="TitleBloomOpacity">0.4</sys:Double>
-
 
         <Style x:Key="SystemButton" TargetType="Button">
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
@@ -114,7 +114,6 @@
             </Setter>
         </Style>
 
-
         <Style x:Key="GlowButton" TargetType="Button">
             <Setter Property="Background" Value="#10FFFFFF"/>
             <Setter Property="Foreground" Value="#CCFFFFFF"/>
@@ -134,23 +133,23 @@
                             <Grid.RenderTransform>
                                 <ScaleTransform x:Name="ButtonScale" ScaleX="1" ScaleY="1"/>
                             </Grid.RenderTransform>
-                            <Border x:Name="GlowBorder" 
-                                    Background="{TemplateBinding Background}" 
-                                    CornerRadius="8" 
+                            <Border x:Name="GlowBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="8"
                                     Opacity="1">
                                 <Border.Effect>
-                                    <DropShadowEffect x:Name="GlowEffect" 
-                                                      Color="{DynamicResource AccentColor}" 
-                                                      BlurRadius="30" 
-                                                      ShadowDepth="0" 
+                                    <DropShadowEffect x:Name="GlowEffect"
+                                                      Color="{DynamicResource AccentColor}"
+                                                      BlurRadius="30"
+                                                      ShadowDepth="0"
                                                       Opacity="0"/>
                                 </Border.Effect>
                             </Border>
-                            <Border x:Name="BorderElement" 
-                                    Background="Transparent" 
-                                    BorderBrush="{TemplateBinding BorderBrush}" 
-                                    BorderThickness="{TemplateBinding BorderThickness}" 
-                                    CornerRadius="8" 
+                            <Border x:Name="BorderElement"
+                                    Background="Transparent"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter x:Name="GlowContent" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" RenderTransformOrigin="0.5,0.5">
                                     <ContentPresenter.RenderTransform>
@@ -264,9 +263,9 @@
                                 <Border x:Name="PART_Track" CornerRadius="4">
                                     <Border x:Name="PART_Indicator" Background="{DynamicResource AccentBrush}" CornerRadius="4" HorizontalAlignment="Left">
                                         <Border.Effect>
-                                            <DropShadowEffect Color="{DynamicResource AccentColor}" 
-                                                              BlurRadius="{DynamicResource BloomBlurRadius}" 
-                                                              ShadowDepth="0" 
+                                            <DropShadowEffect Color="{DynamicResource AccentColor}"
+                                                              BlurRadius="{DynamicResource BloomBlurRadius}"
+                                                              ShadowDepth="0"
                                                               Opacity="{DynamicResource BloomOpacity}"/>
                                         </Border.Effect>
                                     </Border>
@@ -282,7 +281,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
 
         <Style TargetType="Slider">
             <Setter Property="Template">
@@ -396,7 +394,7 @@
 
         <Style x:Key="PlayButton" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="25,12"/>
@@ -411,21 +409,21 @@
                             <Grid.RenderTransform>
                                 <ScaleTransform x:Name="ButtonScale" ScaleX="1" ScaleY="1"/>
                             </Grid.RenderTransform>
-                            <Border x:Name="GlowBorder" 
-                                    Background="{TemplateBinding Background}" 
-                                    CornerRadius="5" 
+                            <Border x:Name="GlowBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="5"
                                     Opacity="1">
                                 <Border.Effect>
-                                    <DropShadowEffect x:Name="PlayGlow" 
-                                                      Color="{DynamicResource AccentColor}" 
-                                                      BlurRadius="{DynamicResource BloomBlurRadius}" 
-                                                      ShadowDepth="0" 
+                                    <DropShadowEffect x:Name="PlayGlow"
+                                                      Color="{DynamicResource AccentColor}"
+                                                      BlurRadius="{DynamicResource BloomBlurRadius}"
+                                                      ShadowDepth="0"
                                                       Opacity="{DynamicResource BloomOpacity}"/>
                                 </Border.Effect>
                             </Border>
-                            <Border x:Name="PlayBorder" 
-                                    Background="Transparent" 
-                                    CornerRadius="5" 
+                            <Border x:Name="PlayBorder"
+                                    Background="Transparent"
+                                    CornerRadius="5"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter x:Name="PlayContent" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                     <ContentPresenter.RenderTransform>
@@ -494,8 +492,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="NavBd" Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
+                        <Border x:Name="NavBd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
@@ -523,6 +521,10 @@
             <TranslateTransform x:Name="RootGridTransform" X="0" Y="0"/>
         </Grid.RenderTransform>
 
+        <Grid x:Name="SceneBackground" IsHitTestVisible="False" Panel.ZIndex="-3" ClipToBounds="True">
+            <Image x:Name="PixelSceneImage" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" SnapsToDevicePixels="True"/>
+        </Grid>
+
         <Rectangle IsHitTestVisible="False" Opacity="0.04" Panel.ZIndex="-1">
             <Rectangle.Fill>
                 <VisualBrush TileMode="Tile" Viewport="0,0,4,4" ViewportUnits="Absolute">
@@ -535,15 +537,6 @@
                 </VisualBrush>
             </Rectangle.Fill>
         </Rectangle>
-
-        <RichTextBox x:Name="SysMonitorRich" FontFamily="Consolas, Courier New" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,115,20,0" IsHitTestVisible="False" Background="Transparent" BorderThickness="0" IsReadOnly="True" Focusable="False" VerticalScrollBarVisibility="Disabled">
-            <RichTextBox.Resources>
-                <Style TargetType="Paragraph">
-                    <Setter Property="Margin" Value="0"/>
-                    <Setter Property="TextAlignment" Value="Right"/>
-                </Style>
-            </RichTextBox.Resources>
-        </RichTextBox>
 
         <Grid VerticalAlignment="Top" Height="40" Background="Transparent">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False">
@@ -562,18 +555,10 @@
 
         <Separator VerticalAlignment="Top" Margin="0,40,0,0" Background="#444444" Opacity="0.5"/>
 
-
-
-
-        <StackPanel x:Name="TopButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,70,20,0">
-            <Button x:Name="BtnReinstall" Content="Перекачать моды" Click="BtnReinstall_Click" Margin="0,0,10,0" Style="{StaticResource GlowButton}"/>
-            <Button x:Name="BtnSettingsOpen" Content="Настройки" Click="BtnSettings_Click" Style="{StaticResource GlowButton}"/>
-        </StackPanel>
-
         <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
             <TextBlock Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
             <Button Content="Войти через Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
-            
+
             <TextBlock Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
             <TextBox x:Name="UsernameBox"/>
             <Button Content="Войти оффлайн" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
@@ -586,36 +571,164 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="#08FFFFFF" BorderBrush="#15FFFFFF" BorderThickness="0,0,1,0" Margin="0,40,0,0">
-                <StackPanel Margin="0,25,0,0">
-                    <TextBlock Text="PLAY" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,0,0,10"/>
-                    <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#x25B6;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                            <TextBlock Text="Играть" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <TextBlock Text="SERVER" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,25,0,10"/>
-                    <Button x:Name="NavServerBtn" Click="NavServer_Click" Style="{StaticResource NavButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                            <TextBlock Text="Серверы" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                    <StackPanel Grid.Row="0" Margin="0,20,0,0">
+
+                        <Border Width="128" Height="128" CornerRadius="34" Margin="0,0,0,14" HorizontalAlignment="Center">
+                            <Border.Background>
+                                <ImageBrush ImageSource="logo_main.png" Stretch="UniformToFill"/>
+                            </Border.Background>
+                        </Border>
+
+                        <TextBlock Text="PLAY" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,0,0,10"/>
+                        <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x25B6;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="Играть" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="SERVER" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,25,0,10"/>
+                        <Button x:Name="NavServerBtn" Click="NavServer_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="Серверы" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel x:Name="TopButtons" Grid.Row="1" Margin="0,0,0,16">
+                        <Rectangle Height="1" Fill="#15FFFFFF" Margin="14,0,14,10"/>
+                        <Button x:Name="BtnReinstall" Click="BtnReinstall_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x21BB;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="Перекачать моды" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnSettingsOpen" Click="BtnSettings_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x2699;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="Настройки" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnGitHub" Click="BtnGitHub_Click" Style="{StaticResource NavButton}" ToolTip="github.com/pers1k1">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x2B22;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="GitHub" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Border>
 
-            <Grid x:Name="PlayContentPanel" Grid.Column="1">
-                <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="#88FFFFFF" FontSize="13" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,70,0,0"/>
-                <TextBlock x:Name="VersionText" FontFamily="Consolas, Courier New" Text="v6.8" Foreground="#55FFFFFF" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20,90,0,0"/>
-                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="30,0,0,35">
-                    <CheckBox x:Name="DebugCheck" Content="Debug" Foreground="#88FFFFFF" Margin="0,0,0,10" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
-                    <Button x:Name="BtnPlay" Content="&#x25B6;  ИГРАТЬ" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
-                </StackPanel>
-                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,35" Width="400">
-                    <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="{DynamicResource AccentBrush}" Opacity="0.8" FontSize="11" HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,10" Height="50"/>
-                    <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
-                </StackPanel>
+            <Grid x:Name="PlayContentPanel" Grid.Column="1" Margin="22,48,22,20">
+
+                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0"/>
+                                    <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
+                                    <Ellipse Width="11" Height="11" Fill="#28C840"/>
+                                </StackPanel>
+                                <TextBlock Text="player@battlecraft: ~/play" FontFamily="Consolas, Courier New" FontSize="12" Foreground="#77FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="300"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0" Margin="20,16,10,18">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Image Grid.Column="0" Source="winlogo.png" Width="150" Height="150" VerticalAlignment="Top" Margin="0,1,20,0"
+                                               Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" SnapsToDevicePixels="True"/>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock FontFamily="Consolas, Courier New" FontSize="15" Margin="0,0,0,6">
+                                                <Run Text="player" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold"/><Run Text="@battlecraft" Foreground="#66FFFFFF"/>
+                                            </TextBlock>
+                                            <Rectangle Height="1" Fill="#1EFFFFFF" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="21"/>
+                                                    <RowDefinition Height="21"/>
+                                                    <RowDefinition Height="21"/>
+                                                    <RowDefinition Height="21"/>
+                                                    <RowDefinition Height="21"/>
+                                                    <RowDefinition Height="21"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="OS" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="Windows 10 · WPF .NET 8" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="LAUNCHER" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.0" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="MINECRAFT" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 · Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="MODPACK" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock x:Name="ModpackVerText" Grid.Row="3" Grid.Column="1" Text="—" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="MEMORY" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock x:Name="MemoryText" Grid.Row="4" Grid.Column="1" Text="—" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock Grid.Row="5" Grid.Column="0" Text="SHELL" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Grid.Row="5" Grid.Column="1" Text="bcr-terminal" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="0,14,0,0">
+                                    <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="{DynamicResource AccentBrush}" Opacity="0.85" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="#AAFFFFFF" FontSize="12" TextAlignment="Left" TextWrapping="Wrap" Margin="0,0,0,8" Height="48"/>
+                                    <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="2" Margin="0,16,0,0">
+                                    <CheckBox x:Name="DebugCheck" Content="--debug" FontFamily="Consolas, Courier New" Foreground="#88FFFFFF" Margin="0,0,0,12" Checked="DebugCheck_Changed" Unchecked="DebugCheck_Changed"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="bcr" FontFamily="Consolas, Courier New" FontSize="14" FontWeight="Bold" Foreground="#7CDB6A" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="&#x03BB;" FontFamily="Consolas, Courier New" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <Button x:Name="BtnPlay" Content="&#x25B6;  play" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Grid.Column="1" Margin="0,14,14,16" Background="#33000000" CornerRadius="6" BorderBrush="#18FFFFFF" BorderThickness="1" ClipToBounds="True">
+                                <Image x:Name="BlobImage" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" SnapsToDevicePixels="True"/>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
             </Grid>
 
             <Grid x:Name="ServerContentPanel" Grid.Column="1" Visibility="Collapsed" Margin="20,50,20,15">
@@ -639,7 +752,7 @@
                     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
                         <StackPanel x:Name="ServerConfigForm">
                             <TextBlock Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                                
+
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <Button x:Name="TabGeneralBtn" Content="Основные" Style="{StaticResource ServerActionButton}" Click="TabGeneralBtn_Click"/>
                                     <Button x:Name="TabWhitelistBtn" Content="Вайтлист" Style="{StaticResource ServerActionButton}" Click="TabWhitelistBtn_Click"/>
@@ -686,7 +799,7 @@
                                             </Grid>
                                         </StackPanel>
                                     </WrapPanel>
-                                    
+
                                     <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
                                         <CheckBox x:Name="ServerSpawnAnimalsCheck" Content="Животные" Margin="0,0,25,0" VerticalAlignment="Center"/>
                                         <CheckBox x:Name="ServerSpawnMonstersCheck" Content="Монстры" Margin="0,0,25,0" VerticalAlignment="Center"/>
@@ -769,13 +882,10 @@
             </Grid>
         </Grid>
 
-        <Button x:Name="BtnGitHub" Content="⬡  GitHub" Click="BtnGitHub_Click" Style="{StaticResource GlowButton}" ToolTip="github.com/pers1k1"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,35" Opacity="0.7"/>
-
         <StackPanel x:Name="SetupPanel" Visibility="Hidden" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
             <TextBlock Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
             <Button Content="Войти через Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
-            
+
             <TextBlock Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <TextBox x:Name="SetupUsernameBox"/>
             <TextBlock Text="Папка для Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
@@ -790,10 +900,9 @@
             <Button Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
         </StackPanel>
 
-
         <Grid x:Name="SettingsPanel" Background="#CC000000" Visibility="Hidden">
             <Border Background="Transparent" MouseDown="BtnCloseSettings_Click"/>
-            <Border x:Name="SettingsBox" Background="{DynamicResource PrimaryBrush}" 
+            <Border x:Name="SettingsBox" Background="{DynamicResource PrimaryBrush}"
                     Width="500" MaxHeight="650" VerticalAlignment="Center" Margin="0,20,0,20"
                     CornerRadius="12" BorderBrush="#20FFFFFF" BorderThickness="1"
                     RenderTransformOrigin="0.5,0.5">
@@ -804,9 +913,9 @@
                     </TransformGroup>
                 </Border.RenderTransform>
                 <Border.Effect>
-                    <DropShadowEffect Color="{DynamicResource AccentColor}" 
-                                      BlurRadius="30" 
-                                      ShadowDepth="0" 
+                    <DropShadowEffect Color="{DynamicResource AccentColor}"
+                                      BlurRadius="30"
+                                      ShadowDepth="0"
                                       Opacity="{DynamicResource BloomOpacity}"/>
                 </Border.Effect>
                 <Grid>
@@ -818,9 +927,9 @@
                                     <TranslateTransform x:Name="SettingsTitleTranslate" Y="0"/>
                                 </TextBlock.RenderTransform>
                                 <TextBlock.Effect>
-                                    <DropShadowEffect Color="{DynamicResource AccentColor}" 
-                                                      BlurRadius="{DynamicResource TitleBloomBlurRadius}" 
-                                                      ShadowDepth="0" 
+                                    <DropShadowEffect Color="{DynamicResource AccentColor}"
+                                                      BlurRadius="{DynamicResource TitleBloomBlurRadius}"
+                                                      ShadowDepth="0"
                                                       Opacity="{DynamicResource TitleBloomOpacity}"/>
                                 </TextBlock.Effect>
                             </TextBlock>
@@ -833,8 +942,7 @@
 
                             <TextBlock Text="Готовые пресеты:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
 
-
-                            <ComboBox x:Name="ColorPresetCombo" SelectionChanged="ColorPreset_Changed" Height="40" VerticalContentAlignment="Center">
+                            <ComboBox x:Name="ColorPresetCombo" SelectionChanged="ColorPreset_Changed" Height="40" VerticalContentAlignment="Center" MaxDropDownHeight="480">
                                 <ComboBox.ItemContainerStyle>
                                     <Style TargetType="ComboBoxItem">
                                         <Setter Property="Background" Value="{Binding Tag}"/>
@@ -915,8 +1023,6 @@
                                 <Button Content="..." Click="BtnSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
                             </Grid>
 
-
-
                             <Button Content="СБРОСИТЬ ВСЕ НАСТРОЙКИ" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
 
                             <Button Content="Сохранить и Закрыть" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
@@ -978,6 +1084,74 @@
                     <ProgressBar x:Name="UpdateProgressBar" Width="270" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
                 </StackPanel>
             </Border>
+        </Grid>
+
+        <Grid x:Name="BootOverlay" Panel.ZIndex="100" Background="#0A0816">
+
+            <Ellipse Width="950" Height="950" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-320,40,0,0" IsHitTestVisible="False">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#33BB86FC" Offset="0"/>
+                        <GradientStop Color="#00000000" Offset="0.72"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Width="1100" Height="1100" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-380,-340,0" IsHitTestVisible="False">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#2ABB86FC" Offset="0"/>
+                        <GradientStop Color="#00000000" Offset="0.72"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+
+            <Rectangle Opacity="0.06" IsHitTestVisible="False">
+                <Rectangle.Fill>
+                    <VisualBrush TileMode="Tile" Viewport="0,0,3,3" ViewportUnits="Absolute">
+                        <VisualBrush.Visual>
+                            <Grid Width="3" Height="3">
+                                <Line X1="0" Y1="0" X2="3" Y2="0" Stroke="#88FFFFFF" StrokeThickness="1"/>
+                            </Grid>
+                        </VisualBrush.Visual>
+                    </VisualBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="540">
+
+                <Canvas x:Name="BootPixelCanvas" Width="180" Height="180" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                <TextBlock x:Name="BootTitle" Text="BATTLECRAFT" FontFamily="Consolas, Courier New" FontSize="30" FontWeight="Bold"
+                           Foreground="White" HorizontalAlignment="Center" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform x:Name="BootTitleTr" Y="12"/>
+                    </TextBlock.RenderTransform>
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="28" ShadowDepth="0" Opacity="0.55"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+                <TextBlock x:Name="BootSubtitle" Text="R E M A K E   L A U N C H E R" FontFamily="Consolas, Courier New" FontSize="12"
+                           Foreground="#88FFFFFF" HorizontalAlignment="Center" Margin="0,4,0,0" Opacity="0"/>
+
+                <Border Background="#22000000" CornerRadius="6" BorderBrush="#18FFFFFF" BorderThickness="1" Margin="0,22,0,0" Padding="16,12" Height="138">
+                    <TextBlock x:Name="BootLogText" FontFamily="Consolas, Courier New" FontSize="12" TextWrapping="NoWrap"
+                               VerticalAlignment="Top" Foreground="#CCFFFFFF" LineHeight="18" LineStackingStrategy="BlockLineHeight"/>
+                </Border>
+
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ProgressBar x:Name="BootProgress" Grid.Column="0" Height="6" Background="#15FFFFFF" BorderThickness="0"
+                                 Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BootPercent" Grid.Column="1" Text="0%" FontFamily="Consolas, Courier New" FontSize="11"
+                               Foreground="#88FFFFFF" Margin="12,0,0,0" VerticalAlignment="Center" Width="34" TextAlignment="Right"/>
+                </Grid>
+            </StackPanel>
+
+            <TextBlock Text="github.com/pers1k1" FontFamily="Consolas, Courier New" FontSize="11" Foreground="#44FFFFFF"
+                       HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24" IsHitTestVisible="False"/>
         </Grid>
     </Grid>
 </Window>
