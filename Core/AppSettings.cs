@@ -19,6 +19,7 @@ namespace CustomLauncher
         public string? AccentColor { get; set; } = "#BB86FC";
         public bool? BloomEnabled { get; set; } = true;
         public double? BloomStrength { get; set; } = 60.0;
+        public double? ConsoleOpacity { get; set; } = 1.0;
         public string Username { get; set; } = "";
         public string UserType { get; set; } = "";
         public int RamMb { get; set; } = 4096;

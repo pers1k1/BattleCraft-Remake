@@ -56,7 +56,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.2";
+        private const string VER = "7.3";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1070,6 +1070,10 @@ namespace CustomLauncher
             if (BloomEnabledCheck != null) BloomEnabledCheck.IsChecked = _settings.BloomEnabled ?? true;
             if (BloomStrengthSlider != null) BloomStrengthSlider.Value = _settings.BloomStrength ?? 60;
 
+            double consolePct = (_settings.ConsoleOpacity ?? 1.0) * 100.0;
+            ApplyConsoleOpacity(consolePct, false);
+            if (ConsoleOpacitySlider != null) ConsoleOpacitySlider.Value = consolePct;
+
             if (ColorPresetCombo != null)
             {
                 string tagToFind = $"{p}|{a}".ToUpper();
@@ -1122,6 +1126,16 @@ namespace CustomLauncher
                 BloomStrengthSlider.Opacity = on ? 1.0 : 0.35;
             }
         }
+
+        private void ApplyConsoleOpacity(double pct, bool save = true)
+        {
+            double o = pct / 100.0;
+            if (PlayContentPanel != null) PlayContentPanel.Opacity = o;
+            if (ServerContentPanel != null) ServerContentPanel.Opacity = o;
+            if (save) { _settings.ConsoleOpacity = o; AppSettings.Save(_settings); }
+        }
+
+        private void ConsoleOpacitySlider_ValueChanged(object s, RoutedPropertyChangedEventArgs<double> e) { if (IsLoaded) ApplyConsoleOpacity(e.NewValue); }
 
         private void BtnApplyPrimaryColor_Click(object s, RoutedEventArgs e) => ApplyPrimaryColor(PrimaryColorBox.Text);
         private void BtnApplyAccentColor_Click(object s, RoutedEventArgs e) => ApplyAccentColor(AccentColorBox.Text);

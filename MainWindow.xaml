@@ -696,7 +696,7 @@
                                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="OS" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="Windows 10 · WPF .NET 8" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="LAUNCHER" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.2" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.3" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="MINECRAFT" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 · Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="MODPACK" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
@@ -1031,6 +1031,9 @@
 
                             <TextBlock Text="Сила свечения:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="BloomStrengthSlider" Minimum="0" Maximum="100" Value="60" ValueChanged="BloomStrengthSlider_ValueChanged"/>
+
+                            <TextBlock Text="Прозрачность консоли:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
+                            <Slider x:Name="ConsoleOpacitySlider" Minimum="30" Maximum="100" Value="100" ValueChanged="ConsoleOpacitySlider_ValueChanged"/>
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
