@@ -59,7 +59,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.5";
+        private const string VER = "7.6";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -170,6 +170,7 @@ namespace CustomLauncher
 
         public MainWindow()
         {
+            LauncherLog.Init();
             InitializeComponent();
             _consoleFlushTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
             _consoleFlushTimer.Tick += (s, e) => FlushConsoleQueue();
@@ -907,6 +908,7 @@ namespace CustomLauncher
         {
             if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Log(message)); return; }
             string prefix = message.Contains("Ошибка") ? "[ERR]" : "[SYS]";
+            LauncherLog.Write($"{prefix} {message}");
             _logLines.Add($"{prefix} {message}");
             if (_logLines.Count > 200) _logLines.RemoveAt(0);
             LogTerminalText.Text = string.Join("\n", _logLines);
@@ -1365,21 +1367,65 @@ namespace CustomLauncher
 
         private async Task InstallForgeSilent()
         {
-            StatusText.Text = "Установка Forge..."; GameProgressBar.IsIndeterminate = true;
+            GameProgressBar.IsIndeterminate = true;
             try
             {
+                StatusText.Text = "Загрузка файлов Minecraft...";
                 await _launcher.InstallAsync(MC); EnsureProfiles();
+
+                StatusText.Text = "Загрузка установщика Forge...";
                 string jar = Path.Combine(Path.GetTempPath(), "forge_installer.jar");
                 if (File.Exists(jar)) File.Delete(jar);
                 await new FileDownloader().DownloadFileAsync(FORGE_JAR_URL, jar);
-                var psi = new ProcessStartInfo { FileName = FindJava(), Arguments = $"-jar \"{jar}\" --installClient \"{_settings.GamePath}\"", CreateNoWindow = true, UseShellExecute = false };
-                var proc = Process.Start(psi); if (proc != null) await proc.WaitForExitAsync();
+
+                StatusText.Text = "Установка библиотек Forge...";
+                Log("Этот этап займёт от 1 до 5 минут, не закрывайте лаунчер.");
+                ShowForgeWarning(true);
+                await RunForgeInstaller(jar);
+                ShowForgeWarning(false);
+
                 await _launcher.GetAllVersionsAsync();
                 try { File.Delete(jar); } catch { }
                 CleanForgeLog();
+                Log("Forge установлен.");
             }
-            catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка Forge"); }
+            catch (Exception ex) { ShowForgeWarning(false); await HandleErrorAsync(ex, "Ошибка Forge"); }
             finally { GameProgressBar.IsIndeterminate = false; }
+        }
+
+        private async Task RunForgeInstaller(string jar)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = FindJava(),
+                Arguments = $"-jar \"{jar}\" --installClient \"{_settings.GamePath}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
+                StandardErrorEncoding = System.Text.Encoding.UTF8
+            };
+
+            var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+            DataReceivedEventHandler onData = (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(e.Data)) return;
+                LauncherLog.Write($"[FORGE] {e.Data.Trim()}");
+            };
+            proc.OutputDataReceived += onData;
+            proc.ErrorDataReceived += onData;
+
+            proc.Start();
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+            await proc.WaitForExitAsync();
+        }
+
+        private void ShowForgeWarning(bool show)
+        {
+            if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => ShowForgeWarning(show)); return; }
+            if (ForgeWarningPanel != null) ForgeWarningPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void CleanForgeLog()
@@ -1391,8 +1437,7 @@ namespace CustomLauncher
 
         private async Task HandleErrorAsync(Exception ex, string context)
         {
-            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash-log.txt");
-            try { File.WriteAllText(logPath, $"[{DateTime.Now}] {context}\r\n{ex.ToString()}\r\n"); } catch { }
+            string logPath = LauncherLog.WriteCrash(context, ex);
 
             bool isJavaError = ex is System.ComponentModel.Win32Exception
                 || ex.Message.Contains("не удается найти")
@@ -1409,7 +1454,8 @@ namespace CustomLauncher
 
             if (await ShowCustomDialog($"{context}: {ex.Message}\n\nОткрыть файл с логами?", "Ошибка", true))
             {
-                try { Process.Start(new ProcessStartInfo(logPath) { UseShellExecute = true }); } catch { }
+                string toOpen = !string.IsNullOrEmpty(logPath) && File.Exists(logPath) ? logPath : AppSettings.GetConfigDir();
+                try { Process.Start(new ProcessStartInfo(toOpen) { UseShellExecute = true }); } catch { }
             }
         }
 

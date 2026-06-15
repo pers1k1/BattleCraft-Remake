@@ -696,7 +696,7 @@
                                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="OS" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="Windows 10 · WPF .NET 8" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="LAUNCHER" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.5" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.6" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="MINECRAFT" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 · Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="MODPACK" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
@@ -716,6 +716,12 @@
                                         <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="#AAFFFFFF" FontSize="12" TextAlignment="Left" TextWrapping="Wrap"/>
                                     </ScrollViewer>
                                     <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
+                                    <Border x:Name="ForgeWarningPanel" Visibility="Collapsed" Margin="0,10,0,0" Padding="10,7" Background="#22BB86FC" CornerRadius="6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#x26A0;" FontFamily="Consolas, Courier New" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Установка библиотек Forge. Этот этап займёт от 1 до 5 минут." FontFamily="Consolas, Courier New" FontSize="12" Foreground="#E6FFFFFF" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
 
                                 <StackPanel Grid.Row="2" Margin="0,16,0,0">
