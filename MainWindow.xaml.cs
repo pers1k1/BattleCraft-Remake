@@ -39,6 +39,10 @@ namespace CustomLauncher
         private System.Windows.Threading.DispatcherTimer? _sysMonTimer;
         private System.Collections.Generic.List<string> _logLines = new();
         private long _lastProgressTick;
+        private long _lastByteTick;
+        private long _lastByteCount;
+        private long _lastByteSpeedTick;
+        private long _lastNetLogTick;
 
         private ServerManager? _serverManager;
         private ServerConfig? _activeServerConfig;
@@ -59,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.6";
+        private const string VER = "7.7";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -906,8 +910,15 @@ namespace CustomLauncher
 
         private void Log(string message)
         {
-            if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Log(message)); return; }
             string prefix = message.Contains("Ошибка") ? "[ERR]" : "[SYS]";
+            LogTagged(prefix, message);
+        }
+
+        private void LogNet(string message) => LogTagged("[NET]", message);
+
+        private void LogTagged(string prefix, string message)
+        {
+            if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => LogTagged(prefix, message)); return; }
             LauncherLog.Write($"{prefix} {message}");
             _logLines.Add($"{prefix} {message}");
             if (_logLines.Count > 200) _logLines.RemoveAt(0);
@@ -1214,12 +1225,49 @@ namespace CustomLauncher
                 if (System.Threading.Interlocked.CompareExchange(ref _lastProgressTick, now, prev) != prev) return;
 
                 double percent = total > 0 ? (double)done / total * 100 : -1;
+                bool noBytes = now - System.Threading.Interlocked.Read(ref _lastByteTick) > 1500;
                 bool debug = _settings.DebugConsole;
                 Dispatcher.BeginInvoke(() =>
                 {
                     if (debug && !string.IsNullOrEmpty(name)) Log($"Файл: {name} ({done}/{total})");
                     else StatusText.Text = name;
-                    if (percent >= 0) SetProgress(percent);
+                    if (percent >= 0 && noBytes) SetProgress(percent);
+                }, System.Windows.Threading.DispatcherPriority.Background);
+            };
+
+            _launcher.ByteProgressChanged += (s, e) =>
+            {
+                long total = e.TotalBytes;
+                long done = e.ProgressedBytes;
+                if (total <= 0) return;
+
+                long now = Environment.TickCount64;
+                long prev = System.Threading.Interlocked.Read(ref _lastByteTick);
+                if (now - prev < 200) return;
+                if (System.Threading.Interlocked.CompareExchange(ref _lastByteTick, now, prev) != prev) return;
+
+                double percent = (double)done / total * 100;
+
+                double speed = 0;
+                long lastBytes = System.Threading.Interlocked.Read(ref _lastByteCount);
+                long lastTick = System.Threading.Interlocked.Read(ref _lastByteSpeedTick);
+                if (done >= lastBytes && lastTick > 0 && now > lastTick)
+                    speed = (done - lastBytes) * 1000.0 / (now - lastTick);
+                System.Threading.Interlocked.Exchange(ref _lastByteCount, done);
+                System.Threading.Interlocked.Exchange(ref _lastByteSpeedTick, now);
+
+                bool logNow = now - System.Threading.Interlocked.Read(ref _lastNetLogTick) > 1500;
+                if (logNow) System.Threading.Interlocked.Exchange(ref _lastNetLogTick, now);
+
+                Dispatcher.BeginInvoke(() =>
+                {
+                    SetProgress(percent);
+                    if (logNow)
+                    {
+                        string line = $"Загрузка {percent:F0}% · {FileDownloader.FormatSize(done)} / {FileDownloader.FormatSize(total)}";
+                        if (speed > 0) line += $" · {FileDownloader.FormatSpeed(speed)}";
+                        LogNet(line);
+                    }
                 }, System.Windows.Threading.DispatcherPriority.Background);
             };
         }
@@ -1367,16 +1415,19 @@ namespace CustomLauncher
 
         private async Task InstallForgeSilent()
         {
-            GameProgressBar.IsIndeterminate = true;
             try
             {
+                SetProgress(0);
                 StatusText.Text = "Загрузка файлов Minecraft...";
                 await _launcher.InstallAsync(MC); EnsureProfiles();
 
                 StatusText.Text = "Загрузка установщика Forge...";
                 string jar = Path.Combine(Path.GetTempPath(), "forge_installer.jar");
                 if (File.Exists(jar)) File.Delete(jar);
-                await new FileDownloader().DownloadFileAsync(FORGE_JAR_URL, jar);
+                var forgeDl = new FileDownloader();
+                forgeDl.LogMessage += LogNet;
+                forgeDl.ProgressChanged += p => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(p); });
+                await forgeDl.DownloadFileAsync(FORGE_JAR_URL, jar);
 
                 StatusText.Text = "Установка библиотек Forge...";
                 Log("Этот этап займёт от 1 до 5 минут, не закрывайте лаунчер.");
@@ -1419,7 +1470,31 @@ namespace CustomLauncher
             proc.Start();
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
-            await proc.WaitForExitAsync();
+
+            var creep = StartCreepProgress(95, 200);
+            try { await proc.WaitForExitAsync(); }
+            finally { StopCreepProgress(creep); SetProgress(100); }
+        }
+
+        private System.Windows.Threading.DispatcherTimer StartCreepProgress(double to, double seconds)
+        {
+            double value = 0;
+            SetProgress(0);
+            double step = (to - value) / (seconds * 2);
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            timer.Tick += (s, e) =>
+            {
+                value = Math.Min(to, value + step);
+                GameProgressBar.IsIndeterminate = false;
+                SetProgress(value);
+            };
+            timer.Start();
+            return timer;
+        }
+
+        private static void StopCreepProgress(System.Windows.Threading.DispatcherTimer? timer)
+        {
+            try { timer?.Stop(); } catch { }
         }
 
         private void ShowForgeWarning(bool show)
@@ -1471,8 +1546,8 @@ namespace CustomLauncher
                 if (File.Exists(tempZip)) File.Delete(tempZip);
 
                 var downloader = new FileDownloader();
+                downloader.LogMessage += LogNet;
                 downloader.ProgressChanged += (p) => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; GameProgressBar.Value = p; });
-                downloader.StatusChanged += (s) => Dispatcher.BeginInvoke(() => StatusText.Text = $"Скачивание Java 17... {s}");
 
                 await downloader.DownloadFileAsync("https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse", tempZip);
 
@@ -1539,7 +1614,8 @@ namespace CustomLauncher
                 try
                 {
                     var dl = new FileDownloader();
-                    dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { SetProgress(v); StatusText.Text = $"Скачивание {v:F0}%"; });
+                    dl.LogMessage += LogNet;
+                    dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(v); });
                     await dl.DownloadFileAsync(MODPACK_URL, zip);
                     StatusText.Text = "Распаковка...";
                     await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
@@ -1926,6 +2002,7 @@ namespace CustomLauncher
                 string old = cur + ".old";
 
                 var dl = new FileDownloader();
+                dl.LogMessage += LogNet;
                 dl.ProgressChanged += p => Dispatcher.BeginInvoke(() => SetUpdateProgress(p));
                 await dl.DownloadFileAsync(LAUNCHER_EXE_URL, tmp);
 
