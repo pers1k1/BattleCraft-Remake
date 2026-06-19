@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.7";
+        private const string VER = "7.8";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -74,11 +74,17 @@ namespace CustomLauncher
         private const string SERVER_MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/server_modpack_version.txt";
         private const string SERVER_MAP_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/server_map_version.txt";
         private const string MODPACK_URL = "https://github.com/pers1k1/modpack/releases/download/main/release.zip";
+        private const string BATTLECRAFT_MOD_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/battlecraft_mod_version.txt";
         private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
+
+        private static string BattleCraftJarUrl(string ver) =>
+            $"https://github.com/pers1k1/BattleCraft-mod/releases/download/v{ver}/battlecraft-{ver}-all.jar";
         private static readonly string FORGE_JAR_URL = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{MC}-{FORGE}/forge-{MC}-{FORGE}-installer.jar";
         private string _onlineModpackVer = "0.0";
+        private string _onlineBattleCraftModVer = "0.0";
         private string _onlineServerModpackVer = "0.0";
         private string _onlineServerMapVer = "0.0";
+        private bool _needsBattleCraftModUpdate = false;
         private bool _needsServerModpackUpdate = false;
         private bool _needsServerMapUpdate = false;
         private bool _waitingForPortKillConfirmation = false;
@@ -1323,6 +1329,14 @@ namespace CustomLauncher
                 if (!_settings.IsModpackInstalled) { didInstall = true; await InstallModpack(true); }
                 else if (_needsModpackUpdate) { didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
 
+                bool battlecraftAvailable = _onlineBattleCraftModVer != "0.0" && Version.TryParse(_onlineBattleCraftModVer, out _);
+                if (battlecraftAvailable && (didInstall || _needsBattleCraftModUpdate || !BattleCraftModInstalled()))
+                {
+                    await InstallBattleCraftMod();
+                    _needsBattleCraftModUpdate = false;
+                    didInstall = true;
+                }
+
                 if (didInstall) { Log("Готово!"); StatusText.Text = "Установка завершена! Нажмите ИГРАТЬ."; SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
 
                 StatusText.Text = "Запуск..."; SetProgress(100);
@@ -1644,6 +1658,58 @@ namespace CustomLauncher
                         }
                         throw new OperationCanceledException("Установка отменена пользователем.");
                     }
+                }
+            }
+        }
+
+        private bool BattleCraftModInstalled()
+        {
+            try
+            {
+                string modsDir = Path.Combine(_settings.GamePath, "mods");
+                return Directory.Exists(modsDir) && Directory.GetFiles(modsDir, "battlecraft*.jar").Length > 0;
+            }
+            catch { return false; }
+        }
+
+        private async Task InstallBattleCraftMod()
+        {
+            string ver = _onlineBattleCraftModVer;
+            if (ver == "0.0" || !Version.TryParse(ver, out _)) return;
+
+            string modsDir = Path.Combine(_settings.GamePath, "mods");
+            Directory.CreateDirectory(modsDir);
+
+            try
+            {
+                foreach (var f in Directory.GetFiles(modsDir, "battlecraft*.jar"))
+                    try { File.Delete(f); } catch { }
+            }
+            catch { }
+
+            string url = BattleCraftJarUrl(ver);
+            string dest = Path.Combine(modsDir, Path.GetFileName(new Uri(url).AbsolutePath));
+
+            bool success = false;
+            while (!success)
+            {
+                try
+                {
+                    var dl = new FileDownloader();
+                    dl.LogMessage += LogNet;
+                    dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(v); });
+                    await dl.DownloadFileAsync(url, dest);
+                    _settings.BattleCraftModVersion = ver;
+                    AppSettings.Save(_settings);
+                    success = true;
+                }
+                catch (Exception ex)
+                {
+                    try { if (File.Exists(dest)) File.Delete(dest); } catch { }
+                    bool retry = await ShowCustomDialog(
+                        $"Загрузка клиента оборвалась.\nОшибка: {ex.Message}\nПродолжить скачивание?",
+                        "Ошибка скачивания", true);
+                    if (!retry) throw new OperationCanceledException("Установка отменена пользователем.");
                 }
             }
         }
@@ -1982,6 +2048,25 @@ namespace CustomLauncher
                     _onlineServerMapVer = serverMapVerStr;
                     _needsServerMapUpdate = onMV > loMV;
                 }
+
+                try
+                {
+                    string bcVerStr = (await _httpClient.GetStringAsync(BATTLECRAFT_MOD_VER_URL + ts)).Trim();
+                    if (Version.TryParse(bcVerStr, out var onBC))
+                    {
+                        _onlineBattleCraftModVer = bcVerStr;
+                        if (Version.TryParse(_settings.BattleCraftModVersion, out var loBC))
+                            _needsBattleCraftModUpdate = _settings.IsModpackInstalled && onBC > loBC;
+                        if (Version.TryParse(_settings.ServerBattleCraftModVersion, out var loSBC) && onBC > loSBC)
+                            _needsServerModpackUpdate = true;
+                        if (_settings.IsModpackInstalled && _needsBattleCraftModUpdate && !_needsModpackUpdate)
+                        {
+                            BtnPlay.Content = "ОБНОВИТЬ";
+                            BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30));
+                        }
+                    }
+                }
+                catch { }
 
                 UpdateServerButtons();
                 StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
@@ -2380,6 +2465,12 @@ namespace CustomLauncher
                         await installer.UpdateServerMods(serverDir, OnServerProgress);
                         currentStage++;
                     }
+                    if (currentStage == 3)
+                    {
+                        if (_onlineBattleCraftModVer != "0.0" && Version.TryParse(_onlineBattleCraftModVer, out _))
+                            await installer.InstallBattleCraftMod(serverDir, BattleCraftJarUrl(_onlineBattleCraftModVer), OnServerProgress);
+                        currentStage++;
+                    }
                     success = true;
                 }
                 catch (Exception ex)
@@ -2401,6 +2492,7 @@ namespace CustomLauncher
 
             _activeServerConfig.IsInstalled = true;
             _settings.ServerModpackVersion = _onlineServerModpackVer;
+            _settings.ServerBattleCraftModVersion = _onlineBattleCraftModVer;
             _settings.ServerMapVersion = _onlineServerMapVer;
             _needsServerModpackUpdate = false;
             _needsServerMapUpdate = false;
@@ -2431,8 +2523,12 @@ namespace CustomLauncher
             {
                 var installer = new ServerInstaller();
                 installer.StatusChanged += OnInstallerStatusChanged;
-                await installer.UpdateServerMods(Path.Combine(_activeServerConfig.ServerPath, "server"), OnServerProgress);
+                string serverModsDir = Path.Combine(_activeServerConfig.ServerPath, "server");
+                await installer.UpdateServerMods(serverModsDir, OnServerProgress);
+                if (_onlineBattleCraftModVer != "0.0" && Version.TryParse(_onlineBattleCraftModVer, out _))
+                    await installer.InstallBattleCraftMod(serverModsDir, BattleCraftJarUrl(_onlineBattleCraftModVer), OnServerProgress);
                 _settings.ServerModpackVersion = _onlineServerModpackVer;
+                _settings.ServerBattleCraftModVersion = _onlineBattleCraftModVer;
                 _needsServerModpackUpdate = false;
                 AppSettings.Save(_settings);
                 AppendConsoleOutput("[SYS] Моды сервера обновлены.");

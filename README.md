@@ -1,46 +1,57 @@
-# BattleCraft Remake. Custom Launcher
+# BattleCraft Launcher
 
-## Версии
-- **Minecraft**: 1.20.1
-- **Forge**: 47.4.20
-- **Launcher Version**: 7.7
+A custom Minecraft launcher and server manager for the BattleCraft modpack, built on .NET 8 and WPF. It handles the full client lifecycle — installing Minecraft, Forge, Java, and mods — and provides an integrated tool for provisioning and operating dedicated Forge servers.
 
-## Особенности клиента
-- Загрузка и запуск Minecraft и Forge в один клик
-- Установка кастомного дизайна: иконки, фон, цвета
-- Интеграция Discord Rich Presence с кнопкой GitHub
-- Авторизация Microsoft без WebView2 (легковесная)
-- Поддержка одиночной игры и мультиплеера
-- Автообновление лаунчера и модпака
-- Автоматическая очистка кэша Distant Horizons (удаление Distant_Horizons_server_data при запуске)
-- Автоматическое определение отсутствия Java и её загрузка (Adoptium 17)
-- Единый лог установки и запуска (latest.log) в папке настроек, плюс краш-репорты (хранятся последние два)
-- Предупреждение об этапе установки библиотек Forge (1–5 минут) с захватом вывода установщика в лог
-- Запрет ручного ввода пути к игре для предотвращения ошибок
+## Overview
 
-## Серверная часть
-- Создание и управление несколькими Forge-серверами
-- Поэтапная установка сервера с сохранением прогресса при обрыве связи
-- Настройка server.properties через GUI (MOTD, порт, дистанция, ОЗУ)
-- Вайтлист с офлайн-UUID генерацией
-- Встроенная консоль с вводом команд
-- Умное восстановление мира из локального бэкапа
-- Автоматическое обновление серверных модов и карты мира
+| Component | Version |
+| --- | --- |
+| Minecraft | 1.20.1 |
+| Forge | 47.4.20 |
+| Launcher | 7.8 |
+| Runtime | .NET 8 (WPF, Windows) |
 
-## Сборка
+## Client Features
+
+- One-click installation and launch of Minecraft and Forge.
+- Automatic Java detection and provisioning (Adoptium Temurin 17) when no suitable runtime is present.
+- Self-updating launcher and modpack with resumable, retry-on-failure downloads.
+- Microsoft authentication without WebView2, plus offline accounts.
+- Customizable interface: accent colors, background, custom icon, and bloom.
+- Discord Rich Presence integration.
+- Unified install/launch log with rolling crash reports retained in the launcher's configuration directory.
+- Forge library installation notice with installer output captured to the log.
+- Automatic cleanup of stale Distant Horizons server data on launch.
+
+## Server Features
+
+- Create and manage multiple Forge servers from a single interface.
+- Staged installation that preserves progress and resumes after a dropped connection.
+- GUI configuration of `server.properties` (MOTD, port, view distance, RAM).
+- Whitelist management with offline UUID generation.
+- Built-in console with command input.
+- World restore from a local backup.
+- Automatic updates for server mods and the world map.
+
+## Building
+
 ```bash
 dotnet build
 ```
 
-## Публикация
+## Publishing
+
 ```bash
 dotnet publish -c Release -p:PublishSingleFile=true -o publish
 ```
 
-## Стек
-- .NET 8 / WPF
-- CmlLib.Core - Ядро Minecraft
-- DiscordRichPresence - Интеграция RPC
+## Tech Stack
 
-## Лицензия
-MIT
+- .NET 8 / WPF
+- [CmlLib.Core](https://github.com/CmlLib/CmlLib.Core) — Minecraft launch core
+- DiscordRichPresence — Rich Presence integration
+- Newtonsoft.Json, SharpZipLib
+
+## License
+
+Released under the [MIT License](LICENSE).

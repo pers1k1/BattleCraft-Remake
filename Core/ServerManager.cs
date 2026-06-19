@@ -58,14 +58,12 @@ namespace CustomLauncher.Core
             bool wasRunning = CurrentState == ServerState.Running;
             SetState(ServerState.Stopping);
 
-            // Сервер ещё стартует и не принимает команды — корректно завершить нельзя, гасим процесс.
             if (!wasRunning)
             {
                 ForceKillProcess();
                 return;
             }
 
-            // Пишем напрямую: SendCommand отбрасывает команды в состоянии Stopping.
             WriteToServer("stop");
 
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
@@ -137,7 +135,6 @@ namespace CustomLauncher.Core
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
 
-            // Остаёмся в Starting; перейдём в Running, когда сервер сообщит о готовности (см. OnDataReceived).
             _ = MonitorProcessExitAsync();
         }
 
@@ -349,7 +346,6 @@ namespace CustomLauncher.Core
             if (eventArgs.Data == null)
                 return;
 
-            // Forge/Minecraft печатает "Done (XX.XXXs)! For help, type ..." по завершении старта.
             if (CurrentState == ServerState.Starting && eventArgs.Data.Contains("Done ("))
                 SetState(ServerState.Running);
 

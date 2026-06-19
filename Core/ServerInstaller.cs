@@ -58,6 +58,21 @@ namespace CustomLauncher.Core
             }
         }
 
+        public async Task InstallBattleCraftMod(string serverDirectory, string downloadUrl, Action<double>? onProgress = null)
+        {
+            string modsDirectory = Path.Combine(serverDirectory, "mods");
+            EnsureDirectoryExists(modsDirectory);
+
+            foreach (string existing in Directory.GetFiles(modsDirectory, "battlecraft*.jar"))
+                TryDeleteFile(existing);
+
+            string fileName = Path.GetFileName(new Uri(downloadUrl).AbsolutePath);
+            string destinationPath = Path.Combine(modsDirectory, fileName);
+
+            ReportStatus("Скачивание модов сервера...");
+            await DownloadFile(downloadUrl, destinationPath, onProgress);
+        }
+
         public async Task InstallForgeRuntime(string serverDirectory, string javaPath, Action<double>? onProgress)
         {
             string installerJarPath = Path.Combine(

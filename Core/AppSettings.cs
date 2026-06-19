@@ -27,7 +27,9 @@ namespace CustomLauncher
         public bool IsModpackInstalled { get; set; } = false;
         public bool DebugConsole { get; set; } = false;
         public string ModpackVersion { get; set; } = "0.0";
+        public string BattleCraftModVersion { get; set; } = "0.0";
         public string ServerModpackVersion { get; set; } = "0.0";
+        public string ServerBattleCraftModVersion { get; set; } = "0.0";
         public string ServerMapVersion { get; set; } = "0.0";
         public List<ServerConfig> Servers { get; set; } = new();
         public string LastActiveServerName { get; set; } = "";

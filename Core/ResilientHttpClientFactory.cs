@@ -7,29 +7,12 @@ using System.Threading.Tasks;
 
 namespace CustomLauncher.Core
 {
-    /// <summary>
-    /// HttpClient для CmlLib, устойчивый к зависшим соединениям при скачивании библиотек.
-    ///
-    /// CmlLib 4.0.6 в HttpClientDownloadHelper пытается ограничить чтение через
-    /// download.ReadTimeout = 10000, но делает это только если download.CanTimeout.
-    /// У потока ответа SocketsHttpHandler CanTimeout == false, поэтому таймаут никогда
-    /// не выставляется, а сам ReadAsync вызывается без CancellationToken. В итоге
-    /// зависшая загрузка отдельной библиотеки висит до тех пор, пока соединение не оборвёт
-    /// TCP-стек ОС (около 5 минут), после чего цикл продолжается.
-    ///
-    /// Этот обработчик докачивает тело ответа сам, с таймаутом простоя на каждое чтение,
-    /// и при зависании или обрыве перезапрашивает файл целиком.
-    /// </summary>
     public static class ResilientHttpClientFactory
     {
         private static readonly Lazy<HttpClient> _shared = new(CreateClient);
 
         public static HttpClient Shared => _shared.Value;
 
-        /// <summary>
-        /// Срабатывает, когда зависшую или оборванную загрузку приходится повторять.
-        /// Аргумент — готовая строка для лога, например «Повтор: forge-x.jar (попытка 2)».
-        /// </summary>
         public static event Action<string>? DownloadRetry;
 
         private static HttpClient CreateClient()
@@ -46,7 +29,6 @@ namespace CustomLauncher.Core
                 MaxAttempts = 5
             };
 
-            // Общий таймаут отключён — за зависания отвечает StallGuardHandler по простою чтения.
             return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         }
 
@@ -62,7 +44,6 @@ namespace CustomLauncher.Core
             protected override async Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken)
             {
-                // Буферизуем и повторяем только идемпотентные GET — остальное проксируем как есть.
                 if (request.Method != HttpMethod.Get)
                     return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -86,8 +67,6 @@ namespace CustomLauncher.Core
                             continue;
                         }
 
-                        // Ошибки, которые повторять нет смысла (404 и т.п.) — отдаём как есть,
-                        // CmlLib сам бросит EnsureSuccessStatusCode.
                         if (!response.IsSuccessStatusCode)
                             return response;
 
@@ -101,11 +80,10 @@ namespace CustomLauncher.Core
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
                         response?.Dispose();
-                        throw; // настоящая отмена со стороны пользователя
+                        throw;
                     }
                     catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
                     {
-                        // Зависшее или оборванное соединение — пробуем заново.
                         response?.Dispose();
                         lastError = ex;
                         if (attempt < MaxAttempts)
@@ -142,7 +120,6 @@ namespace CustomLauncher.Core
                     }
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                     {
-                        // Простой соединения — превращаем зависание в быструю ошибку для ретрая.
                         throw new IOException(
                             $"Соединение зависло: нет данных дольше {IdleReadTimeout.TotalSeconds:F0} с.");
                     }
@@ -196,7 +173,6 @@ namespace CustomLauncher.Core
                 {
                     foreach (var header in original.Content.Headers)
                     {
-                        // Content-Length выставим по факту ниже — исходный мог быть chunked/неточным.
                         if (string.Equals(header.Key, "Content-Length", StringComparison.OrdinalIgnoreCase))
                             continue;
                         content.Headers.TryAddWithoutValidation(header.Key, header.Value);
@@ -242,12 +218,12 @@ namespace CustomLauncher.Core
 
             private static bool IsRetryableStatus(HttpStatusCode status) => status switch
             {
-                HttpStatusCode.RequestTimeout => true,        // 408
-                (HttpStatusCode)429 => true,                  // Too Many Requests
-                HttpStatusCode.InternalServerError => true,   // 500
-                HttpStatusCode.BadGateway => true,            // 502
-                HttpStatusCode.ServiceUnavailable => true,    // 503
-                HttpStatusCode.GatewayTimeout => true,        // 504
+                HttpStatusCode.RequestTimeout => true,
+                (HttpStatusCode)429 => true,
+                HttpStatusCode.InternalServerError => true,
+                HttpStatusCode.BadGateway => true,
+                HttpStatusCode.ServiceUnavailable => true,
+                HttpStatusCode.GatewayTimeout => true,
                 _ => false
             };
         }
