@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9.6";
+        private const string VER = "7.9.7";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -226,8 +226,8 @@ namespace CustomLauncher
         private readonly int[] _forest = new int[SCN_W];
         private readonly int[] _ground = new int[SCN_W];
 
-        private int[] _treeX = Array.Empty<int>(), _treeH = Array.Empty<int>(), _treeKind = Array.Empty<int>();
-        private double[] _treeSeed = Array.Empty<double>();
+        private int[] _treeX = Array.Empty<int>(), _treeH = Array.Empty<int>(), _treeKind = Array.Empty<int>(), _treeBaseY = Array.Empty<int>();
+        private double[] _treeSeed = Array.Empty<double>(), _treeDim = Array.Empty<double>();
 
         private int[] _canX = Array.Empty<int>(), _canY = Array.Empty<int>(), _canR = Array.Empty<int>(), _sakIdx = Array.Empty<int>();
         private bool[] _canSak = Array.Empty<bool>();
@@ -278,19 +278,34 @@ namespace CustomLauncher
                     _ground[x] = Math.Max(HORIZON - 5, Math.Min(HORIZON + 4, _ground[x]));
                 }
 
-                int tc = 30; _treeX = new int[tc]; _treeH = new int[tc]; _treeKind = new int[tc]; _treeSeed = new double[tc];
-                _canX = new int[tc]; _canY = new int[tc]; _canR = new int[tc]; _canSak = new bool[tc];
-                var sakIdx = new List<int>();
-                for (int i = 0; i < tc; i++)
+                int tc = 36;
+                int clearLo = (int)(SCN_W * 0.40) - 13, clearHi = (int)(SCN_W * 0.40) + 13;
+                var gen = new List<(int x, int baseY, int h, int kind, double seed, double dim, double z)>();
+                int guard = 0;
+                while (gen.Count < tc && guard++ < tc * 30)
                 {
-                    _treeX[i] = (int)((i + 0.5) / tc * SCN_W + _sceneRng.Next(-3, 4));
-                    _treeH[i] = 9 + _sceneRng.Next(0, 8);
-                    _treeKind[i] = _sceneRng.NextDouble() < 0.45 ? 1 : 0;
-                    _treeSeed[i] = _sceneRng.NextDouble();
-                    int cx = ((_treeX[i] % SCN_W) + SCN_W) % SCN_W;
-                    int trunkH = Math.Max(3, (int)(_treeH[i] * 0.5));
-                    int rad = Math.Max(3, (int)(_treeH[i] * 0.48));
-                    _canX[i] = _treeX[i]; _canY[i] = _forest[cx] - trunkH - rad / 2; _canR[i] = rad; _canSak[i] = _treeKind[i] == 1;
+                    int x = _sceneRng.Next(2, SCN_W - 2);
+                    double z = _sceneRng.NextDouble();
+                    if (x >= clearLo && x <= clearHi && z > 0.35) continue;
+                    int cx = ((x % SCN_W) + SCN_W) % SCN_W;
+                    int baseY = _forest[cx] - 3 + (int)(z * 10);
+                    int h = Math.Max(6, (int)((8 + _sceneRng.Next(0, 7)) * (0.7 + 0.55 * z)));
+                    int kind = _sceneRng.NextDouble() < 0.45 ? 1 : 0;
+                    gen.Add((x, baseY, h, kind, _sceneRng.NextDouble(), 0.74 + 0.26 * z, z));
+                }
+                gen.Sort((a, b) => a.baseY.CompareTo(b.baseY));
+
+                _treeX = new int[gen.Count]; _treeH = new int[gen.Count]; _treeKind = new int[gen.Count];
+                _treeBaseY = new int[gen.Count]; _treeSeed = new double[gen.Count]; _treeDim = new double[gen.Count];
+                _canX = new int[gen.Count]; _canY = new int[gen.Count]; _canR = new int[gen.Count]; _canSak = new bool[gen.Count];
+                var sakIdx = new List<int>();
+                for (int i = 0; i < gen.Count; i++)
+                {
+                    var t = gen[i];
+                    _treeX[i] = t.x; _treeBaseY[i] = t.baseY; _treeH[i] = t.h; _treeKind[i] = t.kind; _treeSeed[i] = t.seed; _treeDim[i] = t.dim;
+                    int trunkH = Math.Max(3, (int)(t.h * 0.5));
+                    int rad = Math.Max(3, (int)(t.h * 0.48));
+                    _canX[i] = t.x; _canY[i] = t.baseY - trunkH - rad / 2; _canR[i] = rad; _canSak[i] = t.kind == 1;
                     if (_canSak[i]) sakIdx.Add(i);
                 }
                 _sakIdx = sakIdx.ToArray();
@@ -504,6 +519,7 @@ namespace CustomLauncher
                     if (_cloudX[i] > SCN_W + _cloudW[i]) _cloudX[i] = -_cloudW[i];
                     DrawCloud((int)_cloudX[i], (int)_cloudY[i], (int)_cloudW[i], bright, night, storm);
                 }
+                if (storm > 0) DrawOvercast(storm, night, bright);
 
                 int gmonth = DateTime.Now.Month;
                 bool gWinter = gmonth == 12 || gmonth <= 2;
@@ -550,7 +566,7 @@ namespace CustomLauncher
                     case Weather.Rain: UpdateRain(); break;
                     case Weather.Snow: UpdateSnow(); break;
                     case Weather.Wind: UpdateWind(); break;
-                    case Weather.Fog: DrawFog(0.16 * _wxIntensity); break;
+                    case Weather.Fog: DrawFog(0.34 * _wxIntensity); break;
                     case Weather.Comets: if (night) UpdateComets(); break;
                     case Weather.Sakura: UpdateSakura(); break;
                     case Weather.Leaves: UpdateLeaves(); break;
@@ -735,7 +751,7 @@ namespace CustomLauncher
             if (inten > 0.55 && _flash <= 0 && _sceneRng.NextDouble() < 0.014) TriggerLightning();
             if (_flash > 0) { DrawLightning(); _flash--; }
 
-            DrawFog(0.05 * inten);
+            DrawFog(0.09 * inten);
         }
 
         private void SpawnSplash(int x, int y)
@@ -769,10 +785,10 @@ namespace CustomLauncher
 
         private void TriggerLightning()
         {
-            _flash = 6;
+            _flash = 7;
             _boltX = _sceneRng.Next(28, SCN_W - 28);
             _bolt.Clear();
-            int x = _boltX, y = 6;
+            int x = _boltX, y = 13;
             while (y < HORIZON - 2)
             {
                 _bolt.Add((x, y));
@@ -783,13 +799,23 @@ namespace CustomLauncher
 
         private void DrawLightning()
         {
-            double fa = 0.5 * Math.Pow(_flash / 6.0, 1.4);
+            double fa = 0.5 * Math.Pow(_flash / 7.0, 1.4);
             for (int y = 0; y < SCN_H; y++)
-                for (int x = 0; x < SCN_W; x++) BP(x, y, 232, 238, 255, fa);
+            {
+                double topGlow = 1.0 + 0.7 * (1 - (double)y / SCN_H);
+                for (int x = 0; x < SCN_W; x++) BP(x, y, 232, 238, 255, Math.Min(0.9, fa * topGlow));
+            }
 
             if (_flash >= 3)
             {
-                double ba = Math.Min(1, _flash / 6.0 + 0.3);
+                double ba = Math.Min(1, _flash / 7.0 + 0.3);
+                if (_bolt.Count > 0)
+                {
+                    var (ox, oy) = _bolt[0];
+                    for (int dy = -3; dy <= 3; dy++)
+                        for (int dx = -4; dx <= 4; dx++)
+                            if (dx * dx + dy * dy <= 14) BP(ox + dx, oy + dy, 240, 246, 255, ba * 0.5);
+                }
                 foreach (var (x, y) in _bolt)
                 {
                     SP(x, y, 255, 255, 255);
@@ -899,12 +925,25 @@ namespace CustomLauncher
             }
         }
 
-        private void DrawFog(double strength = 0.16)
+        private void DrawFog(double strength)
         {
+            if (strength <= 0) return;
             for (int y = 0; y < SCN_H; y++)
             {
-                double a = strength * (0.4 + 0.6 * y / SCN_H);
-                for (int x = 0; x < SCN_W; x++) BP(x, y, 200, 200, 214, a);
+                double a = strength * (0.45 + 0.8 * y / SCN_H);
+                for (int x = 0; x < SCN_W; x++) BP(x, y, 206, 208, 220, Math.Min(0.85, a));
+            }
+            for (int bi = 0; bi < 3; bi++)
+            {
+                double by = HORIZON - 10 + bi * 12 + Math.Sin(_frame * 0.015 + bi) * 2;
+                double drift = _frame * (0.5 + bi * 0.18) + bi * 53;
+                for (int x = 0; x < SCN_W; x++)
+                {
+                    double wv = 0.5 + 0.5 * Math.Sin(x * 0.06 + drift * 0.04 + bi * 1.7);
+                    double thick = 2 + 3 * wv;
+                    double ca = strength * 1.7 * wv;
+                    for (int dy = 0; dy < thick; dy++) BP(x, (int)by + dy, 216, 218, 228, Math.Min(0.6, ca * (1 - dy / thick)));
+                }
             }
         }
 
@@ -988,15 +1027,17 @@ namespace CustomLauncher
 
         private void DrawTrees(bool winter, bool autumn, bool spring, double bright, double snowAmount)
         {
+            double windAmp = _weather == Weather.Wind ? 2.7 : _weather == Weather.Rain ? 1.3 : 0.45;
+            if (_weather == Weather.Wind || _weather == Weather.Rain) windAmp *= _wxIntensity;
+            double gust = _weather == Weather.Wind ? 0.7 + 0.6 * (0.5 + 0.5 * Math.Sin(_frame * 0.025)) : 1.0;
             for (int i = 0; i < _treeX.Length; i++)
             {
-                int tx = _treeX[i];
-                int baseY = _forest[((tx % SCN_W) + SCN_W) % SCN_W];
-                DrawLeafTree(tx, baseY, _treeH[i], winter, autumn, spring, bright, snowAmount, _treeSeed[i], _treeKind[i] == 1);
+                double sway = Math.Sin(_frame * 0.11 + _treeSeed[i] * 6.28) * windAmp * gust;
+                DrawLeafTree(_treeX[i], _treeBaseY[i], _treeH[i], winter, autumn, spring, bright * _treeDim[i], snowAmount, _treeSeed[i], _treeKind[i] == 1, sway);
             }
         }
 
-        private void DrawLeafTree(int tx, int baseY, int h, bool winter, bool autumn, bool spring, double bright, double snow, double seed, bool sakura)
+        private void DrawLeafTree(int tx, int baseY, int h, bool winter, bool autumn, bool spring, double bright, double snow, double seed, bool sakura, double sway)
         {
             int trunkH = Math.Max(3, (int)(h * 0.5));
             int rad = Math.Max(3, (int)(h * 0.48));
@@ -1007,11 +1048,13 @@ namespace CustomLauncher
 
             for (int k = 0; k <= trunkH; k++)
             {
-                SP(tx, baseY - k, tr, tg, tb);
-                if (k < trunkH - 1) SP(tx - 1, baseY - k, dr, dg, db);
+                int bend = (int)Math.Round(sway * k / (double)Math.Max(1, trunkH));
+                SP(tx + bend, baseY - k, tr, tg, tb);
+                if (k < trunkH - 1) SP(tx + bend - 1, baseY - k, dr, dg, db);
             }
             SP(tx, baseY + 1, dr, dg, db);
 
+            double cbx = tx + sway;
             int nb = 3 + (int)(Hash2(tx, baseY) * 2.99);
             var tipX = new int[nb];
             var tipY = new int[nb];
@@ -1020,7 +1063,7 @@ namespace CustomLauncher
                 double f = nb == 1 ? 0.5 : (double)j / (nb - 1);
                 double ang = -Math.PI / 2 + (f - 0.5) * 1.55 + (Hash2(tx + j * 7, forkY) - 0.5) * 0.4;
                 double len = rad * 0.85 + Hash2(tx + j, baseY + j) * rad * 0.6;
-                double bx = tx, by = forkY;
+                double bx = cbx, by = forkY;
                 int steps = Math.Max(2, (int)len);
                 for (int s = 0; s <= steps; s++)
                 {
@@ -1038,13 +1081,13 @@ namespace CustomLauncher
                 if (snow > 0)
                 {
                     for (int j = 0; j < nb; j++) BP(tipX[j], tipY[j] - 1, 240, 246, 255, 0.85 * snow);
-                    BP(tx, forkY - 1, 238, 244, 255, 0.6 * snow);
+                    BP((int)Math.Round(cbx), forkY - 1, 238, 244, 255, 0.6 * snow);
                 }
                 return;
             }
 
             double keep = autumn ? 0.5 : 1.0;
-            FoliageBlob(tx, forkY - rad / 2, Math.Max(2, rad - 1), seg, sakura, autumn, spring, bright, keep);
+            FoliageBlob((int)Math.Round(cbx), forkY - rad / 2, Math.Max(2, rad - 1), seg, sakura, autumn, spring, bright, keep);
             for (int j = 0; j < nb; j++)
                 FoliageBlob(tipX[j], tipY[j], Math.Max(2, rad - 2), seg + j * 13, sakura, autumn, spring, bright, keep);
 
@@ -1304,6 +1347,26 @@ namespace CustomLauncher
                 double edge = Math.Sin((double)x / w * Math.PI);
                 int hh = (int)(h * edge);
                 for (int y = -hh; y <= hh / 2; y++) BP(cx + x - w / 2, cy + y, r, g, b, alpha);
+            }
+        }
+
+        private void DrawOvercast(double storm, bool night, double bright)
+        {
+            double drift = _frame * 0.35;
+            byte r = (byte)((night ? 34 : 64) * (night ? 1 : bright));
+            byte g = (byte)((night ? 36 : 68) * (night ? 1 : bright));
+            byte b = (byte)((night ? 50 : 82) * (night ? 1 : bright));
+            for (int x = 0; x < SCN_W; x++)
+            {
+                double edge = 13 + 6 * Math.Sin(x * 0.07 + drift * 0.02) + 3 * Math.Sin(x * 0.19 + drift * 0.05) + 2 * Math.Sin(x * 0.5 + 1);
+                int e = (int)edge;
+                for (int y = 0; y <= e; y++)
+                {
+                    double a = storm * (0.92 - 0.55 * (double)y / Math.Max(1, e));
+                    BP(x, y, r, g, b, Math.Min(0.92, a));
+                }
+                BP(x, e + 1, r, g, b, storm * 0.4);
+                BP(x, e + 2, r, g, b, storm * 0.18);
             }
         }
 
