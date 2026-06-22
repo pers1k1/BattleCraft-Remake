@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.8.1";
+        private const string VER = "7.9";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -230,8 +230,20 @@ namespace CustomLauncher
         private double[] _cloudX = Array.Empty<double>(), _cloudY = Array.Empty<double>(), _cloudW = Array.Empty<double>();
 
         private double[] _pX = Array.Empty<double>(), _pY = Array.Empty<double>(), _pP = Array.Empty<double>();
+        private double[] _pV = Array.Empty<double>();
 
         private double _cometX, _cometY; private int _cometLife;
+
+        private double _wxIntensity = 1.0;
+        private double _wxTarget = 1.0;
+        private Weather _wxPending = Weather.Clear;
+        private bool _wxSwitching;
+
+        private int _flash;
+        private int _boltX;
+        private readonly List<(int x, int y)> _bolt = new();
+        private double[] _splX = Array.Empty<double>(), _splY = Array.Empty<double>();
+        private int[] _splLife = Array.Empty<int>();
 
         private void InitPixelWorld()
         {
@@ -254,14 +266,14 @@ namespace CustomLauncher
                 int cc = 4; _cloudX = new double[cc]; _cloudY = new double[cc]; _cloudW = new double[cc];
                 for (int i = 0; i < cc; i++) { _cloudX[i] = _sceneRng.Next(SCN_W); _cloudY[i] = 10 + _sceneRng.Next(28); _cloudW[i] = 14 + _sceneRng.Next(16); }
 
-                RollWeather();
+                RollWeather(true);
 
                 _worldTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
                 _worldTimer.Tick += (s, e) => WorldTick();
                 _worldTimer.Start();
 
-                _weatherTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(15) };
-                _weatherTimer.Tick += (s, e) => RollWeather();
+                _weatherTimer = new System.Windows.Threading.DispatcherTimer { Interval = RandWeatherInterval() };
+                _weatherTimer.Tick += (s, e) => { RollWeather(); _weatherTimer!.Interval = RandWeatherInterval(); };
                 _weatherTimer.Start();
 
                 WorldTick();
@@ -278,7 +290,9 @@ namespace CustomLauncher
             else { _worldTimer?.Stop(); _weatherTimer?.Stop(); }
         }
 
-        private void RollWeather()
+        private TimeSpan RandWeatherInterval() => TimeSpan.FromSeconds(_sceneRng.Next(70, 165));
+
+        private Weather PickWeather()
         {
             int hour = DateTime.Now.Hour;
             bool night = hour >= 21 || hour < 4;
@@ -287,7 +301,7 @@ namespace CustomLauncher
             bool autumn = month >= 9 && month <= 11;
             bool spring = month >= 3 && month <= 5;
 
-            if (night && _sceneRng.NextDouble() < 0.18) { _weather = Weather.Comets; SetupParticles(); return; }
+            if (night && _sceneRng.NextDouble() < 0.18) return Weather.Comets;
 
             var pool = new List<Weather>();
             void Add(Weather w, int n) { for (int i = 0; i < n; i++) pool.Add(w); }
@@ -298,41 +312,101 @@ namespace CustomLauncher
             Add(Weather.Snow, winter ? 32 : (month == 11 ? 12 : 0));
             Add(Weather.Sakura, spring ? 22 : 0);
             Add(Weather.Leaves, autumn ? 24 : (month == 9 ? 10 : 0));
-            _weather = pool[_sceneRng.Next(pool.Count)];
-            SetupParticles();
+            return pool[_sceneRng.Next(pool.Count)];
+        }
+
+        private void RollWeather(bool immediate = false)
+        {
+            var next = PickWeather();
+
+            if (immediate)
+            {
+                _weather = next; _wxSwitching = false; _wxIntensity = 1.0; _wxTarget = 1.0;
+                SetupParticles();
+                return;
+            }
+
+            if (next == _weather && !_wxSwitching) { _wxTarget = 1.0; return; }
+
+            _wxPending = next; _wxTarget = 0.0; _wxSwitching = true;
         }
 
         private void SetupParticles()
         {
-            int n = _weather switch { Weather.Rain => 95, Weather.Snow => 70, Weather.Sakura => 55, Weather.Leaves => 50, _ => 0 };
-            _pX = new double[n]; _pY = new double[n]; _pP = new double[n];
+            int n = _weather switch { Weather.Rain => 110, Weather.Snow => 80, Weather.Sakura => 55, Weather.Leaves => 50, _ => 0 };
+            _pX = new double[n]; _pY = new double[n]; _pP = new double[n]; _pV = new double[n];
             bool leaves = _weather == Weather.Leaves;
             for (int i = 0; i < n; i++)
             {
                 _pX[i] = _sceneRng.Next(SCN_W);
-
                 _pY[i] = leaves ? (HORIZON - 8 + _sceneRng.NextDouble() * (SCN_H - HORIZON + 8)) : _sceneRng.Next(SCN_H);
                 _pP[i] = _sceneRng.NextDouble() * 6.28;
+                _pV[i] = 0.7 + _sceneRng.NextDouble() * 0.6;
             }
+
+            int sn = _weather == Weather.Rain ? 26 : 0;
+            _splX = new double[sn]; _splY = new double[sn]; _splLife = new int[sn];
+            _bolt.Clear(); _flash = 0;
             _cometLife = 0;
+        }
+
+        private void StepWeatherIntensity()
+        {
+            const double step = 0.02;
+            if (_wxIntensity < _wxTarget) _wxIntensity = Math.Min(_wxTarget, _wxIntensity + step);
+            else if (_wxIntensity > _wxTarget) _wxIntensity = Math.Max(_wxTarget, _wxIntensity - step);
+
+            if (_wxSwitching && _wxIntensity <= 0.001)
+            {
+                _weather = _wxPending; SetupParticles();
+                _wxSwitching = false; _wxTarget = 1.0;
+            }
         }
 
         private void WorldTick()
         {
             _frame++;
             _blobT += 0.08;
+            StepWeatherIntensity();
             RenderScene();
             RenderBlob();
         }
 
-        private void TimeColors(out (int r, int g, int b) top, out (int r, int g, int b) horiz, out double bright, out bool night)
+        private static readonly (double h, (int r, int g, int b) top, (int r, int g, int b) horiz, double bright)[] _skyKeys =
+        {
+            (0.0,  (8, 9, 28),     (22, 18, 52),    0.42),
+            (4.5,  (18, 16, 50),   (66, 44, 90),    0.52),
+            (6.5,  (42, 35, 86),   (236, 150, 96),  0.78),
+            (9.0,  (52, 84, 152),  (172, 202, 230), 0.92),
+            (13.0, (58, 104, 170), (150, 188, 224), 1.0),
+            (16.0, (54, 92, 168),  (184, 172, 212), 0.95),
+            (18.5, (40, 28, 78),   (236, 110, 52),  0.80),
+            (20.5, (24, 18, 58),   (118, 52, 62),   0.60),
+            (22.0, (10, 10, 34),   (34, 26, 68),    0.46),
+        };
+
+        private static (int, int, int) LerpRgb((int r, int g, int b) a, (int r, int g, int b) b, double t)
+            => ((int)(a.r + (b.r - a.r) * t), (int)(a.g + (b.g - a.g) * t), (int)(a.b + (b.b - a.b) * t));
+
+        private void TimeColors(out (int r, int g, int b) top, out (int r, int g, int b) horiz, out double bright, out double nightF)
         {
             double h = CurHour();
+            var keys = _skyKeys;
+            int n = keys.Length;
+            int idx = 0;
+            for (int i = 0; i < n; i++) if (h >= keys[i].h) idx = i;
 
-            if (h >= 4 && h < 12)        { top = (42, 35, 86); horiz = (236, 132, 78); bright = 0.84; night = false; }
-            else if (h >= 12 && h < 16)  { top = (58, 104, 170); horiz = (150, 188, 224); bright = 1.0; night = false; }
-            else if (h >= 16 && h < 21)  { top = (40, 28, 78); horiz = (224, 92, 40); bright = 0.82; night = false; }
-            else                         { top = (10, 10, 32); horiz = (30, 24, 64); bright = 0.5; night = true; }
+            var a = keys[idx];
+            var b = keys[(idx + 1) % n];
+            double h0 = a.h, h1 = b.h <= a.h ? b.h + 24 : b.h;
+            double hh = h < h0 ? h + 24 : h;
+            double t = h1 > h0 ? (hh - h0) / (h1 - h0) : 0;
+            t = t * t * (3 - 2 * t);
+
+            top = LerpRgb(a.top, b.top, t);
+            horiz = LerpRgb(a.horiz, b.horiz, t);
+            bright = a.bright + (b.bright - a.bright) * t;
+            nightF = Math.Max(0, Math.Min(1, (0.62 - bright) / 0.18));
         }
 
         private void RenderScene()
@@ -340,7 +414,18 @@ namespace CustomLauncher
             if (_sceneBmp == null) return;
             try
             {
-                TimeColors(out var top, out var horiz, out var bright, out var night);
+                TimeColors(out var top, out var horiz, out var bright, out var nightF);
+                double h = CurHour();
+                bool night = h >= 21 || h < 4;
+
+                double storm = _weather == Weather.Rain ? _wxIntensity : 0;
+                if (storm > 0)
+                {
+                    top = LerpRgb(top, (46, 48, 62), 0.6 * storm);
+                    horiz = LerpRgb(horiz, (70, 74, 90), 0.55 * storm);
+                    bright *= 1 - 0.4 * storm;
+                    nightF *= 1 - storm;
+                }
 
                 for (int y = 0; y < HORIZON; y++)
                 {
@@ -354,24 +439,23 @@ namespace CustomLauncher
                 for (int y = HORIZON; y < SCN_H; y++)
                     for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(20 * bright), (byte)(16 * bright), (byte)(30 * bright));
 
-                if (night)
+                if (nightF > 0.01)
                 {
                     for (int i = 0; i < _starX.Length; i++)
                     {
-                        double tw = 0.4 + 0.6 * Math.Abs(Math.Sin(_frame * 0.12 + _starP[i]));
-                        byte v = (byte)(220 * tw);
-                        SP(_starX[i], _starY[i], v, v, (byte)(255 * tw));
+                        double tw = (0.4 + 0.6 * Math.Abs(Math.Sin(_frame * 0.12 + _starP[i]))) * nightF;
+                        BP(_starX[i], _starY[i], 220, 220, 255, tw);
                     }
                 }
 
                 DrawSunMoon(night);
 
-                double cloudSpd = _weather == Weather.Wind ? 0.9 : 0.18;
+                double cloudSpd = _weather == Weather.Wind ? 0.9 : (0.18 + 0.5 * storm);
                 for (int i = 0; i < _cloudX.Length; i++)
                 {
                     _cloudX[i] += cloudSpd;
                     if (_cloudX[i] > SCN_W + _cloudW[i]) _cloudX[i] = -_cloudW[i];
-                    DrawCloud((int)_cloudX[i], (int)_cloudY[i], (int)_cloudW[i], bright, night);
+                    DrawCloud((int)_cloudX[i], (int)_cloudY[i], (int)_cloudW[i], bright, night, storm);
                 }
 
                 for (int x = 0; x < SCN_W; x++)
@@ -392,7 +476,7 @@ namespace CustomLauncher
                     case Weather.Rain: UpdateRain(); break;
                     case Weather.Snow: UpdateSnow(); break;
                     case Weather.Wind: UpdateWind(); break;
-                    case Weather.Fog: DrawFog(); break;
+                    case Weather.Fog: DrawFog(0.16 * _wxIntensity); break;
                     case Weather.Comets: if (night) UpdateComets(); break;
                     case Weather.Sakura: UpdateSakura(); break;
                     case Weather.Leaves: UpdateLeaves(); break;
@@ -527,24 +611,115 @@ namespace CustomLauncher
 
         private void UpdateRain()
         {
-            for (int i = 0; i < _pX.Length; i++)
+            double inten = _wxIntensity;
+            int count = (int)Math.Ceiling(_pX.Length * inten);
+            double afade = Math.Min(1, inten * 1.4);
+
+            for (int i = 0; i < count; i++)
             {
-                _pX[i] -= 1.6; _pY[i] += 7;
-                if (_pY[i] >= SCN_H || _pX[i] < 0) { _pX[i] = _sceneRng.Next(SCN_W); _pY[i] = -2; }
+                double sp = 6.5 + _pV[i] * 2.5;
+                _pX[i] -= 1.6; _pY[i] += sp;
+                if (_pY[i] >= SCN_H || _pX[i] < 0)
+                {
+                    if (_pY[i] >= SCN_H && _sceneRng.NextDouble() < 0.4) SpawnSplash((int)_pX[i]);
+                    _pX[i] = _sceneRng.Next(SCN_W); _pY[i] = -2;
+                }
                 int x = (int)_pX[i], y = (int)_pY[i];
-                BP(x, y, 150, 190, 235, 0.7); BP(x + 1, y - 1, 150, 190, 235, 0.45); BP(x + 1, y - 2, 150, 190, 235, 0.3);
+                int len = 1 + (int)(_pV[i] * 2);
+                BP(x, y, 150, 190, 235, 0.75 * afade);
+                for (int k = 1; k <= len; k++) BP(x + 1, y - k, 150, 190, 235, (0.5 - k * 0.1) * afade);
             }
-            DrawFog(0.06);
+
+            UpdateSplashes(afade);
+
+            if (inten > 0.55 && _flash <= 0 && _sceneRng.NextDouble() < 0.014) TriggerLightning();
+            if (_flash > 0) { DrawLightning(); _flash--; }
+
+            DrawFog(0.06 * inten);
+        }
+
+        private void SpawnSplash(int x)
+        {
+            for (int i = 0; i < _splLife.Length; i++)
+            {
+                if (_splLife[i] <= 0)
+                {
+                    _splX[i] = x;
+                    _splY[i] = _forest[((x % SCN_W) + SCN_W) % SCN_W] - 1;
+                    if (_splY[i] < HORIZON) _splY[i] = HORIZON;
+                    _splLife[i] = 5;
+                    return;
+                }
+            }
+        }
+
+        private void UpdateSplashes(double afade)
+        {
+            for (int i = 0; i < _splLife.Length; i++)
+            {
+                if (_splLife[i] <= 0) continue;
+                int sx = (int)_splX[i], sy = (int)_splY[i];
+                int spread = 5 - _splLife[i];
+                double a = (_splLife[i] / 5.0) * 0.6 * afade;
+                BP(sx - spread, sy, 170, 200, 240, a);
+                BP(sx + spread, sy, 170, 200, 240, a);
+                BP(sx, sy - 1, 180, 210, 245, a * 0.6);
+                _splLife[i]--;
+            }
+        }
+
+        private void TriggerLightning()
+        {
+            _flash = 6;
+            _boltX = _sceneRng.Next(28, SCN_W - 28);
+            _bolt.Clear();
+            int x = _boltX, y = 6;
+            while (y < HORIZON - 2)
+            {
+                _bolt.Add((x, y));
+                x += _sceneRng.Next(-3, 4);
+                y += _sceneRng.Next(2, 5);
+            }
+        }
+
+        private void DrawLightning()
+        {
+            double fa = 0.5 * Math.Pow(_flash / 6.0, 1.4);
+            for (int y = 0; y < SCN_H; y++)
+                for (int x = 0; x < SCN_W; x++) BP(x, y, 232, 238, 255, fa);
+
+            if (_flash >= 3)
+            {
+                double ba = Math.Min(1, _flash / 6.0 + 0.3);
+                foreach (var (x, y) in _bolt)
+                {
+                    SP(x, y, 255, 255, 255);
+                    BP(x - 1, y, 200, 220, 255, ba * 0.7);
+                    BP(x + 1, y, 200, 220, 255, ba * 0.7);
+                }
+            }
         }
 
         private void UpdateSnow()
         {
-            for (int i = 0; i < _pX.Length; i++)
+            double inten = _wxIntensity;
+            int count = (int)Math.Ceiling(_pX.Length * inten);
+            double afade = Math.Min(1, inten * 1.4);
+            double gust = Math.Sin(_frame * 0.02) * 0.5;
+
+            for (int i = 0; i < count; i++)
             {
-                _pY[i] += 1.4; _pX[i] += Math.Sin(_pY[i] * 0.12 + _pP[i]) * 0.6;
+                _pY[i] += 1.0 + _pV[i] * 0.8;
+                _pX[i] += Math.Sin(_pY[i] * 0.12 + _pP[i]) * 0.6 + gust;
                 if (_pY[i] >= SCN_H) { _pY[i] = -1; _pX[i] = _sceneRng.Next(SCN_W); }
                 int x = ((int)_pX[i] + SCN_W) % SCN_W, y = (int)_pY[i];
-                BP(x, y, 245, 248, 255, 0.92);
+                bool big = _pV[i] > 1.05;
+                BP(x, y, 245, 248, 255, 0.92 * afade);
+                if (big)
+                {
+                    BP(x + 1, y, 235, 240, 252, 0.6 * afade);
+                    BP(x, y + 1, 235, 240, 252, 0.6 * afade);
+                }
             }
         }
 
@@ -563,7 +738,7 @@ namespace CustomLauncher
                     double xx = head - k;
                     double yy = baseY + Math.Sin(xx * 0.22 + phase) * amp
                                       + Math.Sin(xx * 0.07 - _frame * 0.05) * 1.2;
-                    double edge = Math.Sin((double)k / len * Math.PI);
+                    double edge = Math.Sin((double)k / len * Math.PI) * _wxIntensity;
                     BP((int)xx, (int)yy, 225, 226, 240, 0.5 * edge);
                     BP((int)xx, (int)yy + 1, 210, 212, 230, 0.22 * edge);
                 }
@@ -572,20 +747,24 @@ namespace CustomLauncher
 
         private void UpdateSakura()
         {
-            for (int i = 0; i < _pX.Length; i++)
+            double afade = Math.Min(1, _wxIntensity * 1.4);
+            int count = (int)Math.Ceiling(_pX.Length * _wxIntensity);
+            for (int i = 0; i < count; i++)
             {
                 _pY[i] += 0.9; _pX[i] += Math.Sin(_pY[i] * 0.10 + _pP[i]) * 1.1;
                 if (_pY[i] >= SCN_H) { _pY[i] = -1; _pX[i] = _sceneRng.Next(SCN_W); }
                 int x = ((int)_pX[i] + SCN_W) % SCN_W, y = (int)_pY[i];
                 bool flip = ((int)(_pY[i] * 0.3 + _pP[i] * 3) & 1) == 0;
-                BP(x, y, 248, 196, 222, 0.92);
-                BP(flip ? x + 1 : x - 1, y, 240, 170, 205, 0.7);
+                BP(x, y, 248, 196, 222, 0.92 * afade);
+                BP(flip ? x + 1 : x - 1, y, 240, 170, 205, 0.7 * afade);
             }
         }
 
         private void UpdateLeaves()
         {
-            for (int i = 0; i < _pX.Length; i++)
+            double afade = Math.Min(1, _wxIntensity * 1.4);
+            int count = (int)Math.Ceiling(_pX.Length * _wxIntensity);
+            for (int i = 0; i < count; i++)
             {
                 _pY[i] += 1.1; _pX[i] += Math.Sin(_pY[i] * 0.08 + _pP[i]) * 1.6;
 
@@ -597,8 +776,8 @@ namespace CustomLauncher
                                           : kind == 1 ? ((byte)190, (byte)70, (byte)48)
                                           :             ((byte)206, (byte)160, (byte)60);
                 bool flip = ((int)(_pY[i] * 0.25 + _pP[i] * 4) & 1) == 0;
-                BP(x, y, c.r, c.g, c.b, 0.95);
-                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.8);
+                BP(x, y, c.r, c.g, c.b, 0.95 * afade);
+                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.8 * afade);
             }
         }
 
@@ -621,8 +800,8 @@ namespace CustomLauncher
             {
                 _cometX -= 6; _cometY += 3; _cometLife--;
                 int x = (int)_cometX, y = (int)_cometY;
-                DrawDisc(x, y, 1, 255, 255, 255, 1.0);
-                for (int i = 1; i <= 7; i++) BP(x + i * 2, y - i, 200, 215, 255, Math.Max(0, 0.8 - i * 0.11));
+                DrawDisc(x, y, 1, 255, 255, 255, _wxIntensity);
+                for (int i = 1; i <= 7; i++) BP(x + i * 2, y - i, 200, 215, 255, Math.Max(0, 0.8 - i * 0.11) * _wxIntensity);
             }
         }
 
@@ -654,17 +833,24 @@ namespace CustomLauncher
                     }
         }
 
-        private void DrawCloud(int cx, int cy, int w, double bright, bool night)
+        private void DrawCloud(int cx, int cy, int w, double bright, bool night, double storm = 0)
         {
             byte r = (byte)((night ? 60 : 210) * (night ? 1 : bright));
             byte g = (byte)((night ? 62 : 214) * (night ? 1 : bright));
             byte b = (byte)((night ? 86 : 228) * (night ? 1 : bright));
+            if (storm > 0)
+            {
+                r = (byte)(r + (58 - r) * storm);
+                g = (byte)(g + (60 - g) * storm);
+                b = (byte)(b + (72 - b) * storm);
+            }
+            double alpha = 0.5 + 0.35 * storm;
             int h = w / 3;
             for (int x = 0; x < w; x++)
             {
                 double edge = Math.Sin((double)x / w * Math.PI);
                 int hh = (int)(h * edge);
-                for (int y = -hh; y <= hh / 2; y++) BP(cx + x - w / 2, cy + y, r, g, b, 0.5);
+                for (int y = -hh; y <= hh / 2; y++) BP(cx + x - w / 2, cy + y, r, g, b, alpha);
             }
         }
 
@@ -1817,6 +2003,45 @@ namespace CustomLauncher
             return q[rnd.Next(q.Count)];
         }
 
+        private string GetWeatherPhrase()
+        {
+            var rnd = _rnd;
+            string[] p = _weather switch
+            {
+                Weather.Rain => new[] {
+                    "дождина ебашит, а ты тут", "слышь, ливень за окном", "под дождь заходить — святое",
+                    "погнали, пока гроза не накрыла", "мокро снаружи, тепло у нас", "дождь стучит, моды грузятся",
+                    "гром гремит, а нам похуй", "капает, бля, романтика", "под такой дождь только катать",
+                    "молнии сверкают, погнали"
+                },
+                Weather.Snow => new[] {
+                    "снежок пошёл, красота", "зима ебанула, заходи греться", "снег валит, а мы в деле",
+                    "под снежок катать — кайф", "снежинки летят, моды летят", "холодрыга снаружи, уютно тут",
+                    "первый снег, погнали", "снегопад нахуй, красота же"
+                },
+                Weather.Wind => new[] {
+                    "ветрище поднялся, держись", "ветер воет, а нам норм", "сдует нахуй, заходи быстрей",
+                    "ветродуй сегодня, бодрит", "ветер гонит тучи, погнали"
+                },
+                Weather.Fog => new[] {
+                    "туман лёг, мистика", "нихуя не видно снаружи, туман", "туманчик навалил, атмосферно",
+                    "в тумане как в сказке, заходи"
+                },
+                Weather.Comets => new[] {
+                    "звездопад, бля, загадывай", "кометы летят, лови момент", "ночное небо горит, красота",
+                    "падающие звёзды, успей загадать"
+                },
+                Weather.Sakura => new[] {
+                    "сакура цветёт, эстетика", "лепестки летят, весна пришла", "сакура опадает, лови вайб"
+                },
+                Weather.Leaves => new[] {
+                    "листва кружит, осень", "листья падают, уютная пора", "осенний вайб, заходи"
+                },
+                _ => new[] { "погодка ясная, грех не катнуть", "небо чистое, погнали" }
+            };
+            return p[rnd.Next(p.Length)];
+        }
+
         private async void StartWelcomeTextLoop()
         {
             if (_welcomeLoopStarted) return;
@@ -1824,12 +2049,15 @@ namespace CustomLauncher
 
             string chars = "$?#!*%@^&~";
             var rnd = _rnd;
-            bool showGreeting = true;
+            int slot = 0;
 
             while (true)
             {
-                string phrase = showGreeting ? GetRandomGreeting(_settings.Username) : GetRandomQuestion();
-                showGreeting = !showGreeting;
+                bool weatherSlot = slot == 2 && _weather != Weather.Clear && _wxIntensity > 0.5;
+                string phrase = slot == 0 ? GetRandomGreeting(_settings.Username)
+                              : weatherSlot ? GetWeatherPhrase()
+                              : GetRandomQuestion();
+                slot = (slot + 1) % 3;
 
                 await AnimateTerminalText(WelcomeText, phrase);
 
