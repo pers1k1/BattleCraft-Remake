@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9.4";
+        private const string VER = "7.9.5";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -229,9 +229,10 @@ namespace CustomLauncher
         private int[] _treeX = Array.Empty<int>(), _treeH = Array.Empty<int>(), _treeKind = Array.Empty<int>();
         private double[] _treeSeed = Array.Empty<double>();
 
-        private int[] _sakX = Array.Empty<int>(), _sakY = Array.Empty<int>(), _sakR = Array.Empty<int>();
-        private double[] _petX = Array.Empty<double>(), _petY = Array.Empty<double>(), _petP = Array.Empty<double>();
-        private int[] _petK = Array.Empty<int>();
+        private int[] _canX = Array.Empty<int>(), _canY = Array.Empty<int>(), _canR = Array.Empty<int>(), _sakIdx = Array.Empty<int>();
+        private bool[] _canSak = Array.Empty<bool>();
+        private double[] _fallX = Array.Empty<double>(), _fallY = Array.Empty<double>(), _fallP = Array.Empty<double>();
+        private int[] _fallK = Array.Empty<int>();
 
         private double _snowCover, _leafCover, _rainWet;
         private readonly double[] _snowPile = new double[SCN_W];
@@ -278,28 +279,25 @@ namespace CustomLauncher
                 }
 
                 int tc = 30; _treeX = new int[tc]; _treeH = new int[tc]; _treeKind = new int[tc]; _treeSeed = new double[tc];
-                var saks = new List<(int x, int y, int r)>();
+                _canX = new int[tc]; _canY = new int[tc]; _canR = new int[tc]; _canSak = new bool[tc];
+                var sakIdx = new List<int>();
                 for (int i = 0; i < tc; i++)
                 {
                     _treeX[i] = (int)((i + 0.5) / tc * SCN_W + _sceneRng.Next(-3, 4));
                     _treeH[i] = 9 + _sceneRng.Next(0, 8);
                     _treeKind[i] = _sceneRng.NextDouble() < 0.45 ? 1 : 0;
                     _treeSeed[i] = _sceneRng.NextDouble();
-                    if (_treeKind[i] == 1)
-                    {
-                        int cx = ((_treeX[i] % SCN_W) + SCN_W) % SCN_W;
-                        int trunkH = Math.Max(2, (int)(_treeH[i] * 0.42));
-                        int rad = Math.Max(3, (int)(_treeH[i] * 0.5));
-                        saks.Add((_treeX[i], _forest[cx] - trunkH - rad / 2, rad));
-                    }
+                    int cx = ((_treeX[i] % SCN_W) + SCN_W) % SCN_W;
+                    int trunkH = Math.Max(3, (int)(_treeH[i] * 0.5));
+                    int rad = Math.Max(3, (int)(_treeH[i] * 0.48));
+                    _canX[i] = _treeX[i]; _canY[i] = _forest[cx] - trunkH - rad / 2; _canR[i] = rad; _canSak[i] = _treeKind[i] == 1;
+                    if (_canSak[i]) sakIdx.Add(i);
                 }
-                _sakX = saks.Select(s => s.x).ToArray();
-                _sakY = saks.Select(s => s.y).ToArray();
-                _sakR = saks.Select(s => s.r).ToArray();
+                _sakIdx = sakIdx.ToArray();
 
-                int petN = _sakX.Length > 0 ? 48 : 0;
-                _petX = new double[petN]; _petY = new double[petN]; _petP = new double[petN]; _petK = new int[petN];
-                for (int i = 0; i < petN; i++) RespawnPetal(i);
+                int fallN = 56;
+                _fallX = new double[fallN]; _fallY = new double[fallN]; _fallP = new double[fallN]; _fallK = new int[fallN];
+                for (int i = 0; i < fallN; i++) RespawnFall(i, _sakIdx.Length > 0);
 
                 int pc = 6; _puddleX = new int[pc]; _puddleR = new double[pc];
                 for (int i = 0; i < pc; i++) { _puddleX[i] = 14 + _sceneRng.Next(SCN_W - 28); _puddleR[i] = 3 + _sceneRng.NextDouble() * 4; }
@@ -541,7 +539,8 @@ namespace CustomLauncher
                 DrawGroundDetail(gWinter, gAutumn, gSpring, bright);
                 DrawAccumulation(bright);
                 DrawTrees(gWinter, gAutumn, gSpring, bright, snowAmount);
-                if (gSpring) UpdateSpringPetals(bright);
+                if (gSpring) UpdateFalling(true);
+                else if (gAutumn) UpdateFalling(false);
 
                 bool badWeather = _weather == Weather.Rain || _weather == Weather.Snow;
                 if (!badWeather) DrawKite();
@@ -991,41 +990,70 @@ namespace CustomLauncher
 
         private void DrawLeafTree(int tx, int baseY, int h, bool winter, bool autumn, bool spring, double bright, double snow, double seed, bool sakura)
         {
-            int trunkH = Math.Max(2, (int)(h * 0.42));
-            int rad = Math.Max(3, (int)(h * 0.5));
-            int cy = baseY - trunkH - rad / 2;
-            byte tr = (byte)(60 * bright), tg = (byte)(40 * bright), tb = (byte)(24 * bright);
-            for (int k = 0; k <= trunkH; k++) SP(tx, baseY - k, tr, tg, tb);
-            SP(tx, baseY + 1, tr, tg, tb);
+            int trunkH = Math.Max(3, (int)(h * 0.5));
+            int rad = Math.Max(3, (int)(h * 0.48));
+            int forkY = baseY - trunkH;
+            int seg = (int)(seed * 50);
+            byte tr = (byte)(60 * bright), tg = (byte)(42 * bright), tb = (byte)(26 * bright);
+            byte dr = (byte)(40 * bright), dg = (byte)(28 * bright), db = (byte)(18 * bright);
+
+            for (int k = 0; k <= trunkH; k++)
+            {
+                SP(tx, baseY - k, tr, tg, tb);
+                if (k < trunkH - 1) SP(tx - 1, baseY - k, dr, dg, db);
+            }
+            SP(tx, baseY + 1, dr, dg, db);
+
+            int nb = 3 + (int)(Hash2(tx, baseY) * 2.99);
+            var tipX = new int[nb];
+            var tipY = new int[nb];
+            for (int j = 0; j < nb; j++)
+            {
+                double f = nb == 1 ? 0.5 : (double)j / (nb - 1);
+                double ang = -Math.PI / 2 + (f - 0.5) * 1.55 + (Hash2(tx + j * 7, forkY) - 0.5) * 0.4;
+                double len = rad * 0.85 + Hash2(tx + j, baseY + j) * rad * 0.6;
+                double bx = tx, by = forkY;
+                int steps = Math.Max(2, (int)len);
+                for (int s = 0; s <= steps; s++)
+                {
+                    SP((int)Math.Round(bx), (int)Math.Round(by), tr, tg, tb);
+                    if (s == steps / 2) { SP((int)Math.Round(bx) + (j % 2 == 0 ? 1 : -1), (int)Math.Round(by), dr, dg, db); }
+                    bx += Math.Cos(ang);
+                    by += Math.Sin(ang);
+                }
+                tipX[j] = (int)Math.Round(bx);
+                tipY[j] = (int)Math.Round(by);
+            }
 
             if (winter)
             {
-                SP(tx, cy, tr, tg, tb); SP(tx, cy - 1, tr, tg, tb); SP(tx, cy - 2, tr, tg, tb);
-                SP(tx - 1, cy - 1, tr, tg, tb); SP(tx + 1, cy - 2, tr, tg, tb);
-                SP(tx - 2, cy, tr, tg, tb); SP(tx + 2, cy - 1, tr, tg, tb);
-                SP(tx - 1, cy - 3, tr, tg, tb); SP(tx + 1, cy - 3, tr, tg, tb); SP(tx, cy - 3, tr, tg, tb);
                 if (snow > 0)
                 {
-                    BP(tx, cy - 4, 242, 247, 255, 0.85 * snow);
-                    BP(tx - 2, cy - 1, 236, 242, 252, 0.7 * snow);
-                    BP(tx + 2, cy - 2, 236, 242, 252, 0.7 * snow);
+                    for (int j = 0; j < nb; j++) BP(tipX[j], tipY[j] - 1, 240, 246, 255, 0.85 * snow);
+                    BP(tx, forkY - 1, 238, 244, 255, 0.6 * snow);
                 }
                 return;
             }
 
-            int seg = (int)(seed * 50);
-            double keep = autumn ? 0.55 : 1.0;
-            for (int dy = -rad; dy <= rad; dy++)
-                for (int dx = -rad; dx <= rad; dx++)
+            double keep = autumn ? 0.5 : 1.0;
+            FoliageBlob(tx, forkY - rad / 2, Math.Max(2, rad - 1), seg, sakura, autumn, spring, bright, keep);
+            for (int j = 0; j < nb; j++)
+                FoliageBlob(tipX[j], tipY[j], Math.Max(2, rad - 2), seg + j * 13, sakura, autumn, spring, bright, keep);
+
+            if (snow > 0)
+                for (int j = 0; j < nb; j++)
+                    BP(tipX[j], tipY[j] - Math.Max(2, rad - 2), 238, 244, 255, 0.7 * snow);
+        }
+
+        private void FoliageBlob(int cx, int cy, int r, int seg, bool sakura, bool autumn, bool spring, double bright, double keep)
+        {
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
                 {
-                    if (dx * dx + dy * dy > rad * rad) continue;
-                    int px = tx + dx, py = cy + dy;
+                    if (dx * dx + dy * dy > r * r) continue;
+                    int px = cx + dx, py = cy + dy;
                     double rr = Hash2(px + seg, py);
-                    if (autumn && Hash2(px + seg + 11, py + 5) > keep)
-                    {
-                        if (Hash2(px + 3, py) > 0.92) SP(px, py, tr, tg, tb);
-                        continue;
-                    }
+                    if (keep < 1.0 && Hash2(px + seg + 11, py + 5) > keep) continue;
                     (byte cr, byte cg, byte cb) c;
                     if (sakura)
                         c = spring ? (rr < 0.5 ? ((byte)248, (byte)190, (byte)220) : rr < 0.8 ? ((byte)252, (byte)224, (byte)238) : ((byte)255, (byte)252, (byte)254))
@@ -1034,47 +1062,41 @@ namespace CustomLauncher
                     else
                         c = autumn ? (rr < 0.34 ? ((byte)206, (byte)104, (byte)40) : rr < 0.67 ? ((byte)182, (byte)66, (byte)44) : ((byte)204, (byte)156, (byte)54))
                           :          ((byte)38, (byte)(90 + (rr < 0.5 ? 16 : -8)), (byte)44);
-                    double sh = dy < -rad / 3 ? 1.1 : dy > rad / 3 ? 0.78 : 1.0;
+                    double sh = dy < -r / 3 ? 1.12 : dy > r / 3 ? 0.78 : 1.0;
                     SP(px, py, (byte)Math.Min(255, c.cr * bright * sh), (byte)Math.Min(255, c.cg * bright * sh), (byte)Math.Min(255, c.cb * bright * sh));
                     if (spring && !sakura && rr > 0.9) BP(px, py, 246, 240, 250, 0.85);
                 }
-            if (snow > 0)
-                for (int dx = -rad; dx <= rad; dx++)
-                {
-                    int dyTop = -(int)Math.Sqrt(Math.Max(0, rad * rad - dx * dx));
-                    BP(tx + dx, cy + dyTop, 238, 244, 255, 0.82 * snow * (0.6 + 0.4 * Hash2(tx + dx, cy)));
-                }
         }
 
-        private void RespawnPetal(int i)
+        private void RespawnFall(int i, bool sakuraOnly)
         {
-            if (_sakX.Length == 0) return;
-            int s = _sceneRng.Next(_sakX.Length);
-            int r = _sakR[s];
-            _petX[i] = _sakX[s] + _sceneRng.Next(-r, r + 1);
-            _petY[i] = _sakY[s] + _sceneRng.Next(-r, 1);
-            _petP[i] = _sceneRng.NextDouble() * 6.28;
-            _petK[i] = _sceneRng.Next(3);
+            if (_canX.Length == 0) return;
+            int t = sakuraOnly && _sakIdx.Length > 0 ? _sakIdx[_sceneRng.Next(_sakIdx.Length)] : _sceneRng.Next(_canX.Length);
+            int r = _canR[t];
+            _fallX[i] = _canX[t] + _sceneRng.Next(-r, r + 1);
+            _fallY[i] = _canY[t] + _sceneRng.Next(-r, 1);
+            _fallP[i] = _sceneRng.NextDouble() * 6.28;
+            _fallK[i] = _sceneRng.Next(3);
         }
 
-        private void UpdateSpringPetals(double bright)
+        private void UpdateFalling(bool spring)
         {
-            double wind = Math.Sin(_frame * 0.03) * 0.6;
-            for (int i = 0; i < _petX.Length; i++)
+            double wind = Math.Sin(_frame * 0.03) * (spring ? 0.6 : 0.9);
+            for (int i = 0; i < _fallX.Length; i++)
             {
-                _petY[i] += 0.45 + 0.25 * (0.5 + 0.5 * Math.Sin(_petP[i] + _frame * 0.1));
-                _petX[i] += Math.Sin(_petY[i] * 0.12 + _petP[i]) * 0.9 + wind;
-                int col = (((int)_petX[i]) % SCN_W + SCN_W) % SCN_W;
-                if (_petY[i] >= _ground[col] + (SCN_H - _ground[col]) * 0.85 || _petX[i] < -2 || _petX[i] > SCN_W + 2)
+                _fallY[i] += (spring ? 0.45 : 0.6) + 0.25 * (0.5 + 0.5 * Math.Sin(_fallP[i] + _frame * 0.1));
+                _fallX[i] += Math.Sin(_fallY[i] * (spring ? 0.12 : 0.09) + _fallP[i]) * (spring ? 0.9 : 1.4) + wind;
+                int col = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
+                if (_fallY[i] >= _ground[col] + (SCN_H - _ground[col]) * 0.85 || _fallX[i] < -2 || _fallX[i] > SCN_W + 2)
                 {
-                    RespawnPetal(i);
+                    RespawnFall(i, spring);
                     continue;
                 }
-                int x = col, y = (int)_petY[i];
-                (byte r, byte g, byte b) c = _petK[i] == 0 ? ((byte)248, (byte)188, (byte)216)
-                                           : _petK[i] == 1 ? ((byte)252, (byte)222, (byte)236)
-                                           :                 ((byte)242, (byte)166, (byte)204);
-                bool flip = ((int)(_petY[i] * 0.3 + _petP[i] * 3) & 1) == 0;
+                int x = col, y = (int)_fallY[i];
+                (byte r, byte g, byte b) c = spring
+                    ? (_fallK[i] == 0 ? ((byte)248, (byte)188, (byte)216) : _fallK[i] == 1 ? ((byte)252, (byte)222, (byte)236) : ((byte)242, (byte)166, (byte)204))
+                    : (_fallK[i] == 0 ? ((byte)214, (byte)120, (byte)42) : _fallK[i] == 1 ? ((byte)190, (byte)70, (byte)48) : ((byte)206, (byte)160, (byte)60));
+                bool flip = ((int)(_fallY[i] * 0.3 + _fallP[i] * 3) & 1) == 0;
                 BP(x, y, c.r, c.g, c.b, 0.92);
                 BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.6);
             }
