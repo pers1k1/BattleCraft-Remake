@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9.1";
+        private const string VER = "7.9.2";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -224,6 +224,9 @@ namespace CustomLauncher
         private readonly int[] _mtnNear = new int[SCN_W];
         private readonly int[] _forest = new int[SCN_W];
 
+        private int[] _treeX = Array.Empty<int>(), _treeH = Array.Empty<int>(), _treeKind = Array.Empty<int>();
+        private double[] _treeSeed = Array.Empty<double>();
+
         private int[] _starX = Array.Empty<int>(), _starY = Array.Empty<int>();
         private double[] _starP = Array.Empty<double>();
 
@@ -258,6 +261,15 @@ namespace CustomLauncher
                     _mtnFar[x] = (int)(HORIZON - 18 - 12 * Math.Sin(x * 0.045) - 6 * Math.Sin(x * 0.11 + 2));
                     _mtnNear[x] = (int)(HORIZON - 6 - 9 * Math.Sin(x * 0.06 + 1.3) - 5 * Math.Sin(x * 0.15 + 4));
                     _forest[x] = (int)(SCN_H - 14 - 4 * Math.Sin(x * 0.5) - 3 * Math.Sin(x * 0.9 + 1) - (_sceneRng.NextDouble() < 0.12 ? 4 : 0));
+                }
+
+                int tc = 26; _treeX = new int[tc]; _treeH = new int[tc]; _treeKind = new int[tc]; _treeSeed = new double[tc];
+                for (int i = 0; i < tc; i++)
+                {
+                    _treeX[i] = (int)((i + 0.5) / tc * SCN_W + _sceneRng.Next(-3, 4));
+                    _treeH[i] = 9 + _sceneRng.Next(0, 8);
+                    _treeKind[i] = _sceneRng.NextDouble() < 0.6 ? 0 : 1;
+                    _treeSeed[i] = _sceneRng.NextDouble();
                 }
 
                 int sc = 70; _starX = new int[sc]; _starY = new int[sc]; _starP = new double[sc];
@@ -458,26 +470,38 @@ namespace CustomLauncher
                     DrawCloud((int)_cloudX[i], (int)_cloudY[i], (int)_cloudW[i], bright, night, storm);
                 }
 
-                for (int x = 0; x < SCN_W; x++)
-                {
-                    for (int y = Math.Max(0, _mtnFar[x]); y < HORIZON; y++) SP(x, y, (byte)(70 * bright), (byte)(58 * bright), (byte)(104 * bright));
-                    for (int y = Math.Max(0, _mtnNear[x]); y < HORIZON; y++) SP(x, y, (byte)(40 * bright), (byte)(30 * bright), (byte)(66 * bright));
-                }
                 int gmonth = DateTime.Now.Month;
                 bool gWinter = gmonth == 12 || gmonth <= 2;
                 bool gAutumn = gmonth >= 9 && gmonth <= 11;
                 bool gSpring = gmonth >= 3 && gmonth <= 5;
                 double snowAmount = gWinter ? 1.0 : (_weather == Weather.Snow ? _wxIntensity : 0);
 
-                (int r, int g, int b) gDirt = gWinter ? (60, 70, 96) : gAutumn ? (92, 62, 38) : gSpring ? (66, 104, 54) : (58, 98, 48);
-                (int r, int g, int b) gFloor = gWinter ? (44, 52, 76) : gAutumn ? (54, 38, 26) : gSpring ? (38, 66, 38) : (34, 58, 34);
+                DrawMountains(gWinter, gAutumn, gSpring, bright, snowAmount);
 
+                (int r, int g, int b) gDirt = gWinter ? (138, 150, 176) : gAutumn ? (78, 56, 36) : gSpring ? (58, 92, 50) : (52, 86, 44);
+                (int r, int g, int b) gFloor = gWinter ? (118, 132, 160) : gAutumn ? (50, 36, 24) : gSpring ? (34, 60, 34) : (30, 54, 30);
+
+                int gh = SCN_H - HORIZON;
                 for (int y = HORIZON; y < SCN_H; y++)
-                    for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(gDirt.r * bright), (byte)(gDirt.g * bright), (byte)(gDirt.b * bright));
+                {
+                    double front = (double)(y - HORIZON) / gh;
+                    double shade = 0.72 + 0.28 * front;
+                    for (int x = 0; x < SCN_W; x++)
+                    {
+                        double n = 0.9 + 0.2 * Hash2(x, y);
+                        double m = shade * n;
+                        SP(x, y, (byte)(gDirt.r * bright * m), (byte)(gDirt.g * bright * m), (byte)(gDirt.b * bright * m));
+                    }
+                }
                 for (int x = 0; x < SCN_W; x++)
-                    for (int y = Math.Max(HORIZON, _forest[x]); y < SCN_H; y++) SP(x, y, (byte)(gFloor.r * bright), (byte)(gFloor.g * bright), (byte)(gFloor.b * bright));
+                    for (int y = Math.Max(HORIZON, _forest[x]); y < SCN_H; y++)
+                    {
+                        double n = 0.88 + 0.24 * Hash2(x + 5, y + 11);
+                        SP(x, y, (byte)(gFloor.r * bright * n), (byte)(gFloor.g * bright * n), (byte)(gFloor.b * bright * n));
+                    }
 
                 DrawGroundDetail(gWinter, gAutumn, gSpring, bright, snowAmount);
+                DrawTrees(gWinter, gAutumn, gSpring, bright, snowAmount);
 
                 bool badWeather = _weather == Weather.Rain || _weather == Weather.Snow;
                 if (!badWeather) DrawKite();
@@ -836,6 +860,143 @@ namespace CustomLauncher
             _sceneBuf[i + 1] = (byte)(_sceneBuf[i + 1] * (1 - a) + g * a);
             _sceneBuf[i + 2] = (byte)(_sceneBuf[i + 2] * (1 - a) + r * a);
             _sceneBuf[i + 3] = 255;
+        }
+
+        private void DrawMountains(bool winter, bool autumn, bool spring, double bright, double snowAmount)
+        {
+            (int r, int g, int b) farRock = winter ? (90, 98, 126) : autumn ? (96, 82, 100) : (70, 58, 104);
+            (int r, int g, int b) nearRock = winter ? (58, 66, 94) : autumn ? (58, 46, 56) : (40, 30, 66);
+
+            for (int x = 0; x < SCN_W; x++)
+            {
+                int ft = Math.Max(0, _mtnFar[x]);
+                for (int y = ft; y < HORIZON; y++)
+                    SP(x, y, (byte)(farRock.r * bright), (byte)(farRock.g * bright), (byte)(farRock.b * bright));
+                if (snowAmount > 0)
+                {
+                    int sh = (int)(snowAmount * (HORIZON - ft) * 0.72 + Hash2(x, 3) * 2);
+                    int edge = Math.Min(HORIZON, ft + sh);
+                    for (int y = ft; y < edge; y++)
+                        BP(x, y, (byte)(212 * bright), (byte)(222 * bright), (byte)(240 * bright), 0.9);
+                }
+            }
+            for (int x = 0; x < SCN_W; x++)
+            {
+                int nt = Math.Max(0, _mtnNear[x]);
+                for (int y = nt; y < HORIZON; y++)
+                    SP(x, y, (byte)(nearRock.r * bright), (byte)(nearRock.g * bright), (byte)(nearRock.b * bright));
+                if (snowAmount > 0)
+                {
+                    int sh = (int)(snowAmount * (HORIZON - nt) * 0.62 + Hash2(x, 9) * 2);
+                    int edge = Math.Min(HORIZON, nt + sh);
+                    for (int y = nt; y < edge; y++)
+                    {
+                        double sd = (double)(y - nt) / Math.Max(1, sh);
+                        BP(x, y, (byte)((238 - 14 * sd) * bright), (byte)((245 - 12 * sd) * bright), (byte)(255 * bright), 0.95);
+                    }
+                    if (edge < HORIZON)
+                        BP(x, edge, (byte)(nearRock.r * bright), (byte)(nearRock.g * bright), (byte)(nearRock.b * bright), 0.45);
+                }
+            }
+        }
+
+        private void DrawTrees(bool winter, bool autumn, bool spring, double bright, double snowAmount)
+        {
+            for (int i = 0; i < _treeX.Length; i++)
+            {
+                int tx = _treeX[i];
+                int baseY = _forest[((tx % SCN_W) + SCN_W) % SCN_W];
+                if (_treeKind[i] == 0) DrawConifer(tx, baseY, _treeH[i], autumn, winter, bright, snowAmount);
+                else DrawBroadleaf(tx, baseY, _treeH[i], winter, autumn, spring, bright, snowAmount, _treeSeed[i]);
+            }
+        }
+
+        private void DrawConifer(int tx, int baseY, int h, bool autumn, bool winter, double bright, double snow)
+        {
+            int apex = baseY - h;
+            int half = Math.Max(2, (int)(h * 0.44));
+            (int r, int g, int b) lf = winter ? (38, 72, 44) : autumn ? (46, 82, 48) : (40, 92, 46);
+            (int r, int g, int b) hi = winter ? (54, 96, 58) : (58, 118, 62);
+
+            byte trr = (byte)(54 * bright), trg = (byte)(36 * bright), trb = (byte)(22 * bright);
+            SP(tx, baseY + 1, trr, trg, trb);
+            SP(tx, baseY + 2, trr, trg, trb);
+
+            int prevW = -1;
+            for (int r = 0; r <= h; r++)
+            {
+                int y = apex + r;
+                double t = (double)r / h;
+                int w = (int)(half * t);
+                for (int dx = -w; dx <= w; dx++)
+                {
+                    (int r, int g, int b) c = dx < -w / 2 ? hi : dx > w / 2 ? (lf.r * 7 / 10, lf.g * 7 / 10, lf.b * 7 / 10) : lf;
+                    SP(tx + dx, y, (byte)(c.r * bright), (byte)(c.g * bright), (byte)(c.b * bright));
+                }
+                if (snow > 0 && w > prevW && w > 0)
+                {
+                    BP(tx - w, y, 238, 244, 255, 0.9 * snow);
+                    BP(tx + w, y, 230, 238, 252, 0.85 * snow);
+                }
+                prevW = w;
+            }
+            if (snow > 0)
+            {
+                BP(tx, apex, 246, 250, 255, 0.95 * snow);
+                BP(tx, apex + 1, 240, 246, 255, 0.7 * snow);
+            }
+        }
+
+        private void DrawBroadleaf(int tx, int baseY, int h, bool winter, bool autumn, bool spring, double bright, double snow, double seed)
+        {
+            int trunkH = Math.Max(2, (int)(h * 0.42));
+            int rad = Math.Max(3, (int)(h * 0.5));
+            int cy = baseY - trunkH - rad / 2;
+            byte tr = (byte)(60 * bright), tg = (byte)(40 * bright), tb = (byte)(24 * bright);
+            for (int k = 0; k <= trunkH; k++) SP(tx, baseY - k, tr, tg, tb);
+            SP(tx, baseY + 1, tr, tg, tb);
+
+            if (winter)
+            {
+                SP(tx - 1, cy + 1, tr, tg, tb); SP(tx + 1, cy, tr, tg, tb); SP(tx, cy - 1, tr, tg, tb);
+                SP(tx - 2, cy, tr, tg, tb); SP(tx + 2, cy + 1, tr, tg, tb);
+                if (snow > 0)
+                {
+                    BP(tx, cy - 2, 242, 247, 255, 0.85 * snow);
+                    BP(tx - 2, cy - 1, 236, 242, 252, 0.7 * snow);
+                    BP(tx + 2, cy, 236, 242, 252, 0.7 * snow);
+                }
+                return;
+            }
+
+            int seg = (int)(seed * 50);
+            for (int dy = -rad; dy <= rad; dy++)
+                for (int dx = -rad; dx <= rad; dx++)
+                {
+                    if (dx * dx + dy * dy > rad * rad) continue;
+                    int px = tx + dx, py = cy + dy;
+                    double rr = Hash2(px + seg, py);
+                    (byte cr, byte cg, byte cb) c;
+                    if (autumn)
+                        c = rr < 0.34 ? ((byte)206, (byte)104, (byte)40)
+                          : rr < 0.67 ? ((byte)182, (byte)66, (byte)44)
+                          :             ((byte)204, (byte)156, (byte)56);
+                    else
+                        c = ((byte)38, (byte)(90 + (rr < 0.5 ? 16 : -8)), (byte)44);
+                    double sh = dy < -rad / 3 ? 1.1 : dy > rad / 3 ? 0.78 : 1.0;
+                    SP(px, py, (byte)Math.Min(255, c.cr * bright * sh), (byte)Math.Min(255, c.cg * bright * sh), (byte)Math.Min(255, c.cb * bright * sh));
+                    if (spring)
+                    {
+                        if (rr > 0.86) BP(px, py, 248, 196, 222, 0.9);
+                        else if (rr > 0.82) BP(px, py, 246, 240, 250, 0.85);
+                    }
+                }
+            if (snow > 0)
+                for (int dx = -rad; dx <= rad; dx++)
+                {
+                    int dyTop = -(int)Math.Sqrt(Math.Max(0, rad * rad - dx * dx));
+                    BP(tx + dx, cy + dyTop, 238, 244, 255, 0.82 * snow * (0.6 + 0.4 * Hash2(tx + dx, cy)));
+                }
         }
 
         private void DrawGroundDetail(bool winter, bool autumn, bool spring, double bright, double snowAmount)
