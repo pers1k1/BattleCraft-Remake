@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9.7";
+        private const string VER = "7.9.8";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -2569,6 +2569,8 @@ namespace CustomLauncher
 
             while (true)
             {
+                while (!_sceneRunning) await Task.Delay(400);
+
                 bool weatherSlot = slot == 2 && _weather != Weather.Clear && _wxIntensity > 0.5;
                 string phrase = slot == 0 ? GetRandomGreeting(_settings.Username)
                               : weatherSlot ? GetWeatherPhrase()
@@ -2577,7 +2579,7 @@ namespace CustomLauncher
 
                 await AnimateTerminalText(WelcomeText, phrase);
 
-                for (int w = 0; w < 8; w++)
+                for (int w = 0; w < 8 && _sceneRunning; w++)
                 {
                     WelcomeText.Text = phrase + "_";
                     await Task.Delay(500);
@@ -2585,7 +2587,7 @@ namespace CustomLauncher
                     await Task.Delay(500);
                 }
 
-                for (int i = phrase.Length - 1; i >= 0; i--)
+                for (int i = phrase.Length - 1; i >= 0 && _sceneRunning; i--)
                 {
                     WelcomeText.Text = phrase.Substring(0, i) + chars[rnd.Next(chars.Length)] + "_";
                     await Task.Delay(15);

@@ -628,13 +628,13 @@
 
             <Grid x:Name="PlayContentPanel" Grid.Column="1" Margin="22,48,22,20">
 
-                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
+                <Border Background="#33080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
                     <Border.Effect>
                         <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
                     </Border.Effect>
                 </Border>
 
-                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <Border Background="#8E080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -743,13 +743,13 @@
             </Grid>
 
             <Grid x:Name="ServerContentPanel" Grid.Column="1" Visibility="Collapsed" Margin="22,48,22,20">
-                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
+                <Border Background="#33080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
                     <Border.Effect>
                         <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
                     </Border.Effect>
                 </Border>
 
-                <Border Background="#BE080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                <Border Background="#8E080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
