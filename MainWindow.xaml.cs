@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9.5";
+        private const string VER = "7.9.6";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -912,15 +912,23 @@ namespace CustomLauncher
         {
             if (_cometLife <= 0 && _sceneRng.NextDouble() < 0.06)
             {
-                _cometX = _sceneRng.Next(SCN_W / 2, SCN_W); _cometY = _sceneRng.Next(HORIZON - 20); _cometLife = 14;
+                _cometX = _sceneRng.Next(SCN_W / 2, SCN_W); _cometY = _sceneRng.Next(HORIZON - 26); _cometLife = 16;
             }
             if (_cometLife > 0)
             {
                 _cometX -= 6; _cometY += 3; _cometLife--;
                 int x = (int)_cometX, y = (int)_cometY;
-                DrawDisc(x, y, 1, 255, 255, 255, _wxIntensity);
-                for (int i = 1; i <= 7; i++) BP(x + i * 2, y - i, 200, 215, 255, Math.Max(0, 0.8 - i * 0.11) * _wxIntensity);
+                CometPixel(x, y, 255, 255, 255, _wxIntensity);
+                CometPixel(x + 1, y, 255, 255, 255, 0.7 * _wxIntensity);
+                CometPixel(x, y + 1, 238, 244, 255, 0.5 * _wxIntensity);
+                for (int i = 1; i <= 8; i++) CometPixel(x + i * 2, y - i, 200, 215, 255, Math.Max(0, 0.8 - i * 0.1) * _wxIntensity);
             }
+        }
+
+        private void CometPixel(int x, int y, byte r, byte g, byte b, double a)
+        {
+            if ((uint)x < SCN_W && y >= Math.Min(_mtnFar[x], _mtnNear[x])) return;
+            BP(x, y, r, g, b, a);
         }
 
         private void SP(int x, int y, byte r, byte g, byte b)
