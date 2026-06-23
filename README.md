@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.20 |
-| Launcher | 7.9.7 |
+| Launcher | 8.0.0 |
 | Runtime | .NET 8 (WPF, Windows) |
 
 ## Client Features
@@ -17,7 +17,9 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 - Automatic Java detection and provisioning (Adoptium Temurin 17) when no suitable runtime is present.
 - Self-updating launcher and modpack with resumable, retry-on-failure downloads.
 - Microsoft authentication without WebView2, plus offline accounts.
-- Customizable interface: accent colors, custom icon, bloom, and a glass-style UI that lets the scene show through the panels.
+- Customizable interface: accent colors (Sakura by default), custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
+- Tactile, animated UI: buttons burst into particles on click, the sidebar reacts with glow and motion, and tabs, settings, and login transitions are fully animated.
+- In-app ChangeLogs viewer with separate launcher and modpack/server-map tabs, fetched live from the remote config.
 - Living pixel-art background: a hand-rendered seasonal scene with a day/night cycle, parallax mountains and a forest of swaying trees, and dynamic weather — rain with thunderstorms, snow that drifts and piles up, fog, falling autumn leaves and spring cherry-blossom petals. Animation pauses while the window is minimized or in the background to keep idle resource usage low.
 - Discord Rich Presence integration.
 - Unified install/launch log with rolling crash reports retained in the launcher's configuration directory.
