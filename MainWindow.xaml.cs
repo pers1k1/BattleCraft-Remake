@@ -63,12 +63,12 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "7.9.8";
+        private const string VER = "8.0.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
-        private const string DefPrimary = "#0D0D1E";
-        private const string DefAccent = "#BB86FC";
+        private const string DefPrimary = "#14101A";
+        private const string DefAccent = "#F7CAD0";
         private const string MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/modpack_version.txt";
         private const string LAUNCHER_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/launcher_version.txt";
         private const string SERVER_MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/server_modpack_version.txt";
@@ -76,6 +76,8 @@ namespace CustomLauncher
         private const string MODPACK_URL = "https://github.com/pers1k1/modpack/releases/download/main/release.zip";
         private const string BATTLECRAFT_MOD_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/battlecraft_mod_version.txt";
         private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
+        private const string LAUNCHER_CHANGELOG_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/Launcher_changelog.txt";
+        private const string MODPACK_CHANGELOG_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/ModPack_ServerMap_Changelog.txt";
 
         private static string BattleCraftJarUrl(string ver) =>
             $"https://github.com/pers1k1/BattleCraft-mod/releases/download/v{ver}/battlecraft-{ver}-all.jar";
@@ -1530,7 +1532,10 @@ namespace CustomLauncher
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(400)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
             fade.Completed += (s, e) =>
             {
+                if (BootPixelCanvas?.Effect is DropShadowEffect dse) dse.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+                if (BootPixelCanvas != null) { BootPixelCanvas.Effect = null; BootPixelCanvas.Children.Clear(); }
                 BootOverlay.Visibility = Visibility.Collapsed;
+                BootOverlay.BeginAnimation(OpacityProperty, null);
                 tcs.TrySetResult(true);
             };
             BootOverlay.BeginAnimation(OpacityProperty, fade);
@@ -1785,11 +1790,19 @@ namespace CustomLauncher
 
             AppSettings.Save(_settings);
 
-            SetupPanel.Visibility = Visibility.Hidden;
             TopButtons.Visibility = Visibility.Visible;
             UsernameBox.Text = nick; RamSlider.Value = 4096; SetupPathBox.Text = path; PathBox.Text = path;
             _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
-            SwitchToMain();
+
+            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            fade.Completed += (s2, e2) =>
+            {
+                SetupPanel.Visibility = Visibility.Hidden;
+                SetupPanel.BeginAnimation(OpacityProperty, null);
+                SetupPanel.Opacity = 1;
+                SwitchToMain();
+            };
+            SetupPanel.BeginAnimation(OpacityProperty, fade);
         }
 
         private void FillColorPresets()
@@ -1872,6 +1885,7 @@ namespace CustomLauncher
             double k = str / 100.0;
             this.Resources["BloomBlurRadius"] = 5 + 25 * k;
             this.Resources["BloomOpacity"] = on ? 0.2 + 0.8 * k : 0.0;
+            this.Resources["SettingsBloomOpacity"] = on ? (0.2 + 0.8 * k) * 0.6 : 0.0;
 
             this.Resources["TitleBloomBlurRadius"] = 20 + 40 * k;
             this.Resources["TitleBloomOpacity"] = on ? 0.2 + 0.3 * k : 0.0;
@@ -2608,6 +2622,11 @@ namespace CustomLauncher
 
             var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
 
+            MainPanel.Opacity = 0;
+            MainPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease });
+            if (SideBarTransform != null)
+                SideBarTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-70, 0, TimeSpan.FromMilliseconds(520)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+
             TopButtons.Opacity = 0;
             TopButtons.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(300) });
 
@@ -2632,25 +2651,38 @@ namespace CustomLauncher
             LoginPanel.Visibility = Visibility.Visible;
             if (_settings.UserType == "msa") UsernameBox.Text = "";
             else UsernameBox.Text = _settings.Username;
+
+            var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
+            LoginPanel.Opacity = 0;
+            LoginPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(450)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(80) });
+            var tr = EnsureTabTransform(LoginPanel);
+            tr.Y = 22;
+            tr.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(22, 0, TimeSpan.FromMilliseconds(520)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(80) });
         }
 
         private async void BtnLoginMicrosoft_Click(object s, RoutedEventArgs e)
         {
+            ShowSpinnerOverlay("Вход через Microsoft", "Ожидание авторизации…", false);
             try
             {
                 var handler = JELoginHandlerBuilder.BuildDefault();
                 var sessionObj = await handler.AuthenticateInteractively();
 
-                if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
+                if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username))
+                {
+                    await AuthOverlayFail("Вход не выполнен", "Попробуйте ещё раз");
+                    return;
+                }
 
                 _settings.Username = sessionObj.Username;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
+                HideUpdateOverlay();
                 SwitchToMain();
             }
-            catch (Exception ex)
+            catch
             {
-                await ShowCustomDialog($"Ошибка авторизации: {ex.Message}");
+                await AuthOverlayFail("Ошибка авторизации", "Попробуйте ещё раз");
             }
         }
 
@@ -2698,6 +2730,8 @@ namespace CustomLauncher
         private void BtnSettings_Click(object s, RoutedEventArgs e)
         {
             SettingsPanel.Visibility = Visibility.Visible; _scrollTarget = -1;
+            if (_scrolling) { _scrolling = false; CompositionTarget.Rendering -= ScrollTick; }
+            SettingsScrollViewer?.ScrollToVerticalOffset(0);
 
             try
             {
@@ -2708,12 +2742,14 @@ namespace CustomLauncher
 
             RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
             PathBox.Text = _settings.GamePath;
+            SettingsScale.ScaleX = 1; SettingsScale.ScaleY = 1; SettingsTranslate.Y = 0;
             SettingsPanel.Opacity = 0;
-            SettingsPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.93, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-            SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.93, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-            SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(25, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+            SettingsPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
+            var pop = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 1.4 };
+            var slide = new CubicEase { EasingMode = EasingMode.EaseOut };
+            SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
+            SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
+            SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(420)) { EasingFunction = slide });
 
             var titleEase = new QuarticEase { EasingMode = EasingMode.EaseOut };
             SettingsTitle.Opacity = 0;
@@ -2735,12 +2771,116 @@ namespace CustomLauncher
                 PathBox.Text = np;
             }
             AppSettings.Save(_settings); if (_settings.HasGamePath) InitializeLauncher();
-            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150));
-            fade.Completed += (s2, e2) => { SettingsPanel.Visibility = Visibility.Hidden; SettingsPanel.BeginAnimation(OpacityProperty, null); SettingsPanel.Opacity = 1; };
+            var dur = TimeSpan.FromMilliseconds(200);
+            var collapse = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.6 };
+            var sink = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var sx = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
+            var sy = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
+            var ty = new DoubleAnimation(0, 18, dur) { EasingFunction = sink };
+            var fade = new DoubleAnimation(1, 0, dur);
+            fade.Completed += (s2, e2) =>
+            {
+                SettingsPanel.Visibility = Visibility.Hidden;
+                SettingsPanel.BeginAnimation(OpacityProperty, null); SettingsPanel.Opacity = 1;
+                SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); SettingsScale.ScaleX = 1;
+                SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); SettingsScale.ScaleY = 1;
+                SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, null); SettingsTranslate.Y = 0;
+            };
+            SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, sx);
+            SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, sy);
+            SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, ty);
             SettingsPanel.BeginAnimation(OpacityProperty, fade);
         }
 
         private void BtnSaveSettings_Click(object s, RoutedEventArgs e) => BtnCloseSettings_Click(s, e);
+
+        private string _launcherChangelog = "";
+        private string _modpackChangelog = "";
+        private bool _changelogTabModpack;
+
+        private async void BtnChangelogs_Click(object s, RoutedEventArgs e)
+        {
+            ChangelogPanel.Visibility = Visibility.Visible;
+            ChangelogScale.ScaleX = 1; ChangelogScale.ScaleY = 1; ChangelogTranslate.Y = 0;
+            ChangelogPanel.Opacity = 0;
+            ChangelogPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
+            var pop = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 1.4 };
+            var slide = new CubicEase { EasingMode = EasingMode.EaseOut };
+            ChangelogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
+            ChangelogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
+            ChangelogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(420)) { EasingFunction = slide });
+
+            _launcherChangelog = ""; _modpackChangelog = "";
+            SetChangelogTab(false);
+            ChangelogText.Text = "Загрузка…";
+
+            try
+            {
+                string ts = "?t=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var tl = _httpClient.GetStringAsync(LAUNCHER_CHANGELOG_URL + ts);
+                var tm = _httpClient.GetStringAsync(MODPACK_CHANGELOG_URL + ts);
+                await Task.WhenAll(tl, tm);
+                _launcherChangelog = NormalizeChangelog(tl.Result);
+                _modpackChangelog = NormalizeChangelog(tm.Result);
+            }
+            catch
+            {
+                if (_launcherChangelog.Length == 0) _launcherChangelog = "Не удалось загрузить changelog.\nПроверьте подключение к интернету.";
+                if (_modpackChangelog.Length == 0) _modpackChangelog = _launcherChangelog;
+            }
+
+            if (ChangelogPanel.Visibility == Visibility.Visible) SetChangelogTab(_changelogTabModpack);
+        }
+
+        private static string NormalizeChangelog(string text)
+        {
+            string t = (text ?? "").Replace("\r\n", "\n").Trim();
+            return t.Length == 0 ? "Здесь пока пусто." : t;
+        }
+
+        private void ChangelogTab_Launcher(object s, RoutedEventArgs e) => SetChangelogTab(false);
+        private void ChangelogTab_Modpack(object s, RoutedEventArgs e) => SetChangelogTab(true);
+
+        private void SetChangelogTab(bool modpack)
+        {
+            _changelogTabModpack = modpack;
+            string txt = modpack ? _modpackChangelog : _launcherChangelog;
+            ChangelogText.Text = txt.Length > 0 ? txt : "Загрузка…";
+            ChangelogScrollViewer?.ScrollToVerticalOffset(0);
+
+            var accent = (Brush)FindResource("AccentBrush");
+            var dim = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
+            var underline = new Thickness(0, 0, 0, 2);
+            ChangelogTabLauncher.BorderThickness = modpack ? new Thickness(0) : underline;
+            ChangelogTabLauncher.BorderBrush = modpack ? Brushes.Transparent : accent;
+            ChangelogTabLauncher.Foreground = modpack ? dim : new SolidColorBrush(Colors.White);
+            ChangelogTabModpack.BorderThickness = modpack ? underline : new Thickness(0);
+            ChangelogTabModpack.BorderBrush = modpack ? accent : Brushes.Transparent;
+            ChangelogTabModpack.Foreground = modpack ? new SolidColorBrush(Colors.White) : dim;
+        }
+
+        private void BtnCloseChangelog_Click(object s, RoutedEventArgs e)
+        {
+            var dur = TimeSpan.FromMilliseconds(200);
+            var collapse = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.6 };
+            var sink = new CubicEase { EasingMode = EasingMode.EaseIn };
+            var sx = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
+            var sy = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
+            var ty = new DoubleAnimation(0, 18, dur) { EasingFunction = sink };
+            var fade = new DoubleAnimation(1, 0, dur);
+            fade.Completed += (s2, e2) =>
+            {
+                ChangelogPanel.Visibility = Visibility.Hidden;
+                ChangelogPanel.BeginAnimation(OpacityProperty, null); ChangelogPanel.Opacity = 1;
+                ChangelogScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); ChangelogScale.ScaleX = 1;
+                ChangelogScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); ChangelogScale.ScaleY = 1;
+                ChangelogTranslate.BeginAnimation(TranslateTransform.YProperty, null); ChangelogTranslate.Y = 0;
+            };
+            ChangelogScale.BeginAnimation(ScaleTransform.ScaleXProperty, sx);
+            ChangelogScale.BeginAnimation(ScaleTransform.ScaleYProperty, sy);
+            ChangelogTranslate.BeginAnimation(TranslateTransform.YProperty, ty);
+            ChangelogPanel.BeginAnimation(OpacityProperty, fade);
+        }
         private void DebugCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) { _settings.DebugConsole = DebugCheck.IsChecked == true; AppSettings.Save(_settings); } }
         private void BtnSelectFolder_Click(object s, RoutedEventArgs e) { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) PathBox.Text = ResolveGamePath(d.FolderName); }
 
@@ -2851,12 +2991,18 @@ namespace CustomLauncher
             catch { HideUpdateOverlay(); StatusText.Text = "Ошибка обновления"; }
         }
 
-        private void ShowUpdateOverlay()
+        private void ShowUpdateOverlay() => ShowSpinnerOverlay("Обновление лаунчера", "Скачивание новой версии…", true);
+
+        private void ShowSpinnerOverlay(string title, string sub, bool showProgress)
         {
             UpdateProgressBar.BeginAnimation(ProgressBar.ValueProperty, null);
             UpdateProgressBar.Value = 0;
-            UpdatePercentText.Text = "0%";
-            UpdateSubText.Text = "Скачивание новой версии…";
+            UpdateTitleText.Text = title;
+            UpdateSubText.Text = sub;
+            UpdateSubText.Foreground = new SolidColorBrush(Color.FromArgb(0xAA, 0xFF, 0xFF, 0xFF));
+            UpdateProgressBar.Visibility = showProgress ? Visibility.Visible : Visibility.Collapsed;
+            UpdatePercentText.Text = showProgress ? "0%" : "";
+            UpdateSpinnerArc?.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "AccentBrush");
 
             UpdateOverlay.Visibility = Visibility.Visible;
             UpdateOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
@@ -2868,6 +3014,17 @@ namespace CustomLauncher
 
             UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty,
                 new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.1)) { RepeatBehavior = RepeatBehavior.Forever });
+        }
+
+        private async Task AuthOverlayFail(string title, string sub)
+        {
+            UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            if (UpdateSpinnerArc != null) UpdateSpinnerArc.Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x6B));
+            UpdateTitleText.Text = title;
+            UpdateSubText.Text = sub;
+            UpdateSubText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x9B, 0x9B));
+            await Task.Delay(2000);
+            HideUpdateOverlay();
         }
 
         private void HideUpdateOverlay()
@@ -2956,13 +3113,107 @@ namespace CustomLauncher
             }
         }
 
+        public void Btn_Pop(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || FxCanvas == null) return;
+            if (btn.ActualWidth <= 0 || btn.ActualHeight <= 0) return;
+            Point origin;
+            try
+            {
+                var p = Mouse.GetPosition(btn);
+                if (p.X < 0 || p.Y < 0 || p.X > btn.ActualWidth || p.Y > btn.ActualHeight)
+                    p = new Point(btn.ActualWidth / 2, btn.ActualHeight / 2);
+                origin = btn.TransformToVisual(FxCanvas).Transform(p);
+            }
+            catch { return; }
+            SpawnBurst(origin);
+        }
+
+        private void SpawnBurst(Point center)
+        {
+            var accent = (Color)FindResource("AccentColor");
+
+            double ringSize = 34;
+            var ring = new System.Windows.Shapes.Ellipse
+            {
+                Width = ringSize,
+                Height = ringSize,
+                Stroke = new SolidColorBrush(accent),
+                StrokeThickness = 2,
+                Fill = Brushes.Transparent,
+                IsHitTestVisible = false,
+                RenderTransformOrigin = new Point(0.5, 0.5),
+                Opacity = 0.85
+            };
+            var rsc = new ScaleTransform(0.2, 0.2);
+            ring.RenderTransform = rsc;
+            Canvas.SetLeft(ring, center.X - ringSize / 2);
+            Canvas.SetTop(ring, center.Y - ringSize / 2);
+            FxCanvas.Children.Add(ring);
+
+            var rEase = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var rDur = TimeSpan.FromMilliseconds(420);
+            rsc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.2, 1.9, rDur) { EasingFunction = rEase });
+            rsc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.2, 1.9, rDur) { EasingFunction = rEase });
+            var rFade = new DoubleAnimation(0.85, 0, rDur) { EasingFunction = rEase };
+            rFade.Completed += (s, e) => FxCanvas.Children.Remove(ring);
+            ring.BeginAnimation(UIElement.OpacityProperty, rFade);
+
+            int count = 11 + _rnd.Next(5);
+            for (int i = 0; i < count; i++)
+            {
+                double size = 3 + _rnd.NextDouble() * 4;
+                var dot = new System.Windows.Shapes.Ellipse
+                {
+                    Width = size,
+                    Height = size,
+                    Fill = new SolidColorBrush(JitterColor(accent)),
+                    IsHitTestVisible = false,
+                    RenderTransformOrigin = new Point(0.5, 0.5)
+                };
+                var sc = new ScaleTransform(1, 1);
+                var tt = new TranslateTransform();
+                var grp = new TransformGroup();
+                grp.Children.Add(sc);
+                grp.Children.Add(tt);
+                dot.RenderTransform = grp;
+                Canvas.SetLeft(dot, center.X - size / 2);
+                Canvas.SetTop(dot, center.Y - size / 2);
+                FxCanvas.Children.Add(dot);
+
+                double ang = _rnd.NextDouble() * Math.PI * 2;
+                double dist = 26 + _rnd.NextDouble() * 38;
+                double dx = Math.Cos(ang) * dist;
+                double dy = Math.Sin(ang) * dist - 12;
+                var dur = TimeSpan.FromMilliseconds(380 + _rnd.Next(280));
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+                tt.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, dx, dur) { EasingFunction = ease });
+                tt.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, dy, dur) { EasingFunction = ease });
+                sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 0, dur) { EasingFunction = ease });
+                sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 0, dur) { EasingFunction = ease });
+                var fade = new DoubleAnimation(1, 0, dur) { EasingFunction = ease };
+                var captured = dot;
+                fade.Completed += (s, e) => FxCanvas.Children.Remove(captured);
+                dot.BeginAnimation(UIElement.OpacityProperty, fade);
+            }
+        }
+
+        private Color JitterColor(Color c)
+        {
+            double f = 0.7 + _rnd.NextDouble() * 0.5;
+            return Color.FromRgb(
+                (byte)Math.Min(255, c.R * f),
+                (byte)Math.Min(255, c.G * f),
+                (byte)Math.Min(255, c.B * f));
+        }
+
         private void NavPlay_Click(object s, RoutedEventArgs e)
         {
             if (!_isServerTab) return;
             _isServerTab = false;
             UpdateNavHighlight();
-            PlayContentPanel.Visibility = Visibility.Visible;
-            ServerContentPanel.Visibility = Visibility.Collapsed;
+            AnimateTabSwitch(PlayContentPanel, ServerContentPanel);
         }
 
         private void NavServer_Click(object s, RoutedEventArgs e)
@@ -2970,13 +3221,53 @@ namespace CustomLauncher
             if (_isServerTab) return;
             _isServerTab = true;
             UpdateNavHighlight();
-            PlayContentPanel.Visibility = Visibility.Collapsed;
-            ServerContentPanel.Visibility = Visibility.Visible;
+            AnimateTabSwitch(ServerContentPanel, PlayContentPanel);
 
             try { int maxRam = (int)(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1048576L); ServerRamSlider.Maximum = Math.Max(2048, maxRam); }
             catch { ServerRamSlider.Maximum = 8192; }
 
             LoadServerList();
+        }
+
+        private void AnimateTabSwitch(FrameworkElement show, FrameworkElement hide)
+        {
+            double tgt = _settings?.ConsoleOpacity ?? 1.0;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var hideTr = EnsureTabTransform(hide);
+            var outFade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(130)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
+            outFade.Completed += (s2, e2) =>
+            {
+                hide.Visibility = Visibility.Collapsed;
+                hide.BeginAnimation(OpacityProperty, null);
+                hide.Opacity = tgt;
+                hideTr.BeginAnimation(TranslateTransform.YProperty, null);
+                hideTr.Y = 0;
+            };
+            hide.BeginAnimation(OpacityProperty, outFade);
+
+            show.Visibility = Visibility.Visible;
+            var showTr = EnsureTabTransform(show);
+            showTr.Y = 16;
+            show.Opacity = 0;
+            var inFade = new DoubleAnimation(0, tgt, TimeSpan.FromMilliseconds(260)) { BeginTime = TimeSpan.FromMilliseconds(110), EasingFunction = ease };
+            inFade.Completed += (s2, e2) =>
+            {
+                show.BeginAnimation(OpacityProperty, null);
+                show.Opacity = tgt;
+                showTr.BeginAnimation(TranslateTransform.YProperty, null);
+                showTr.Y = 0;
+            };
+            show.BeginAnimation(OpacityProperty, inFade);
+            showTr.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(16, 0, TimeSpan.FromMilliseconds(320)) { BeginTime = TimeSpan.FromMilliseconds(110), EasingFunction = ease });
+        }
+
+        private static TranslateTransform EnsureTabTransform(FrameworkElement fe)
+        {
+            if (fe.RenderTransform is TranslateTransform tt) return tt;
+            var t = new TranslateTransform();
+            fe.RenderTransform = t;
+            return t;
         }
 
         private void UpdateNavHighlight()

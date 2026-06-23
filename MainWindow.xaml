@@ -28,15 +28,16 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <Color x:Key="PrimaryColor">#0D0D1E</Color>
+        <Color x:Key="PrimaryColor">#14101A</Color>
         <SolidColorBrush x:Key="PrimaryBrush" Color="{DynamicResource PrimaryColor}"/>
 
-        <Color x:Key="AccentColor">#BB86FC</Color>
+        <Color x:Key="AccentColor">#F7CAD0</Color>
         <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}"/>
-        <SolidColorBrush x:Key="OnAccentBrush" Color="White"/>
+        <SolidColorBrush x:Key="OnAccentBrush" Color="#100C18"/>
 
         <sys:Double x:Key="BloomBlurRadius">15</sys:Double>
         <sys:Double x:Key="BloomOpacity">0.6</sys:Double>
+        <sys:Double x:Key="SettingsBloomOpacity">0.36</sys:Double>
         <sys:Double x:Key="TitleBloomBlurRadius">30</sys:Double>
         <sys:Double x:Key="TitleBloomOpacity">0.4</sys:Double>
 
@@ -52,7 +53,11 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}" x:Name="border">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <ContentPresenter.RenderTransform>
+                                    <ScaleTransform x:Name="SysIconScale" ScaleX="1" ScaleY="1"/>
+                                </ContentPresenter.RenderTransform>
+                            </ContentPresenter>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -61,6 +66,30 @@
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="Background" Value="#55FFFFFF"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SysIconScale" Storyboard.TargetProperty="ScaleX" To="0.8" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SysIconScale" Storyboard.TargetProperty="ScaleY" To="0.8" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="SysIconScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.4">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="SysIconScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.4">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -126,6 +155,7 @@
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
             <EventSetter Event="PreviewMouseMove" Handler="Btn_MouseTrack"/>
             <EventSetter Event="MouseLeave" Handler="Btn_MouseReset"/>
+            <EventSetter Event="Click" Handler="Btn_Pop"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -183,16 +213,24 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="0.95" Duration="0:0:0.05"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="0.95" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.25"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.45">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.45">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -402,6 +440,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <EventSetter Event="PreviewMouseMove" Handler="Btn_MouseTrack"/>
             <EventSetter Event="MouseLeave" Handler="Btn_MouseReset"/>
+            <EventSetter Event="Click" Handler="Btn_Pop"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -459,16 +498,24 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="0.92" Duration="0:0:0.05"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="0.92" Duration="0:0:0.05"/>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.25"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.5">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3.5"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.5">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3.5"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -489,19 +536,72 @@
             <Setter Property="BorderThickness" Value="3,0,0,0"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <EventSetter Event="Click" Handler="Btn_Pop"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="NavBd" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Border x:Name="NavHover" Background="#14FFFFFF" Opacity="0"/>
+                                <Rectangle x:Name="NavAccent" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource AccentBrush}" Opacity="0">
+                                    <Rectangle.Effect>
+                                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+                                    </Rectangle.Effect>
+                                </Rectangle>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0,0.5">
+                                    <ContentPresenter.RenderTransform>
+                                        <TranslateTransform x:Name="NavTr" X="0"/>
+                                    </ContentPresenter.RenderTransform>
+                                </ContentPresenter>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="NavBd" Property="Background" Value="#10FFFFFF"/>
-                                <Setter Property="Foreground" Value="#CCFFFFFF"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavHover" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavAccent" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavTr" Storyboard.TargetProperty="X" To="6" Duration="0:0:0.28">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavHover" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavAccent" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavTr" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.3">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavTr" Storyboard.TargetProperty="X" To="11" Duration="0:0:0.07">
+                                                <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavTr" Storyboard.TargetProperty="X" To="6" Duration="0:0:0.4">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -570,7 +670,10 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="#08FFFFFF" BorderBrush="#15FFFFFF" BorderThickness="0,0,1,0" Margin="0,40,0,0">
+            <Border x:Name="SideBar" Grid.Column="0" Background="#08FFFFFF" BorderBrush="#15FFFFFF" BorderThickness="0,0,1,0" Margin="0,40,0,0" RenderTransformOrigin="0,0.5">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="SideBarTransform" X="0"/>
+                </Border.RenderTransform>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -610,6 +713,12 @@
                                 <TextBlock Text="Перекачать моды" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+                        <Button x:Name="BtnChangelogs" Click="BtnChangelogs_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x1F5CE;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="ChangeLogs" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button x:Name="BtnSettingsOpen" Click="BtnSettings_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x2699;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -630,7 +739,7 @@
 
                 <Border Background="#33080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
                     <Border.Effect>
-                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
+                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="42" ShadowDepth="0" Opacity="{DynamicResource BloomOpacity}"/>
                     </Border.Effect>
                 </Border>
 
@@ -745,7 +854,7 @@
             <Grid x:Name="ServerContentPanel" Grid.Column="1" Visibility="Collapsed" Margin="22,48,22,20">
                 <Border Background="#33080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CacheMode="BitmapCache">
                     <Border.Effect>
-                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.28"/>
+                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="42" ShadowDepth="0" Opacity="{DynamicResource BloomOpacity}"/>
                     </Border.Effect>
                 </Border>
 
@@ -941,9 +1050,9 @@
 
         <Grid x:Name="SettingsPanel" Background="#CC000000" Visibility="Hidden">
             <Border Background="Transparent" MouseDown="BtnCloseSettings_Click"/>
-            <Border x:Name="SettingsBox" Background="{DynamicResource PrimaryBrush}"
+            <Border x:Name="SettingsBox" Background="#8E080611"
                     Width="500" MaxHeight="650" VerticalAlignment="Center" Margin="0,20,0,20"
-                    CornerRadius="12" BorderBrush="#20FFFFFF" BorderThickness="1"
+                    CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
                     RenderTransformOrigin="0.5,0.5">
                 <Border.RenderTransform>
                     <TransformGroup>
@@ -953,15 +1062,31 @@
                 </Border.RenderTransform>
                 <Border.Effect>
                     <DropShadowEffect Color="{DynamicResource AccentColor}"
-                                      BlurRadius="30"
+                                      BlurRadius="20"
                                       ShadowDepth="0"
-                                      Opacity="{DynamicResource BloomOpacity}"/>
+                                      Opacity="{DynamicResource SettingsBloomOpacity}"/>
                 </Border.Effect>
                 <Grid>
-                    <Border Background="Black" Opacity="0.2" CornerRadius="11"/>
-                    <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto" Margin="0,10,0,10" PreviewMouseWheel="SettingsScroll_PreviewMouseWheel" ScrollChanged="SettingsScroll_ScrollChanged">
-                        <StackPanel Margin="25">
-                            <TextBlock x:Name="SettingsTitle" Text="НАСТРОЙКИ" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseSettings_Click" ToolTip="Закрыть"/>
+                                <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
+                                <Ellipse Width="11" Height="11" Fill="#28C840"/>
+                            </StackPanel>
+                            <TextBlock Text="player@battlecraft: ~/settings" FontFamily="Consolas, Courier New" FontSize="12" Foreground="#77FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto" Margin="0,10,0,10" PreviewMouseWheel="SettingsScroll_PreviewMouseWheel" ScrollChanged="SettingsScroll_ScrollChanged">
+                        <StackPanel Margin="25,15,25,25" TextElement.FontFamily="Consolas, Courier New">
+                            <TextBlock x:Name="SettingsTitle" FontSize="20" FontWeight="Bold" Margin="0,0,0,18" FontFamily="Consolas, Courier New">
+                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run Text="настройки" Foreground="White"/>
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform x:Name="SettingsTitleTranslate" Y="0"/>
                                 </TextBlock.RenderTransform>
@@ -973,7 +1098,9 @@
                                 </TextBlock.Effect>
                             </TextBlock>
 
-                            <TextBlock Text="Внешний вид" HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,10"/>
+                            <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run Text="ВНЕШНИЙ ВИД"/>
+                            </TextBlock>
 
                             <Button Click="BtnChangeIcon_Click" HorizontalAlignment="Center" Margin="0,0,0,15" Style="{StaticResource GlowButton}" ToolTip="Изменить иконку в панели задач и шапке">
                                 <TextBlock Text="Сменить иконку лаунчера (ICO)" Margin="35,0"/>
@@ -1038,12 +1165,14 @@
                             <TextBlock Text="Сила свечения:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="BloomStrengthSlider" Minimum="0" Maximum="100" Value="60" ValueChanged="BloomStrengthSlider_ValueChanged"/>
 
-                            <TextBlock Text="Прозрачность консоли:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
-                            <Slider x:Name="ConsoleOpacitySlider" Minimum="30" Maximum="100" Value="100" ValueChanged="ConsoleOpacitySlider_ValueChanged"/>
+                            <TextBlock Text="Прозрачность терминала:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
+                            <Slider x:Name="ConsoleOpacitySlider" Minimum="5" Maximum="100" Value="100" ValueChanged="ConsoleOpacitySlider_ValueChanged"/>
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
-                            <TextBlock Text="Система" Foreground="{DynamicResource AccentBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,10"/>
+                            <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run Text="СИСТЕМА"/>
+                            </TextBlock>
 
                             <TextBlock Text="Выделенная память (RAM МБ):" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
                             <Grid Margin="0,0,0,10">
@@ -1073,6 +1202,52 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <Grid x:Name="ChangelogPanel" Background="#CC000000" Visibility="Hidden">
+            <Border Background="Transparent" MouseDown="BtnCloseChangelog_Click"/>
+            <Border x:Name="ChangelogBox" Background="#8E080611"
+                    Width="640" MaxHeight="660" VerticalAlignment="Center" Margin="0,20,0,20"
+                    CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="ChangelogScale" ScaleX="1" ScaleY="1"/>
+                        <TranslateTransform x:Name="ChangelogTranslate" Y="0"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="20" ShadowDepth="0" Opacity="{DynamicResource SettingsBloomOpacity}"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseChangelog_Click" ToolTip="Закрыть"/>
+                                <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
+                                <Ellipse Width="11" Height="11" Fill="#28C840"/>
+                            </StackPanel>
+                            <TextBlock Text="player@battlecraft: ~/changelogs" FontFamily="Consolas, Courier New" FontSize="12" Foreground="#77FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,16,22,8">
+                        <Button x:Name="ChangelogTabLauncher" Content="Launcher Changelog" Click="ChangelogTab_Launcher" Style="{StaticResource GlowButton}" Margin="0,0,8,0"/>
+                        <Button x:Name="ChangelogTabModpack" Content="ModPack &amp; ServerMap Changelog" Click="ChangelogTab_Modpack" Style="{StaticResource GlowButton}"/>
+                    </StackPanel>
+
+                    <ScrollViewer x:Name="ChangelogScrollViewer" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="6,0,6,14">
+                        <TextBlock x:Name="ChangelogText" Margin="18,4,18,14" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap" LineHeight="20" Text="Загрузка…"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
         <Grid x:Name="CustomDialogOverlay" Visibility="Hidden" Background="#AA000000">
             <Border x:Name="CustomDialogBox" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource PrimaryBrush}" BorderThickness="1" BorderBrush="#33FFFFFF" CornerRadius="12" MinWidth="350" MaxWidth="500" Padding="25" RenderTransformOrigin="0.5,0.5" CacheMode="BitmapCache">
                 <Border.RenderTransform>
@@ -1121,7 +1296,7 @@
                         </Ellipse>
                         <TextBlock x:Name="UpdatePercentText" Text="0%" FontFamily="Consolas, Courier New" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
-                    <TextBlock Text="Обновление лаунчера" FontSize="17" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="UpdateTitleText" Text="Обновление лаунчера" FontSize="17" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,6"/>
                     <TextBlock x:Name="UpdateSubText" Text="Скачивание новой версии…" FontSize="12" Foreground="#AAFFFFFF" HorizontalAlignment="Center" Margin="0,0,0,18"/>
                     <ProgressBar x:Name="UpdateProgressBar" Width="270" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
                 </StackPanel>
@@ -1195,5 +1370,7 @@
             <TextBlock Text="github.com/pers1k1" FontFamily="Consolas, Courier New" FontSize="11" Foreground="#44FFFFFF"
                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24" IsHitTestVisible="False"/>
         </Grid>
+
+        <Canvas x:Name="FxCanvas" Panel.ZIndex="99" IsHitTestVisible="False" ClipToBounds="False"/>
     </Grid>
 </Window>
