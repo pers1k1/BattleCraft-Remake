@@ -8,8 +8,8 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.20 |
-| Launcher | 8.0.1 |
-| Runtime | .NET 8 (WPF, Windows) |
+| Launcher | 8.0.2 |
+| Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Client Features
 
@@ -22,7 +22,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 - In-app ChangeLogs viewer with separate launcher and modpack/server-map tabs, fetched live from the remote config.
 - Living pixel-art background: a hand-rendered seasonal scene with a day/night cycle, parallax mountains and a forest of swaying trees, and dynamic weather — rain with thunderstorms, snow that drifts and piles up, fog, falling autumn leaves and spring cherry-blossom petals. Animation pauses while the window is minimized or in the background to keep idle resource usage low.
 - Discord Rich Presence integration.
-- Unified install/launch log with rolling crash reports retained in the launcher's configuration directory.
+- Unified install/launch log with rolling crash reports retained in the launcher's configuration directory; the detected OS (e.g. Windows 11) is reported on the boot screen and in the terminal.
 - Forge library installation notice with installer output captured to the log.
 - Automatic cleanup of stale Distant Horizons server data on launch.
 
