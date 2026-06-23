@@ -1308,7 +1308,7 @@
             <Ellipse Width="950" Height="950" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-320,40,0,0" IsHitTestVisible="False">
                 <Ellipse.Fill>
                     <RadialGradientBrush>
-                        <GradientStop Color="#33BB86FC" Offset="0"/>
+                        <GradientStop x:Name="BootGlowStop1" Color="#33BB86FC" Offset="0"/>
                         <GradientStop Color="#00000000" Offset="0.72"/>
                     </RadialGradientBrush>
                 </Ellipse.Fill>
@@ -1316,7 +1316,7 @@
             <Ellipse Width="1100" Height="1100" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-380,-340,0" IsHitTestVisible="False">
                 <Ellipse.Fill>
                     <RadialGradientBrush>
-                        <GradientStop Color="#2ABB86FC" Offset="0"/>
+                        <GradientStop x:Name="BootGlowStop2" Color="#2ABB86FC" Offset="0"/>
                         <GradientStop Color="#00000000" Offset="0.72"/>
                     </RadialGradientBrush>
                 </Ellipse.Fill>

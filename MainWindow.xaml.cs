@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.0.0";
+        private const string VER = "8.0.1";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1399,9 +1399,17 @@ namespace CustomLauncher
             double offX = (BootPixelCanvas.Width - cols * cell) / 2.0;
             double offY = (BootPixelCanvas.Height - rows * cell) / 2.0;
 
-            var faceMain = Color.FromRgb(0x5E, 0x9B, 0x3F);
-            var faceDark = Color.FromRgb(0x4A, 0x7C, 0x32);
-            var featureBrush = new SolidColorBrush(Color.FromRgb(0x18, 0x20, 0x10));
+            var accentBase = (Color)FindResource("AccentColor");
+            Color Shade(double f) => Color.FromRgb(
+                (byte)Math.Min(255, accentBase.R * f),
+                (byte)Math.Min(255, accentBase.G * f),
+                (byte)Math.Min(255, accentBase.B * f));
+            var faceMain = accentBase;
+            var faceDark = Shade(0.74);
+            var featureBrush = new SolidColorBrush(Shade(0.2));
+
+            if (BootGlowStop1 != null) BootGlowStop1.Color = Color.FromArgb(0x33, accentBase.R, accentBase.G, accentBase.B);
+            if (BootGlowStop2 != null) BootGlowStop2.Color = Color.FromArgb(0x2A, accentBase.R, accentBase.G, accentBase.B);
 
             for (int r = 0; r < rows; r++)
             {
@@ -1439,8 +1447,7 @@ namespace CustomLauncher
                 }
             }
 
-            var accent = (Color)FindResource("AccentColor");
-            var glow = new DropShadowEffect { Color = accent, BlurRadius = 26, ShadowDepth = 0, Opacity = 0 };
+            var glow = new DropShadowEffect { Color = accentBase, BlurRadius = 26, ShadowDepth = 0, Opacity = 0 };
             BootPixelCanvas.Effect = glow;
             var glowIn = new DoubleAnimation(0, 0.7, TimeSpan.FromMilliseconds(450)) { BeginTime = TimeSpan.FromMilliseconds(380) };
             glowIn.Completed += (s, e) =>
@@ -1499,6 +1506,70 @@ namespace CustomLauncher
                 await FadeOutBootAsync();
             }
             catch { }
+
+            await CheckPrerequisitesAsync();
+        }
+
+        private async Task CheckPrerequisitesAsync()
+        {
+            try
+            {
+                if (IsWebView2Installed()) return;
+
+                MessageBox.Show(this,
+                    "Для входа через Microsoft нужен компонент Microsoft Edge WebView2 Runtime, который не установлен в системе.\n\nСейчас он будет загружен и установлен.",
+                    "Требуется компонент", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                ShowSpinnerOverlay("Установка компонента", "Загрузка WebView2 Runtime…", false);
+                bool ok = await InstallWebView2Async();
+                HideUpdateOverlay();
+
+                if (!ok)
+                    MessageBox.Show(this,
+                        "Не удалось установить WebView2 Runtime автоматически. Открою страницу загрузки — установите его вручную, иначе вход через Microsoft работать не будет.",
+                        "Требуется компонент", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch { }
+        }
+
+        private static bool IsWebView2Installed()
+        {
+            const string guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
+            string[] hklmKeys =
+            {
+                $@"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{guid}",
+                $@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{guid}"
+            };
+            foreach (var key in hklmKeys)
+            {
+                using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key);
+                if (k?.GetValue("pv") is string v && !string.IsNullOrEmpty(v) && v != "0.0.0.0") return true;
+            }
+            using var cu = Microsoft.Win32.Registry.CurrentUser.OpenSubKey($@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{guid}");
+            return cu?.GetValue("pv") is string cv && !string.IsNullOrEmpty(cv) && cv != "0.0.0.0";
+        }
+
+        private async Task<bool> InstallWebView2Async()
+        {
+            try
+            {
+                string tmp = Path.Combine(Path.GetTempPath(), "MicrosoftEdgeWebview2Setup.exe");
+                using (var http = new HttpClient())
+                {
+                    http.Timeout = TimeSpan.FromMinutes(5);
+                    var bytes = await http.GetByteArrayAsync("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
+                    await File.WriteAllBytesAsync(tmp, bytes);
+                }
+                var psi = new ProcessStartInfo(tmp, "/silent /install") { UseShellExecute = true };
+                var proc = Process.Start(psi);
+                if (proc != null) await proc.WaitForExitAsync();
+                return IsWebView2Installed();
+            }
+            catch
+            {
+                try { Process.Start(new ProcessStartInfo("https://developer.microsoft.com/microsoft-edge/webview2/") { UseShellExecute = true }); } catch { }
+                return false;
+            }
         }
 
         private async Task TypeBootLineAsync(string tag, Brush tagBrush, string message)
@@ -1831,8 +1902,10 @@ namespace CustomLauncher
 
         private void ApplyThemeFromSettings()
         {
-            string p = string.IsNullOrWhiteSpace(_settings.PrimaryColor) ? DefPrimary : _settings.PrimaryColor;
-            string a = string.IsNullOrWhiteSpace(_settings.AccentColor) ? DefAccent : _settings.AccentColor;
+            string p = string.IsNullOrWhiteSpace(_settings.PrimaryColor) ? DefPrimary : _settings.PrimaryColor!;
+            string a = string.IsNullOrWhiteSpace(_settings.AccentColor) ? DefAccent : _settings.AccentColor!;
+            if (string.Equals(p, "#0D0D1E", StringComparison.OrdinalIgnoreCase) && string.Equals(a, "#BB86FC", StringComparison.OrdinalIgnoreCase))
+            { p = DefPrimary; a = DefAccent; }
             ApplyPrimaryColor(p, false); ApplyAccentColor(a, false);
             ApplyBloom(_settings.BloomEnabled ?? true, _settings.BloomStrength ?? 60, false);
             if (PrimaryColorBox != null) PrimaryColorBox.Text = p.ToUpper();
@@ -2063,6 +2136,7 @@ namespace CustomLauncher
                 MSession? mSession = null;
                 if (_settings.UserType == "msa")
                 {
+                    ShowSpinnerOverlay("Загрузка профиля Minecraft", "Проверка лицензии Microsoft…", false);
                     var handler = JELoginHandlerBuilder.BuildDefault();
                     dynamic? sessionObj = null;
                     try { sessionObj = await handler.AuthenticateSilently(); } catch { }
@@ -2074,9 +2148,11 @@ namespace CustomLauncher
                         mSession.AccessToken = sessionObj.AccessToken;
                         mSession.UUID = sessionObj.UUID;
                         mSession.UserType = "msa";
+                        HideUpdateOverlay();
                     }
                     else
                     {
+                        HideUpdateOverlay();
                         await ShowCustomDialog("Срок действия сессии истек. Пожалуйста, авторизуйтесь заново.");
                         SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false);
                         LoginGridState();
@@ -2108,7 +2184,7 @@ namespace CustomLauncher
             }
             catch (OperationCanceledException) { Log("Установка отменена."); StatusText.Text = "Отменено"; SetPlayState("idle"); }
             catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка запуска"); }
-            finally { SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
+            finally { HideUpdateOverlay(); SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
         }
 
         private void SetBusy(bool busy)

@@ -15,8 +15,8 @@ namespace CustomLauncher
         private static readonly string ConfigFile = Path.Combine(ConfigDir, "launcher_config.json");
         private static readonly object _fileLock = new object();
 
-        public string? PrimaryColor { get; set; } = "#0D0D1E";
-        public string? AccentColor { get; set; } = "#BB86FC";
+        public string? PrimaryColor { get; set; } = "#14101A";
+        public string? AccentColor { get; set; } = "#F7CAD0";
         public bool? BloomEnabled { get; set; } = true;
         public double? BloomStrength { get; set; } = 60.0;
         public double? ConsoleOpacity { get; set; } = 1.0;
