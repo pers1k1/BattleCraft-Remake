@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.0.1";
+        private const string VER = "8.0.2";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1487,6 +1487,7 @@ namespace CustomLauncher
                 var lines = new (string tag, Brush tagBrush, string msg)[]
                 {
                     ("[BOOT] ", accentBrush, "BattleCraft Remake Launcher v" + VER),
+                    ("[ OK ] ", okBrush,     "Обнаружена ОС: " + GetWindowsVersionName()),
                     ("[ OK ] ", okBrush,     "Инициализация ядра"),
                     ("[ OK ] ", okBrush,     "Загрузка конфигурации"),
                     ("[ OK ] ", okBrush,     "Проверка целостности библиотек"),
@@ -1742,6 +1743,31 @@ namespace CustomLauncher
                 }
             }
             catch { }
+        }
+
+        private static string GetWindowsVersionName()
+        {
+            try
+            {
+                var v = Environment.OSVersion.Version;
+                if (v.Major >= 10)
+                {
+                    if (v.Build >= 22000) return "Windows 11";
+                    return "Windows 10";
+                }
+                if (v.Major == 6)
+                {
+                    return v.Minor switch
+                    {
+                        3 => "Windows 8.1",
+                        2 => "Windows 8",
+                        1 => "Windows 7",
+                        _ => "Windows Vista",
+                    };
+                }
+                return $"Windows {v.Major}.{v.Minor}";
+            }
+            catch { return "Windows"; }
         }
 
         private void InitializeLauncherCore()
@@ -2002,6 +2028,7 @@ namespace CustomLauncher
 
         private void InitializeLauncher()
         {
+            Log($"Платформа: {GetWindowsVersionName()} ({Environment.OSVersion.Version})");
             _minecraftPath = new MinecraftPath(_settings.GamePath);
 
             var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath, ResilientHttpClientFactory.Shared);
