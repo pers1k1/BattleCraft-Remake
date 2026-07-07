@@ -88,14 +88,14 @@ namespace CustomLauncher.Core
                         lastError = ex;
                         if (attempt < MaxAttempts)
                         {
-                            NotifyRetry(request, attempt, "обрыв соединения");
+                            NotifyRetry(request, attempt, Lang.T("обрыв соединения"));
                             await DelayBeforeRetry(attempt, cancellationToken).ConfigureAwait(false);
                         }
                     }
                 }
 
                 throw new HttpRequestException(
-                    $"Не удалось скачать {request.RequestUri} за {MaxAttempts} попыток.", lastError);
+                    Lang.F("Не удалось скачать {0} за {1} попыток.", request.RequestUri?.ToString() ?? "", MaxAttempts), lastError);
             }
 
             private async Task<byte[]> ReadWithIdleTimeout(HttpResponseMessage response, CancellationToken ct)
@@ -121,7 +121,7 @@ namespace CustomLauncher.Core
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                     {
                         throw new IOException(
-                            $"Соединение зависло: нет данных дольше {IdleReadTimeout.TotalSeconds:F0} с.");
+                            Lang.F("Соединение зависло: нет данных дольше {0:F0} с.", IdleReadTimeout.TotalSeconds));
                     }
 
                     if (read == 0)
@@ -193,11 +193,11 @@ namespace CustomLauncher.Core
 
                 string fileName = request.RequestUri is { } uri
                     ? Path.GetFileName(uri.AbsolutePath)
-                    : "файл";
+                    : Lang.T("файл");
                 if (string.IsNullOrEmpty(fileName))
-                    fileName = "файл";
+                    fileName = Lang.T("файл");
 
-                subscribers.Invoke($"Повтор: {fileName} (попытка {attempt + 1}, {reason})");
+                subscribers.Invoke(Lang.F("Повтор: {0} (попытка {1}, {2})", fileName, attempt + 1, reason));
             }
 
             private static HttpRequestMessage CloneGet(HttpRequestMessage request)
@@ -252,7 +252,7 @@ namespace CustomLauncher.Core
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     throw new IOException(
-                        $"Соединение зависло: нет данных дольше {_idleTimeout.TotalSeconds:F0} с.");
+                        Lang.F("Соединение зависло: нет данных дольше {0:F0} с.", _idleTimeout.TotalSeconds));
                 }
             }
 

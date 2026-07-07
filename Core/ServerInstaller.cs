@@ -210,7 +210,7 @@ namespace CustomLauncher.Core
 
         private void ReportStatus(string message)
         {
-            StatusChanged?.Invoke(message);
+            StatusChanged?.Invoke(Lang.T(message));
         }
 
         private static void EnsureDirectoryExists(string path)

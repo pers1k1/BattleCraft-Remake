@@ -656,12 +656,12 @@
         <Separator VerticalAlignment="Top" Margin="0,40,0,0" Background="#444444" Opacity="0.5"/>
 
         <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-            <TextBlock Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
-            <Button Content="Войти через Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+            <TextBlock x:Name="LoginMsLabel" Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <Button x:Name="LoginMsBtn" Content="Войти через Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
 
-            <TextBlock Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
+            <TextBlock x:Name="LoginNickLabel" Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
             <TextBox x:Name="UsernameBox"/>
-            <Button Content="Войти оффлайн" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
+            <Button x:Name="LoginOfflineBtn" Content="Войти оффлайн" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
         </StackPanel>
 
         <Grid x:Name="MainPanel" Visibility="Hidden">
@@ -692,7 +692,7 @@
                         <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x25B6;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="Играть" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="NavPlayText" Text="Играть" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -700,7 +700,7 @@
                         <Button x:Name="NavServerBtn" Click="NavServer_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="Серверы" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="NavServerText" Text="Серверы" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -710,7 +710,7 @@
                         <Button x:Name="BtnReinstall" Click="BtnReinstall_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x21BB;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="Перекачать моды" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BtnReinstallText" Text="Перекачать моды" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnChangelogs" Click="BtnChangelogs_Click" Style="{StaticResource NavButton}">
@@ -722,7 +722,7 @@
                         <Button x:Name="BtnSettingsOpen" Click="BtnSettings_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x2699;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Text="Настройки" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BtnSettingsText" Text="Настройки" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnGitHub" Click="BtnGitHub_Click" Style="{StaticResource NavButton}" ToolTip="github.com/pers1k1">
@@ -828,7 +828,7 @@
                                     <Border x:Name="ForgeWarningPanel" Visibility="Collapsed" Margin="0,10,0,0" Padding="10,7" Background="#22BB86FC" CornerRadius="6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#x26A0;" FontFamily="Consolas, Courier New" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock Text="Установка библиотек Forge. Этот этап займёт от 1 до 5 минут." FontFamily="Consolas, Courier New" FontSize="12" Foreground="#E6FFFFFF" TextWrapping="Wrap"/>
+                                            <TextBlock x:Name="ForgeWarnText" Text="Установка библиотек Forge. Этот этап займёт от 1 до 5 минут." FontFamily="Consolas, Courier New" FontSize="12" Foreground="#E6FFFFFF" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -885,8 +885,8 @@
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
                     <ComboBox x:Name="ServerSelector" Width="220" SelectionChanged="ServerSelector_Changed"/>
-                    <Button Content="+ Создать" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
-                    <Button Content="Удалить" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
+                    <Button x:Name="BtnAddServer" Content="+ Создать" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
+                    <Button x:Name="BtnRemoveServer" Content="Удалить" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
                 </StackPanel>
 
                 <Grid x:Name="ServerConfigConsoleGrid" Grid.Row="1" Visibility="Collapsed">
@@ -896,7 +896,7 @@
                     </Grid.RowDefinitions>
                     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
                         <StackPanel x:Name="ServerConfigForm">
-                            <TextBlock Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="ServerConfigTitle" Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <Button x:Name="TabGeneralBtn" Content="Основные" Style="{StaticResource ServerActionButton}" Click="TabGeneralBtn_Click"/>
@@ -906,23 +906,23 @@
                                 <StackPanel x:Name="TabGeneralContent">
                                     <WrapPanel Orientation="Horizontal">
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock Text="Имя сервера (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerMotdLabel" Text="Имя сервера (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerMotdBox" Text="BattleCraft Server" Width="250"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock Text="Макс. игроков:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerMaxPlayersLabel" Text="Макс. игроков:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerMaxPlayersBox" Text="20" Width="80"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock Text="Порт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerPortLabel" Text="Порт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerPortBox" Text="25565" Width="80"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock Text="IP Сервера:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerIpLabel" Text="IP Сервера:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerIpBox" Width="120" ToolTip="Оставьте пустым для всех интерфейсов"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8" Width="200">
-                                            <TextBlock Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerViewDistanceLabel" Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -933,7 +933,7 @@
                                             </Grid>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8" Width="200">
-                                            <TextBlock Text="ОЗУ (МБ):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerRamLabel" Text="ОЗУ (МБ):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -983,7 +983,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="ServerConsoleTitle" Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
 
                         <Border Grid.Row="1" Background="#0AFFFFFF" CornerRadius="6" BorderBrush="#15FFFFFF" BorderThickness="1" Padding="0">
                             <TextBox x:Name="ServerConsoleOutput"
@@ -1031,12 +1031,18 @@
         </Grid>
 
         <StackPanel x:Name="SetupPanel" Visibility="Hidden" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
-            <TextBlock Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
-            <Button Content="Войти через Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+            <TextBlock Text="Язык / Language:" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <ComboBox x:Name="SetupLangCombo" SelectionChanged="LangCombo_Changed">
+                <ComboBoxItem Content="Русский" Tag="ru"/>
+                <ComboBoxItem Content="English" Tag="en"/>
+            </ComboBox>
 
-            <TextBlock Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
+            <TextBlock x:Name="SetupMsLabel" Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
+            <Button x:Name="SetupMsBtn" Content="Войти через Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+
+            <TextBlock x:Name="SetupNickLabel" Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <TextBox x:Name="SetupUsernameBox"/>
-            <TextBlock Text="Папка для Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
+            <TextBlock x:Name="SetupFolderLabel" Text="Папка для Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -1045,7 +1051,7 @@
                 <TextBox x:Name="SetupPathBox" Grid.Column="0" IsReadOnly="True"/>
                 <Button Content="..." Click="BtnSetupSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
             </Grid>
-            <Button Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
+            <Button x:Name="SetupStartBtn" Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
         </StackPanel>
 
         <Grid x:Name="SettingsPanel" Background="#CC000000" Visibility="Hidden">
@@ -1075,7 +1081,7 @@
                     <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
                         <Grid>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseSettings_Click" ToolTip="Закрыть"/>
+                                <Ellipse x:Name="SettingsCloseDot" Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseSettings_Click" ToolTip="Закрыть"/>
                                 <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
                                 <Ellipse Width="11" Height="11" Fill="#28C840"/>
                             </StackPanel>
@@ -1086,7 +1092,7 @@
                     <ScrollViewer Grid.Row="1" x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto" Margin="0,10,0,10" PreviewMouseWheel="SettingsScroll_PreviewMouseWheel" ScrollChanged="SettingsScroll_ScrollChanged">
                         <StackPanel Margin="25,15,25,25" TextElement.FontFamily="Consolas, Courier New">
                             <TextBlock x:Name="SettingsTitle" FontSize="20" FontWeight="Bold" Margin="0,0,0,18" FontFamily="Consolas, Courier New">
-                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run Text="настройки" Foreground="White"/>
+                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run x:Name="SettingsTitleRun" Text="настройки" Foreground="White"/>
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform x:Name="SettingsTitleTranslate" Y="0"/>
                                 </TextBlock.RenderTransform>
@@ -1099,14 +1105,14 @@
                             </TextBlock>
 
                             <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
-                                <Run Text="# " Foreground="#55FFFFFF"/><Run Text="ВНЕШНИЙ ВИД"/>
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="AppearanceHeaderRun" Text="ВНЕШНИЙ ВИД"/>
                             </TextBlock>
 
-                            <Button Click="BtnChangeIcon_Click" HorizontalAlignment="Center" Margin="0,0,0,15" Style="{StaticResource GlowButton}" ToolTip="Изменить иконку в панели задач и шапке">
-                                <TextBlock Text="Сменить иконку лаунчера (ICO)" Margin="35,0"/>
+                            <Button x:Name="BtnChangeIconBtn" Click="BtnChangeIcon_Click" HorizontalAlignment="Center" Margin="0,0,0,15" Style="{StaticResource GlowButton}" ToolTip="Изменить иконку в панели задач и шапке">
+                                <TextBlock x:Name="BtnChangeIconText" Text="Сменить иконку лаунчера (ICO)" Margin="35,0"/>
                             </Button>
 
-                            <TextBlock Text="Готовые пресеты:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
+                            <TextBlock x:Name="PresetsLabel" Text="Готовые пресеты:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
 
                             <ComboBox x:Name="ColorPresetCombo" SelectionChanged="ColorPreset_Changed" Height="40" VerticalContentAlignment="Center" MaxDropDownHeight="480">
                                 <ComboBox.ItemContainerStyle>
@@ -1135,7 +1141,7 @@
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
-                            <TextBlock Text="Ручная настройка цветов:" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="ManualColorsLabel" Text="Ручная настройка цветов:" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
@@ -1144,7 +1150,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                                    <TextBlock Text="Основной (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
+                                    <TextBlock x:Name="PrimaryHexLabel" Text="Основной (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBox x:Name="PrimaryColorBox" Width="100" Margin="0,0,5,0"/>
                                         <Button Content="OK" Click="BtnApplyPrimaryColor_Click" Width="40" Style="{StaticResource GlowButton}"/>
@@ -1152,7 +1158,7 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                                    <TextBlock Text="Акцент (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
+                                    <TextBlock x:Name="AccentHexLabel" Text="Акцент (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBox x:Name="AccentColorBox" Width="100" Margin="0,0,5,0"/>
                                         <Button Content="OK" Click="BtnApplyAccentColor_Click" Width="40" Style="{StaticResource GlowButton}"/>
@@ -1162,19 +1168,25 @@
 
                             <CheckBox x:Name="BloomEnabledCheck" Content="Включить свечение (Neon Glow)" IsChecked="True" Checked="BloomEnabledCheck_Changed" Unchecked="BloomEnabledCheck_Changed" Margin="0,5,0,5"/>
 
-                            <TextBlock Text="Сила свечения:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
+                            <TextBlock x:Name="BloomStrengthLabel" Text="Сила свечения:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="BloomStrengthSlider" Minimum="0" Maximum="100" Value="60" ValueChanged="BloomStrengthSlider_ValueChanged"/>
 
-                            <TextBlock Text="Прозрачность терминала:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
+                            <TextBlock x:Name="ConsoleOpacityLabel" Text="Прозрачность терминала:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="ConsoleOpacitySlider" Minimum="5" Maximum="100" Value="100" ValueChanged="ConsoleOpacitySlider_ValueChanged"/>
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
                             <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
-                                <Run Text="# " Foreground="#55FFFFFF"/><Run Text="СИСТЕМА"/>
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="SystemHeaderRun" Text="СИСТЕМА"/>
                             </TextBlock>
 
-                            <TextBlock Text="Выделенная память (RAM МБ):" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="LangLabel" Text="Язык:" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
+                            <ComboBox x:Name="SettingsLangCombo" SelectionChanged="LangCombo_Changed" Margin="0,0,0,15">
+                                <ComboBoxItem Content="Русский" Tag="ru"/>
+                                <ComboBoxItem Content="English" Tag="en"/>
+                            </ComboBox>
+
+                            <TextBlock x:Name="RamLabel" Text="Выделенная память (RAM МБ):" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -1184,7 +1196,7 @@
                                 <TextBox x:Name="RamBox" Text="{Binding Value, ElementName=RamSlider, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat={}{0:0}}" Grid.Column="1" TextAlignment="Center" IsReadOnly="True" Focusable="False" Cursor="Arrow"/>
                             </Grid>
 
-                            <TextBlock Text="Путь к игре:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
+                            <TextBlock x:Name="GamePathLabel" Text="Путь к игре:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -1194,9 +1206,9 @@
                                 <Button Content="..." Click="BtnSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
                             </Grid>
 
-                            <Button Content="СБРОСИТЬ ВСЕ НАСТРОЙКИ" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
+                            <Button x:Name="BtnResetAll" Content="СБРОСИТЬ ВСЕ НАСТРОЙКИ" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
 
-                            <Button Content="Сохранить и Закрыть" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
+                            <Button x:Name="BtnSaveClose" Content="Сохранить и Закрыть" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
@@ -1228,7 +1240,7 @@
                     <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
                         <Grid>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseChangelog_Click" ToolTip="Закрыть"/>
+                                <Ellipse x:Name="ChangelogCloseDot" Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseChangelog_Click" ToolTip="Закрыть"/>
                                 <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
                                 <Ellipse Width="11" Height="11" Fill="#28C840"/>
                             </StackPanel>

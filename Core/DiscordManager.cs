@@ -52,7 +52,7 @@ namespace CustomLauncher.Core
 
             var presence = new RichPresence()
             {
-                Details = $"В главном меню | v{LauncherVersion} (Моды: v{ModpackVersion})",
+                Details = Lang.F("В главном меню | v{0} (Моды: v{1})", LauncherVersion, ModpackVersion),
                 State = _isOwner ? "Owner" : "User",
                 Assets = new Assets()
                 {

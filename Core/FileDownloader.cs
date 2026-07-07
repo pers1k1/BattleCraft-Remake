@@ -32,14 +32,14 @@ namespace CustomLauncher.Core
 
             if (!response.IsSuccessStatusCode)
             {
-                LogMessage?.Invoke($"Ошибка скачивания {fileName} (HTTP {(int)response.StatusCode})");
-                throw new Exception($"Ошибка скачивания (HTTP {response.StatusCode})");
+                LogMessage?.Invoke(Lang.F("Ошибка скачивания {0} (HTTP {1})", fileName, (int)response.StatusCode));
+                throw new Exception(Lang.F("Ошибка скачивания (HTTP {0})", response.StatusCode));
             }
 
             long totalBytes = response.Content.Headers.ContentLength ?? -1L;
             LogMessage?.Invoke(totalBytes > 0
-                ? $"Загрузка: {fileName} ({FormatSize(totalBytes)})"
-                : $"Загрузка: {fileName}");
+                ? Lang.F("Загрузка: {0} ({1})", fileName, FormatSize(totalBytes))
+                : Lang.F("Загрузка: {0}", fileName));
 
             byte[] buffer = new byte[81920];
 
@@ -97,7 +97,7 @@ namespace CustomLauncher.Core
             ProgressChanged?.Invoke(100);
 
             double avg = total.Elapsed.TotalSeconds > 0 ? totalRead / total.Elapsed.TotalSeconds : 0;
-            LogMessage?.Invoke($"Готово: {fileName} — {FormatSize(totalRead)} за {FormatDuration(total.Elapsed)} ({FormatSpeed(avg)})");
+            LogMessage?.Invoke(Lang.F("Готово: {0} — {1} за {2} ({3})", fileName, FormatSize(totalRead), FormatDuration(total.Elapsed), FormatSpeed(avg)));
         }
 
         private static string SafeName(string url)
@@ -105,9 +105,9 @@ namespace CustomLauncher.Core
             try
             {
                 string name = Path.GetFileName(new Uri(url).AbsolutePath);
-                return string.IsNullOrEmpty(name) ? "файл" : name;
+                return string.IsNullOrEmpty(name) ? Lang.T("файл") : name;
             }
-            catch { return "файл"; }
+            catch { return Lang.T("файл"); }
         }
 
         public static string FormatSpeed(double bytesPerSecond)
@@ -127,8 +127,8 @@ namespace CustomLauncher.Core
 
         private static string FormatDuration(TimeSpan t)
         {
-            if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes} мин {t.Seconds} с";
-            return $"{t.TotalSeconds:F0} с";
+            if (t.TotalMinutes >= 1) return Lang.F("{0} мин {1} с", (int)t.TotalMinutes, t.Seconds);
+            return Lang.F("{0:F0} с", t.TotalSeconds);
         }
     }
 }

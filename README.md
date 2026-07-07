@@ -17,7 +17,8 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 - Automatic Java detection and provisioning (Adoptium Temurin 17) when no suitable runtime is present.
 - Self-updating launcher and modpack with resumable, retry-on-failure downloads.
 - Microsoft authentication without WebView2, plus offline accounts.
-- Customizable interface: accent colors (Sakura by default), custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
+- Customizable interface: 18 color theme presets (Sakura by default) plus manual HEX colors, custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
+- Bilingual interface (Russian and English): the language is chosen during first-run setup and can be switched at any time in the settings.
 - Tactile, animated UI: buttons burst into particles on click, the sidebar reacts with glow and motion, and tabs, settings, and login transitions are fully animated.
 - In-app ChangeLogs viewer with separate launcher and modpack/server-map tabs, fetched live from the remote config.
 - Living pixel-art background: a hand-rendered seasonal scene with a day/night cycle, parallax mountains and a forest of swaying trees, and dynamic weather — rain with thunderstorms, snow that drifts and piles up, fog, falling autumn leaves and spring cherry-blossom petals. Animation pauses while the window is minimized or in the background to keep idle resource usage low.

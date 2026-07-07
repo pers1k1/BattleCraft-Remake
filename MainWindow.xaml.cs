@@ -106,10 +106,10 @@ namespace CustomLauncher
 
         private Task<bool> ShowCustomDialog(string message, string title = "Внимание", bool isYesNo = false)
         {
-            CustomDialogTitle.Text = title;
+            CustomDialogTitle.Text = Lang.T(title);
             CustomDialogMessage.Text = message;
             CustomDialogBtnCancel.Visibility = isYesNo ? Visibility.Visible : Visibility.Collapsed;
-            CustomDialogBtnOk.Content = isYesNo ? "Да" : "OK";
+            CustomDialogBtnOk.Content = isYesNo ? Lang.T("Да") : "OK";
 
             CustomDialogOverlay.Visibility = Visibility.Visible;
             CustomDialogOverlay.Opacity = 0;
@@ -151,7 +151,7 @@ namespace CustomLauncher
 
         private async Task<string?> ShowInputDialogAsync(string title, string defaultValue = "")
         {
-            CustomDialogTitle.Text = title;
+            CustomDialogTitle.Text = Lang.T(title);
             CustomDialogMessage.Text = "";
             CustomDialogMessage.Visibility = Visibility.Collapsed;
             CustomDialogInputBox.Visibility = Visibility.Visible;
@@ -1487,13 +1487,13 @@ namespace CustomLauncher
                 var lines = new (string tag, Brush tagBrush, string msg)[]
                 {
                     ("[BOOT] ", accentBrush, "BattleCraft Remake Launcher v" + VER),
-                    ("[ OK ] ", okBrush,     "Обнаружена ОС: " + GetWindowsVersionName()),
-                    ("[ OK ] ", okBrush,     "Инициализация ядра"),
-                    ("[ OK ] ", okBrush,     "Загрузка конфигурации"),
-                    ("[ OK ] ", okBrush,     "Проверка целостности библиотек"),
-                    ("[ OK ] ", okBrush,     "Подключение Discord RPC"),
-                    ("[ OK ] ", okBrush,     "Подготовка интерфейса"),
-                    ("  >    ", accentBrush, "Запуск лаунчера"),
+                    ("[ OK ] ", okBrush,     Lang.T("Обнаружена ОС: ") + GetWindowsVersionName()),
+                    ("[ OK ] ", okBrush,     Lang.T("Инициализация ядра")),
+                    ("[ OK ] ", okBrush,     Lang.T("Загрузка конфигурации")),
+                    ("[ OK ] ", okBrush,     Lang.T("Проверка целостности библиотек")),
+                    ("[ OK ] ", okBrush,     Lang.T("Подключение Discord RPC")),
+                    ("[ OK ] ", okBrush,     Lang.T("Подготовка интерфейса")),
+                    ("  >    ", accentBrush, Lang.T("Запуск лаунчера")),
                 };
 
                 for (int i = 0; i < lines.Length; i++)
@@ -1518,17 +1518,17 @@ namespace CustomLauncher
                 if (IsWebView2Installed()) return;
 
                 MessageBox.Show(this,
-                    "Для входа через Microsoft нужен компонент Microsoft Edge WebView2 Runtime, который не установлен в системе.\n\nСейчас он будет загружен и установлен.",
-                    "Требуется компонент", MessageBoxButton.OK, MessageBoxImage.Information);
+                    Lang.T("Для входа через Microsoft нужен компонент Microsoft Edge WebView2 Runtime, который не установлен в системе.\n\nСейчас он будет загружен и установлен."),
+                    Lang.T("Требуется компонент"), MessageBoxButton.OK, MessageBoxImage.Information);
 
-                ShowSpinnerOverlay("Установка компонента", "Загрузка WebView2 Runtime…", false);
+                ShowSpinnerOverlay(Lang.T("Установка компонента"), Lang.T("Загрузка WebView2 Runtime…"), false);
                 bool ok = await InstallWebView2Async();
                 HideUpdateOverlay();
 
                 if (!ok)
                     MessageBox.Show(this,
-                        "Не удалось установить WebView2 Runtime автоматически. Открою страницу загрузки — установите его вручную, иначе вход через Microsoft работать не будет.",
-                        "Требуется компонент", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        Lang.T("Не удалось установить WebView2 Runtime автоматически. Открою страницу загрузки — установите его вручную, иначе вход через Microsoft работать не будет."),
+                        Lang.T("Требуется компонент"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch { }
         }
@@ -1695,7 +1695,7 @@ namespace CustomLauncher
 
         private void Log(string message)
         {
-            string prefix = message.Contains("Ошибка") ? "[ERR]" : "[SYS]";
+            string prefix = message.Contains("Ошибка") || message.Contains("Error") || message.Contains("error") ? "[ERR]" : "[SYS]";
             LogTagged(prefix, message);
         }
 
@@ -1780,9 +1780,13 @@ namespace CustomLauncher
             catch { }
 
             _settings = AppSettings.Load();
+            if (string.IsNullOrWhiteSpace(_settings.Language))
+                _settings.Language = _settings.IsFirstRun && System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "ru" ? "en" : "ru";
+            Lang.Current = _settings.Language;
             FillColorPresets();
             ApplyThemeFromSettings();
             ApplyCustomTheme();
+            ApplyLanguage();
             StartTimers();
 
             _discordManager.LauncherVersion = VER;
@@ -1836,7 +1840,7 @@ namespace CustomLauncher
                     Directory.CreateDirectory(path);
                 });
             }
-            catch (Exception ex) { Log($"Ошибка подготовки папки игры: {ex.Message}"); }
+            catch (Exception ex) { Log(Lang.F("Ошибка подготовки папки игры: {0}", ex.Message)); }
         }
 
         private async void BtnSetupMicrosoft_Click(object s, RoutedEventArgs e)
@@ -1855,20 +1859,20 @@ namespace CustomLauncher
                 SetupUsernameBox.Text = sessionObj.Username;
                 SetupUsernameBox.IsEnabled = false;
                 SetupUsernameBox.Opacity = 0.5;
-                await ShowCustomDialog($"Авторизован как: {sessionObj.Username}");
+                await ShowCustomDialog(Lang.F("Авторизован как: {0}", sessionObj.Username));
             }
             catch (Exception ex)
             {
-                await ShowCustomDialog($"Ошибка авторизации: {ex.Message}");
+                await ShowCustomDialog(Lang.F("Ошибка авторизации: {0}", ex.Message));
             }
         }
 
         private async void BtnSetupComplete_Click(object s, RoutedEventArgs e)
         {
             string nick = SetupUsernameBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog("Авторизуйтесь через Microsoft или введите никнейм!"); return; }
+            if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog(Lang.T("Авторизуйтесь через Microsoft или введите никнейм!")); return; }
             string path = ResolveGamePath(SetupPathBox.Text);
-            if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog("Выберите папку для игры!"); return; }
+            if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog(Lang.T("Выберите папку для игры!")); return; }
 
             if (!string.Equals(path, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
             {
@@ -1909,21 +1913,120 @@ namespace CustomLauncher
             ColorPresetCombo.MaxDropDownHeight = 480;
             (string name, string tag)[] presets =
             {
-                ("Космос",    "#0D0D1E|#BB86FC"),
-                ("Малина",    "#1A1A2E|#E94560"),
-                ("Океан",     "#0A192F|#64FFDA"),
-                ("Лес",       "#1B2631|#2ECC71"),
-                ("Золото",    "#2C1810|#FFD700"),
-                ("Янтарь",    "#1A1512|#FF9F43"),
-                ("Мята",      "#0F2027|#00F260"),
-                ("Лаванда",   "#0E0B16|#E6D8F5"),
-                ("Роза",      "#120A16|#F3C6E6"),
-                ("Сакура",    "#14101A|#F7CAD0"),
-                ("Сирень",    "#0D0C18|#C9B6F0"),
-                ("Перламутр", "#100E18|#DCE3F0"),
+                ("Космос",       "#0D0D1E|#BB86FC"),
+                ("Малина",       "#1A1A2E|#E94560"),
+                ("Океан",        "#0A192F|#64FFDA"),
+                ("Лес",          "#1B2631|#2ECC71"),
+                ("Золото",       "#2C1810|#FFD700"),
+                ("Янтарь",       "#1A1512|#FF9F43"),
+                ("Мята",         "#0F2027|#00F260"),
+                ("Лаванда",      "#0E0B16|#E6D8F5"),
+                ("Роза",         "#120A16|#F3C6E6"),
+                ("Сакура",       "#14101A|#F7CAD0"),
+                ("Сирень",       "#0D0C18|#C9B6F0"),
+                ("Перламутр",    "#100E18|#DCE3F0"),
+                ("Эспрессо",     "#2B1A12|#B9E5C8"),
+                ("Мокко",        "#9C7A66|#C7DAE8"),
+                ("Графит",       "#232329|#B8A7F0"),
+                ("Чернила",      "#1E2530|#F2D06B"),
+                ("Олива",        "#4C511F|#FFA9D6"),
+                ("Ультрафиолет", "#5B3FA8|#FFC49B"),
             };
             foreach (var (name, tag) in presets)
-                ColorPresetCombo.Items.Add(new ComboBoxItem { Content = name, Tag = tag });
+                ColorPresetCombo.Items.Add(new ComboBoxItem { Content = Lang.T(name), Tag = tag });
+        }
+
+        private static void SelectLangCombo(ComboBox combo, string code)
+        {
+            if (combo == null) return;
+            foreach (ComboBoxItem it in combo.Items)
+                if (it.Tag as string == code) { combo.SelectedItem = it; break; }
+        }
+
+        private void LangCombo_Changed(object s, SelectionChangedEventArgs e)
+        {
+            if (s is not ComboBox cb) return;
+            if (cb.SelectedItem is not ComboBoxItem item || item.Tag is not string code) return;
+            if (_settings == null || code == Lang.Current) return;
+            Lang.Current = code;
+            _settings.Language = code;
+            AppSettings.Save(_settings);
+            FillColorPresets();
+            ApplyThemeFromSettings();
+            ApplyLanguage();
+        }
+
+        private void ApplyLanguage()
+        {
+            SelectLangCombo(SetupLangCombo, Lang.Current);
+            SelectLangCombo(SettingsLangCombo, Lang.Current);
+
+            LoginMsLabel.Text = Lang.T("Лицензия (Microsoft):");
+            LoginMsBtn.Content = Lang.T("Войти через Microsoft");
+            LoginNickLabel.Text = Lang.T("ИЛИ Пиратка (Никнейм):");
+            LoginOfflineBtn.Content = Lang.T("Войти оффлайн");
+
+            SetupMsLabel.Text = Lang.T("Лицензия (Microsoft):");
+            SetupMsBtn.Content = Lang.T("Войти через Microsoft");
+            SetupNickLabel.Text = Lang.T("ИЛИ Пиратка (Никнейм):");
+            SetupFolderLabel.Text = Lang.T("Папка для Minecraft:");
+            SetupStartBtn.Content = Lang.T("Начать");
+
+            NavPlayText.Text = Lang.T("Играть");
+            NavServerText.Text = Lang.T("Серверы");
+            BtnReinstallText.Text = Lang.T("Перекачать моды");
+            BtnSettingsText.Text = Lang.T("Настройки");
+            ForgeWarnText.Text = Lang.T("Установка библиотек Forge. Этот этап займёт от 1 до 5 минут.");
+            LogTerminalText.Text = Lang.Tr(LogTerminalText.Text);
+            if (BtnPlay.Content is string pc) BtnPlay.Content = Lang.Tr(pc);
+
+            BtnAddServer.Content = Lang.T("+ Создать");
+            BtnRemoveServer.Content = Lang.T("Удалить");
+            ServerConfigTitle.Text = Lang.T("КОНФИГУРАЦИЯ");
+            TabGeneralBtn.Content = Lang.T("Основные");
+            TabWhitelistBtn.Content = Lang.T("Вайтлист");
+            ServerMotdLabel.Text = Lang.T("Имя сервера (MOTD):");
+            ServerMaxPlayersLabel.Text = Lang.T("Макс. игроков:");
+            ServerPortLabel.Text = Lang.T("Порт:");
+            ServerIpLabel.Text = Lang.T("IP Сервера:");
+            ServerIpBox.ToolTip = Lang.T("Оставьте пустым для всех интерфейсов");
+            ServerViewDistanceLabel.Text = Lang.T("Дальность прорисовки:");
+            ServerRamLabel.Text = Lang.T("ОЗУ (МБ):");
+            ServerSpawnAnimalsCheck.Content = Lang.T("Животные");
+            ServerSpawnMonstersCheck.Content = Lang.T("Монстры");
+            ServerOnlineModeCheck.Content = Lang.T("Только лиц.");
+            ServerEulaCheck.Content = Lang.T("Принимаю EULA Mojang");
+            ServerWhitelistCheck.Content = Lang.T("Включить вайтлист");
+            ServerConsoleTitle.Text = Lang.T("КОНСОЛЬ");
+            BtnInstallServer.Content = Lang.T("Создать сервер");
+            BtnUpdateServerMods.Content = Lang.T("Обновить моды");
+            BtnStartServer.Content = Lang.T("Запустить");
+            BtnStopServer.Content = Lang.T("Остановить");
+            BtnRestartServer.Content = Lang.T("Перезапустить");
+            BtnRestoreBackup.Content = Lang.T("Восстановить мир");
+            BtnOpenServerFolder.Content = Lang.T("Открыть папку");
+            ServerStatusText.Text = Lang.Tr(ServerStatusText.Text);
+
+            SettingsTitleRun.Text = Lang.T("настройки");
+            AppearanceHeaderRun.Text = Lang.T("ВНЕШНИЙ ВИД");
+            SystemHeaderRun.Text = Lang.T("СИСТЕМА");
+            BtnChangeIconBtn.ToolTip = Lang.T("Изменить иконку в панели задач и шапке");
+            BtnChangeIconText.Text = Lang.T("Сменить иконку лаунчера (ICO)");
+            PresetsLabel.Text = Lang.T("Готовые пресеты:");
+            ManualColorsLabel.Text = Lang.T("Ручная настройка цветов:");
+            PrimaryHexLabel.Text = Lang.T("Основной (HEX):");
+            AccentHexLabel.Text = Lang.T("Акцент (HEX):");
+            BloomEnabledCheck.Content = Lang.T("Включить свечение (Neon Glow)");
+            BloomStrengthLabel.Text = Lang.T("Сила свечения:");
+            ConsoleOpacityLabel.Text = Lang.T("Прозрачность терминала:");
+            LangLabel.Text = Lang.T("Язык:");
+            RamLabel.Text = Lang.T("Выделенная память (RAM МБ):");
+            GamePathLabel.Text = Lang.T("Путь к игре:");
+            BtnResetAll.Content = Lang.T("СБРОСИТЬ ВСЕ НАСТРОЙКИ");
+            BtnSaveClose.Content = Lang.T("Сохранить и Закрыть");
+            SettingsCloseDot.ToolTip = Lang.T("Закрыть");
+            ChangelogCloseDot.ToolTip = Lang.T("Закрыть");
+            CustomDialogBtnCancel.Content = Lang.T("Отмена");
         }
 
         private void ApplyThemeFromSettings()
@@ -2019,7 +2122,7 @@ namespace CustomLauncher
 
         private async void BtnResetAllSettings_Click(object s, RoutedEventArgs e)
         {
-            if (await ShowCustomDialog("Сбросить все?", "Сброс", true) != true) return;
+            if (await ShowCustomDialog(Lang.T("Сбросить все?"), "Сброс", true) != true) return;
             _settings = new AppSettings(); AppSettings.Save(_settings);
             try { string d = GetThemeDir(); if (Directory.Exists(d)) Directory.Delete(d, true); } catch { }
             MainWnd.Background = null; MainWnd.SetResourceReference(Control.BackgroundProperty, "PrimaryBrush"); Icon = null;
@@ -2028,7 +2131,7 @@ namespace CustomLauncher
 
         private void InitializeLauncher()
         {
-            Log($"Платформа: {GetWindowsVersionName()} ({Environment.OSVersion.Version})");
+            Log(Lang.F("Платформа: {0} ({1})", GetWindowsVersionName(), Environment.OSVersion.Version));
             _minecraftPath = new MinecraftPath(_settings.GamePath);
 
             var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath, ResilientHttpClientFactory.Shared);
@@ -2051,7 +2154,7 @@ namespace CustomLauncher
                 bool debug = _settings.DebugConsole;
                 Dispatcher.BeginInvoke(() =>
                 {
-                    if (debug && !string.IsNullOrEmpty(name)) Log($"Файл: {name} ({done}/{total})");
+                    if (debug && !string.IsNullOrEmpty(name)) Log(Lang.F("Файл: {0} ({1}/{2})", name, done, total));
                     else StatusText.Text = name;
                     if (percent >= 0 && noBytes) SetProgress(percent);
                 }, System.Windows.Threading.DispatcherPriority.Background);
@@ -2086,7 +2189,7 @@ namespace CustomLauncher
                     SetProgress(percent);
                     if (logNow)
                     {
-                        string line = $"Загрузка {percent:F0}% · {FileDownloader.FormatSize(done)} / {FileDownloader.FormatSize(total)}";
+                        string line = Lang.F("Загрузка {0:F0}% · {1} / {2}", percent, FileDownloader.FormatSize(done), FileDownloader.FormatSize(total));
                         if (speed > 0) line += $" · {FileDownloader.FormatSpeed(speed)}";
                         LogNet(line);
                     }
@@ -2102,12 +2205,12 @@ namespace CustomLauncher
                 _gameProcess = null;
                 Show();
                 SetPlayState("idle");
-                StatusText.Text = "Готов";
+                StatusText.Text = Lang.T("Готов");
                 SetProgress(0);
                 _discordManager.SetMenuState();
                 return;
             }
-            if (!_settings.HasGamePath) { await ShowCustomDialog("Выберите папку для игры в настройках!"); return; }
+            if (!_settings.HasGamePath) { await ShowCustomDialog(Lang.T("Выберите папку для игры в настройках!")); return; }
 
             BtnPlay.IsEnabled = false; SetBusy(true);
             bool didInstall = false;
@@ -2153,17 +2256,17 @@ namespace CustomLauncher
                     didInstall = true;
                 }
 
-                if (didInstall) { Log("Готово!"); StatusText.Text = "Установка завершена! Нажмите ИГРАТЬ."; SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
+                if (didInstall) { Log(Lang.T("Готово!")); StatusText.Text = Lang.T("Установка завершена! Нажмите ИГРАТЬ."); SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
 
-                StatusText.Text = "Запуск..."; SetProgress(100);
+                StatusText.Text = Lang.T("Запуск..."); SetProgress(100);
                 var vers = await _launcher.GetAllVersionsAsync();
                 var ver = vers.FirstOrDefault(v => v.Name == FULL_ID) ?? vers.FirstOrDefault(v => v.Name.Contains(MC) && v.Name.ToLower().Contains("forge"));
-                if (ver == null) { await ShowCustomDialog("Forge не найден!"); return; }
+                if (ver == null) { await ShowCustomDialog(Lang.T("Forge не найден!")); return; }
 
                 MSession? mSession = null;
                 if (_settings.UserType == "msa")
                 {
-                    ShowSpinnerOverlay("Загрузка профиля Minecraft", "Проверка лицензии Microsoft…", false);
+                    ShowSpinnerOverlay(Lang.T("Загрузка профиля Minecraft"), Lang.T("Проверка лицензии Microsoft…"), false);
                     var handler = JELoginHandlerBuilder.BuildDefault();
                     dynamic? sessionObj = null;
                     try { sessionObj = await handler.AuthenticateSilently(); } catch { }
@@ -2180,7 +2283,7 @@ namespace CustomLauncher
                     else
                     {
                         HideUpdateOverlay();
-                        await ShowCustomDialog("Срок действия сессии истек. Пожалуйста, авторизуйтесь заново.");
+                        await ShowCustomDialog(Lang.T("Срок действия сессии истек. Пожалуйста, авторизуйтесь заново."));
                         SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false);
                         LoginGridState();
                         return;
@@ -2201,16 +2304,16 @@ namespace CustomLauncher
                 _gameProcess.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
-                _discordManager.SetPlayingState(_activeServerConfig?.Name ?? "Одиночная игра");
+                _discordManager.SetPlayingState(_activeServerConfig?.Name ?? Lang.T("Одиночная игра"));
 
                 await _gameProcess.WaitForExitAsync();
                 _gameProcess = null;
                 SetPlayState("idle");
-                StatusText.Text = "Готов";
+                StatusText.Text = Lang.T("Готов");
                 _discordManager.SetMenuState();
             }
-            catch (OperationCanceledException) { Log("Установка отменена."); StatusText.Text = "Отменено"; SetPlayState("idle"); }
-            catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка запуска"); }
+            catch (OperationCanceledException) { Log(Lang.T("Установка отменена.")); StatusText.Text = Lang.T("Отменено"); SetPlayState("idle"); }
+            catch (Exception ex) { await HandleErrorAsync(ex, Lang.T("Ошибка запуска")); }
             finally { HideUpdateOverlay(); SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
         }
 
@@ -2223,8 +2326,8 @@ namespace CustomLauncher
 
         private void SetPlayState(string st)
         {
-            if (st == "running") { BtnPlay.Content = "ОТМЕНА"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
-            else { BtnPlay.Content = "\u25B6  ИГРАТЬ"; BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
+            if (st == "running") { BtnPlay.Content = Lang.T("ОТМЕНА"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
+            else { BtnPlay.Content = Lang.T("\u25B6  ИГРАТЬ"); BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
         }
 
         private void InjectJvmArgs(Process p)
@@ -2251,10 +2354,10 @@ namespace CustomLauncher
             try
             {
                 SetProgress(0);
-                StatusText.Text = "Загрузка файлов Minecraft...";
+                StatusText.Text = Lang.T("Загрузка файлов Minecraft...");
                 await _launcher.InstallAsync(MC); EnsureProfiles();
 
-                StatusText.Text = "Загрузка установщика Forge...";
+                StatusText.Text = Lang.T("Загрузка установщика Forge...");
                 string jar = Path.Combine(Path.GetTempPath(), "forge_installer.jar");
                 if (File.Exists(jar)) File.Delete(jar);
                 var forgeDl = new FileDownloader();
@@ -2262,8 +2365,8 @@ namespace CustomLauncher
                 forgeDl.ProgressChanged += p => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(p); });
                 await forgeDl.DownloadFileAsync(FORGE_JAR_URL, jar);
 
-                StatusText.Text = "Установка библиотек Forge...";
-                Log("Этот этап займёт от 1 до 5 минут, не закрывайте лаунчер.");
+                StatusText.Text = Lang.T("Установка библиотек Forge...");
+                Log(Lang.T("Этот этап займёт от 1 до 5 минут, не закрывайте лаунчер."));
                 ShowForgeWarning(true);
                 await RunForgeInstaller(jar);
                 ShowForgeWarning(false);
@@ -2271,9 +2374,9 @@ namespace CustomLauncher
                 await _launcher.GetAllVersionsAsync();
                 try { File.Delete(jar); } catch { }
                 CleanForgeLog();
-                Log("Forge установлен.");
+                Log(Lang.T("Forge установлен."));
             }
-            catch (Exception ex) { ShowForgeWarning(false); await HandleErrorAsync(ex, "Ошибка Forge"); }
+            catch (Exception ex) { ShowForgeWarning(false); await HandleErrorAsync(ex, Lang.T("Ошибка Forge")); }
             finally { GameProgressBar.IsIndeterminate = false; }
         }
 
@@ -2353,14 +2456,14 @@ namespace CustomLauncher
 
             if (isJavaError)
             {
-                if (await ShowCustomDialog("Похоже, что отсутствует Java. Скачать и установить Java 17 автоматически?", "Ошибка Java", true))
+                if (await ShowCustomDialog(Lang.T("Похоже, что отсутствует Java. Скачать и установить Java 17 автоматически?"), "Ошибка Java", true))
                 {
                     await DownloadAndInstallJava();
                     return;
                 }
             }
 
-            if (await ShowCustomDialog($"{context}: {ex.Message}\n\nОткрыть файл с логами?", "Ошибка", true))
+            if (await ShowCustomDialog(Lang.F("{0}: {1}\n\nОткрыть файл с логами?", context, ex.Message), "Ошибка", true))
             {
                 string toOpen = !string.IsNullOrEmpty(logPath) && File.Exists(logPath) ? logPath : AppSettings.GetConfigDir();
                 try { Process.Start(new ProcessStartInfo(toOpen) { UseShellExecute = true }); } catch { }
@@ -2373,7 +2476,7 @@ namespace CustomLauncher
             {
                 SetBusy(true);
                 GameProgressBar.IsIndeterminate = true;
-                StatusText.Text = "Скачивание Java 17...";
+                StatusText.Text = Lang.T("Скачивание Java 17...");
 
                 string tempZip = Path.Combine(Path.GetTempPath(), "jre17.zip");
                 if (File.Exists(tempZip)) File.Delete(tempZip);
@@ -2384,7 +2487,7 @@ namespace CustomLauncher
 
                 await downloader.DownloadFileAsync("https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse", tempZip);
 
-                StatusText.Text = "Установка Java 17...";
+                StatusText.Text = Lang.T("Установка Java 17...");
                 GameProgressBar.IsIndeterminate = true;
                 await Task.Run(() =>
                 {
@@ -2405,18 +2508,18 @@ namespace CustomLauncher
                     }
                 });
 
-                await ShowCustomDialog("Java 17 успешно установлена! Попробуйте запустить игру снова.", "Успех");
+                await ShowCustomDialog(Lang.T("Java 17 успешно установлена! Попробуйте запустить игру снова."), "Успех");
             }
             catch (Exception ex)
             {
-                await ShowCustomDialog($"Ошибка установки Java: {ex.Message}");
+                await ShowCustomDialog(Lang.F("Ошибка установки Java: {0}", ex.Message));
             }
             finally
             {
                 SetBusy(false);
                 GameProgressBar.IsIndeterminate = false;
                 GameProgressBar.Value = 0;
-                StatusText.Text = "Готов";
+                StatusText.Text = Lang.T("Готов");
             }
         }
 
@@ -2426,7 +2529,7 @@ namespace CustomLauncher
         {
             if (clean)
             {
-                StatusText.Text = "Очистка старых файлов...";
+                StatusText.Text = Lang.T("Очистка старых файлов...");
                 foreach (var dir in ModpackDirs)
                 {
                     string p = Path.Combine(_settings.GamePath, dir);
@@ -2450,9 +2553,9 @@ namespace CustomLauncher
                     dl.LogMessage += LogNet;
                     dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(v); });
                     await dl.DownloadFileAsync(MODPACK_URL, zip);
-                    StatusText.Text = "Распаковка...";
+                    StatusText.Text = Lang.T("Распаковка...");
                     await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
-                    Log("Распаковка завершена!");
+                    Log(Lang.T("Распаковка завершена!"));
                     _settings.IsModpackInstalled = true;
                     _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
                     _discordManager.ModpackVersion = _settings.ModpackVersion;
@@ -2464,18 +2567,18 @@ namespace CustomLauncher
                 {
                     try { if (File.Exists(zip)) File.Delete(zip); } catch { }
                     bool retry = await ShowCustomDialog(
-                        $"Загрузка клиента оборвалась.\nОшибка: {ex.Message}\nПродолжить скачивание?",
+                        Lang.F("Загрузка клиента оборвалась.\nОшибка: {0}\nПродолжить скачивание?", ex.Message),
                         "Ошибка скачивания", true);
 
                     if (!retry)
                     {
-                        Log("Установка отменена. Очистка файлов...");
+                        Log(Lang.T("Установка отменена. Очистка файлов..."));
                         foreach (var dir in ModpackDirs)
                         {
                             string p = Path.Combine(_settings.GamePath, dir);
                             try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
                         }
-                        throw new OperationCanceledException("Установка отменена пользователем.");
+                        throw new OperationCanceledException(Lang.T("Установка отменена пользователем."));
                     }
                 }
             }
@@ -2526,9 +2629,9 @@ namespace CustomLauncher
                 {
                     try { if (File.Exists(dest)) File.Delete(dest); } catch { }
                     bool retry = await ShowCustomDialog(
-                        $"Загрузка клиента оборвалась.\nОшибка: {ex.Message}\nПродолжить скачивание?",
+                        Lang.F("Загрузка клиента оборвалась.\nОшибка: {0}\nПродолжить скачивание?", ex.Message),
                         "Ошибка скачивания", true);
-                    if (!retry) throw new OperationCanceledException("Установка отменена пользователем.");
+                    if (!retry) throw new OperationCanceledException(Lang.T("Установка отменена пользователем."));
                 }
             }
         }
@@ -2550,6 +2653,7 @@ namespace CustomLauncher
 
         private string GetRandomGreeting(string username)
         {
+            if (Lang.IsEn) return GetRandomGreetingEn(username);
             int hour = DateTime.Now.Hour;
             var rnd = _rnd;
 
@@ -2609,8 +2713,70 @@ namespace CustomLauncher
             return n[rnd.Next(n.Length)];
         }
 
+        private string GetRandomGreetingEn(string username)
+        {
+            int hour = DateTime.Now.Hour;
+            var rnd = _rnd;
+
+            if (hour >= 4 && hour < 12)
+            {
+                string[] p = {
+                    $"mornin', {username}", $"oh, you're up, {username}", $"well, slept the fuck in, {username}?",
+                    $"damn, you're early, {username}", $"morning, {username}, how'd you sleep", $"hell you're up early, {username}",
+                    $"woke up and came right here, nice, {username}", $"early morning vibes, {username}", $"wake up, sleepyhead, {username}",
+                    $"what an early bird, {username}", $"got the coffee on, {username}?", $"good morning, legend, {username}",
+                    $"coffee would hit right now, huh, {username}?", $"did you even sleep, {username}?", $"slept alright, {username}?",
+                    $"well hey there, {username}", $"morning, {username}, let's go", $"good fuckin' morning, {username}",
+                    $"damn you're up early, {username}", $"morning, damn it, {username}", $"good morning to you, {username}",
+                    $"top of the morning, {username}, you legend"
+                };
+                return p[rnd.Next(p.Length)];
+            }
+            if (hour >= 12 && hour < 16)
+            {
+                string[] p = {
+                    $"yo, {username}", $"what's up, {username}?", $"hey there, legend, {username}",
+                    $"what's new, {username}?", $"how's the day, {username}?", $"nice of you to drop by, {username}",
+                    $"damn, been a while, {username}", $"you really vanished, {username}", $"have a great day, {username}",
+                    $"how's business, {username}?", $"day going alright, {username}?", $"oh, look who showed up, {username}",
+                    $"well hello the fuck there, {username}", $"how you doing, {username}?", $"feeling fresh today, {username}?",
+                    $"damn glad to see you, {username}", $"alright, {username}, let's roll", $"have a productive one, {username}",
+                    $"good on you for showing up, {username}", $"how's the mood, {username}?", $"day's great, right, {username}?",
+                    $"hey there, bro, {username}"
+                };
+                return p[rnd.Next(p.Length)];
+            }
+            if (hour >= 16 && hour < 21)
+            {
+                string[] p = {
+                    $"evenin', {username}", $"so, how was your day, {username}?", $"hey, {username}, evening's a vibe",
+                    $"finally evening, {username}", $"damn, you must be tired, {username}?", $"evening chill, {username}",
+                    $"you've been at it a while, {username}", $"warm evening to you, {username}", $"relaxing, {username}?",
+                    $"evening treating you well, {username}?", $"oh, an evening guest, {username}", $"damn, the day flew by, {username}",
+                    $"the evening is ours, {username}", $"nice evening, legend, {username}", $"how are you this evening, {username}?",
+                    $"hey, {username}, take it easy", $"evenings are always better, {username}", $"anything new today, {username}?",
+                    $"time to chill, right, {username}?", $"damn cozy evening, {username}", $"so what's up, {username}?",
+                    $"tired as hell, {username}?"
+                };
+                return p[rnd.Next(p.Length)];
+            }
+
+            string[] n = {
+                $"what a night owl you are, {username}", $"can't sleep, {username}?", $"damn, it's the middle of the night, {username}",
+                $"night vibes, {username}", $"sleep? too early for that, {username}", $"the moon is out, {username}",
+                $"the night is ours, {username}", $"a bit more and then bed, {username}?", $"hell, you're up late, {username}",
+                $"quiet night to you, {username}", $"you planning to sleep at all, {username}?", $"sleep is for the weak, right, {username}?",
+                $"deep night and here we are, {username}", $"night's a vibe, {username}", $"night shift, {username}",
+                $"don't stay up too long, {username}", $"sweet dreams later, {username}", $"not sleeping again, damn it, {username}",
+                $"dark night, {username}", $"the night is damn long, {username}", $"well hello, night owl, {username}",
+                $"go to bed already, {username}", $"night guest, nice, {username}"
+            };
+            return n[rnd.Next(n.Length)];
+        }
+
         private string GetRandomQuestion()
         {
+            if (Lang.IsEn) return GetRandomQuestionEn();
             int hour = DateTime.Now.Hour;
             var rnd = _rnd;
             var q = new System.Collections.Generic.List<string> {
@@ -2636,8 +2802,36 @@ namespace CustomLauncher
             return q[rnd.Next(q.Count)];
         }
 
+        private string GetRandomQuestionEn()
+        {
+            int hour = DateTime.Now.Hour;
+            var rnd = _rnd;
+            var q = new System.Collections.Generic.List<string> {
+                "how's it going", "what's new", "so, how are you?", "everything smooth?",
+                "how are you really?", "so, we rolling?", "hit it, what are you waiting for",
+                "we're only waiting for you", "loading mods...", "syncing...",
+                "mood's good?", "so what's the plan?", "how's the vibe?",
+                "damn, been a while", "come on, tell me", "all good?"
+            };
+
+            if (hour >= 16 || hour < 4)
+            {
+                q.Add("how was your day?");
+                q.Add("tired, huh?");
+                q.Add("rough day?");
+            }
+            if (hour >= 4 && hour < 12)
+            {
+                q.Add("how'd you sleep?");
+                q.Add("well rested?");
+                q.Add("ready for the day?");
+            }
+            return q[rnd.Next(q.Count)];
+        }
+
         private string GetWeatherPhrase()
         {
+            if (Lang.IsEn) return GetWeatherPhraseEn();
             var rnd = _rnd;
             string[] p = _weather switch
             {
@@ -2671,6 +2865,45 @@ namespace CustomLauncher
                     "листва кружит, осень", "листья падают, уютная пора", "осенний вайб, заходи"
                 },
                 _ => new[] { "погодка ясная, грех не катнуть", "небо чистое, погнали" }
+            };
+            return p[rnd.Next(p.Length)];
+        }
+
+        private string GetWeatherPhraseEn()
+        {
+            var rnd = _rnd;
+            string[] p = _weather switch
+            {
+                Weather.Rain => new[] {
+                    "rain's pouring and you're here", "hear that downpour outside", "logging in during rain — sacred",
+                    "let's go before the storm hits", "wet outside, warm in here", "rain's tapping, mods are loading",
+                    "thunder's rolling and we don't give a damn", "raindrops, damn, romance", "weather like this is made for playing",
+                    "lightning's flashing, let's go"
+                },
+                Weather.Snow => new[] {
+                    "snow's falling, beautiful", "winter hit hard, come warm up", "snow's dumping and we're at it",
+                    "playing while it snows — bliss", "snowflakes flying, mods flying", "freezing outside, cozy in here",
+                    "first snow, let's go", "hell of a snowfall, gorgeous though"
+                },
+                Weather.Wind => new[] {
+                    "wind's picked up, hold on", "wind's howling and we're fine", "you'll get blown away, get in quick",
+                    "windy one today, refreshing", "wind's chasing the clouds, let's go"
+                },
+                Weather.Fog => new[] {
+                    "fog rolled in, mystic", "can't see a damn thing outside, fog", "foggy as hell, atmospheric",
+                    "like a fairy tale in this fog, come in"
+                },
+                Weather.Comets => new[] {
+                    "meteor shower, damn, make a wish", "comets flying, catch the moment", "night sky's on fire, beautiful",
+                    "shooting stars, wish quick"
+                },
+                Weather.Sakura => new[] {
+                    "sakura's blooming, aesthetic", "petals flying, spring is here", "sakura's falling, catch the vibe"
+                },
+                Weather.Leaves => new[] {
+                    "leaves are swirling, autumn", "leaves falling, cozy season", "autumn vibes, come in"
+                },
+                _ => new[] { "clear skies, gotta play", "sky's clean, let's go" }
             };
             return p[rnd.Next(p.Length)];
         }
@@ -2765,7 +2998,7 @@ namespace CustomLauncher
 
         private async void BtnLoginMicrosoft_Click(object s, RoutedEventArgs e)
         {
-            ShowSpinnerOverlay("Вход через Microsoft", "Ожидание авторизации…", false);
+            ShowSpinnerOverlay(Lang.T("Вход через Microsoft"), Lang.T("Ожидание авторизации…"), false);
             try
             {
                 var handler = JELoginHandlerBuilder.BuildDefault();
@@ -2773,7 +3006,7 @@ namespace CustomLauncher
 
                 if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username))
                 {
-                    await AuthOverlayFail("Вход не выполнен", "Попробуйте ещё раз");
+                    await AuthOverlayFail(Lang.T("Вход не выполнен"), Lang.T("Попробуйте ещё раз"));
                     return;
                 }
 
@@ -2785,14 +3018,14 @@ namespace CustomLauncher
             }
             catch
             {
-                await AuthOverlayFail("Ошибка авторизации", "Попробуйте ещё раз");
+                await AuthOverlayFail(Lang.T("Ошибка авторизации"), Lang.T("Попробуйте ещё раз"));
             }
         }
 
         private async void BtnLoginOffline_Click(object s, RoutedEventArgs e)
         {
             var n = UsernameBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog("Введите никнейм!"); return; }
+            if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog(Lang.T("Введите никнейм!")); return; }
             _settings.Username = n;
             _settings.UserType = "offline";
             AppSettings.Save(_settings);
@@ -2915,7 +3148,7 @@ namespace CustomLauncher
 
             _launcherChangelog = ""; _modpackChangelog = "";
             SetChangelogTab(false);
-            ChangelogText.Text = "Загрузка…";
+            ChangelogText.Text = Lang.T("Загрузка…");
 
             try
             {
@@ -2928,7 +3161,7 @@ namespace CustomLauncher
             }
             catch
             {
-                if (_launcherChangelog.Length == 0) _launcherChangelog = "Не удалось загрузить changelog.\nПроверьте подключение к интернету.";
+                if (_launcherChangelog.Length == 0) _launcherChangelog = Lang.T("Не удалось загрузить changelog.\nПроверьте подключение к интернету.");
                 if (_modpackChangelog.Length == 0) _modpackChangelog = _launcherChangelog;
             }
 
@@ -2938,7 +3171,7 @@ namespace CustomLauncher
         private static string NormalizeChangelog(string text)
         {
             string t = (text ?? "").Replace("\r\n", "\n").Trim();
-            return t.Length == 0 ? "Здесь пока пусто." : t;
+            return t.Length == 0 ? Lang.T("Здесь пока пусто.") : t;
         }
 
         private void ChangelogTab_Launcher(object s, RoutedEventArgs e) => SetChangelogTab(false);
@@ -2948,7 +3181,7 @@ namespace CustomLauncher
         {
             _changelogTabModpack = modpack;
             string txt = modpack ? _modpackChangelog : _launcherChangelog;
-            ChangelogText.Text = txt.Length > 0 ? txt : "Загрузка…";
+            ChangelogText.Text = txt.Length > 0 ? txt : Lang.T("Загрузка…");
             ChangelogScrollViewer?.ScrollToVerticalOffset(0);
 
             var accent = (Brush)FindResource("AccentBrush");
@@ -3021,8 +3254,8 @@ namespace CustomLauncher
                 if (Version.TryParse(modpackVerStr, out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
                 {
                     _onlineModpackVer = modpackVerStr;
-                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = "УСТАНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
-                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = "ОБНОВИТЬ"; BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = Lang.T("УСТАНОВИТЬ"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = Lang.T("ОБНОВИТЬ"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
                 }
 
@@ -3050,7 +3283,7 @@ namespace CustomLauncher
                             _needsServerModpackUpdate = true;
                         if (_settings.IsModpackInstalled && _needsBattleCraftModUpdate && !_needsModpackUpdate)
                         {
-                            BtnPlay.Content = "ОБНОВИТЬ";
+                            BtnPlay.Content = Lang.T("ОБНОВИТЬ");
                             BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30));
                         }
                     }
@@ -3058,12 +3291,12 @@ namespace CustomLauncher
                 catch { }
 
                 UpdateServerButtons();
-                StatusText.Text = $"Модпак v{_settings.ModpackVersion}";
+                StatusText.Text = Lang.F("Модпак v{0}", _settings.ModpackVersion);
                 if (Version.TryParse(launcherVerStr, out var onlineLauncherV) && Version.TryParse(VER, out var currentLauncherV)
                     && onlineLauncherV > currentLauncherV
-                    && await ShowCustomDialog($"Обновить лаунчер до {launcherVerStr}?", "Обновление", true)) await UpdateLauncher();
+                    && await ShowCustomDialog(Lang.F("Обновить лаунчер до {0}?", launcherVerStr), "Обновление", true)) await UpdateLauncher();
             }
-            catch { StatusText.Text = "Ошибка сети"; }
+            catch { StatusText.Text = Lang.T("Ошибка сети"); }
         }
 
         private async Task UpdateLauncher()
@@ -3081,7 +3314,7 @@ namespace CustomLauncher
                 await dl.DownloadFileAsync(LAUNCHER_EXE_URL, tmp);
 
                 SetUpdateProgress(100);
-                UpdateSubText.Text = "Перезапуск…";
+                UpdateSubText.Text = Lang.T("Перезапуск…");
                 await Task.Delay(400);
 
                 try { if (File.Exists(old)) File.Delete(old); } catch { }
@@ -3091,10 +3324,10 @@ namespace CustomLauncher
                 Process.Start(new ProcessStartInfo(cur) { UseShellExecute = true });
                 Application.Current.Shutdown();
             }
-            catch { HideUpdateOverlay(); StatusText.Text = "Ошибка обновления"; }
+            catch { HideUpdateOverlay(); StatusText.Text = Lang.T("Ошибка обновления"); }
         }
 
-        private void ShowUpdateOverlay() => ShowSpinnerOverlay("Обновление лаунчера", "Скачивание новой версии…", true);
+        private void ShowUpdateOverlay() => ShowSpinnerOverlay(Lang.T("Обновление лаунчера"), Lang.T("Скачивание новой версии…"), true);
 
         private void ShowSpinnerOverlay(string title, string sub, bool showProgress)
         {
@@ -3147,13 +3380,13 @@ namespace CustomLauncher
         private async void BtnReinstall_Click(object s, RoutedEventArgs e)
         {
             if (_isBusy) return;
-            if (!_settings.HasGamePath) { await ShowCustomDialog("Сначала выберите папку!"); return; }
-            if (await ShowCustomDialog("Перекачать моды?", "Подтверждение", true))
+            if (!_settings.HasGamePath) { await ShowCustomDialog(Lang.T("Сначала выберите папку!")); return; }
+            if (await ShowCustomDialog(Lang.T("Перекачать моды?"), "Подтверждение", true))
             {
                 SetBusy(true);
-                try { await InstallModpack(true); Log("Готово!"); StatusText.Text = "Моды переустановлены"; SetPlayState("idle"); }
-                catch (OperationCanceledException) { Log("Установка отменена."); StatusText.Text = "Отменено"; }
-                catch (Exception ex) { await HandleErrorAsync(ex, "Ошибка переустановки"); }
+                try { await InstallModpack(true); Log(Lang.T("Готово!")); StatusText.Text = Lang.T("Моды переустановлены"); SetPlayState("idle"); }
+                catch (OperationCanceledException) { Log(Lang.T("Установка отменена.")); StatusText.Text = Lang.T("Отменено"); }
+                catch (Exception ex) { await HandleErrorAsync(ex, Lang.T("Ошибка переустановки")); }
                 finally { SetBusy(false); }
             }
         }
@@ -3494,13 +3727,13 @@ namespace CustomLauncher
 
         private async void BtnCreateServer_Click(object s, RoutedEventArgs e)
         {
-            string? serverName = await ShowInputDialogAsync("Имя нового сервера", $"Server {_settings.Servers.Count + 1}");
+            string? serverName = await ShowInputDialogAsync(Lang.T("Имя нового сервера"), $"Server {_settings.Servers.Count + 1}");
             if (serverName == null) return;
 
             bool nameExists = _settings.Servers.Any(sc => sc.Name.Equals(serverName, StringComparison.OrdinalIgnoreCase));
             if (nameExists)
             {
-                await ShowCustomDialog("Сервер с таким именем уже существует!");
+                await ShowCustomDialog(Lang.T("Сервер с таким именем уже существует!"));
                 return;
             }
 
@@ -3530,12 +3763,12 @@ namespace CustomLauncher
             bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
             if (isRunning)
             {
-                await ShowCustomDialog("Сначала остановите сервер!");
+                await ShowCustomDialog(Lang.T("Сначала остановите сервер!"));
                 return;
             }
 
             bool confirmed = await ShowCustomDialog(
-                $"Удалить сервер '{_activeServerConfig.Name}'? Файлы на диске БУДУТ удалены.",
+                Lang.F("Удалить сервер '{0}'? Файлы на диске БУДУТ удалены.", _activeServerConfig.Name),
                 "Подтверждение", true);
 
             if (!confirmed) return;
@@ -3562,17 +3795,17 @@ namespace CustomLauncher
 
             if (!_activeServerConfig.EulaAccepted)
             {
-                await ShowCustomDialog("Необходимо принять EULA!");
+                await ShowCustomDialog(Lang.T("Необходимо принять EULA!"));
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(_activeServerConfig.ServerPath))
             {
-                await ShowCustomDialog("Путь к серверу не задан!");
+                await ShowCustomDialog(Lang.T("Путь к серверу не задан!"));
                 return;
             }
 
-            SetServerBusy(true, "Установка сервера...");
+            SetServerBusy(true, Lang.T("Установка сервера..."));
             string javaPath = FindJava();
             var installer = new ServerInstaller();
             installer.StatusChanged += OnInstallerStatusChanged;
@@ -3615,14 +3848,14 @@ namespace CustomLauncher
                 }
                 catch (Exception ex)
                 {
-                    AppendConsoleOutput($"[ERR] Ошибка на этапе {currentStage + 1}: {ex.Message}");
+                    AppendConsoleOutput(Lang.F("[ERR] Ошибка на этапе {0}: {1}", currentStage + 1, ex.Message));
                     bool retry = await ShowCustomDialog(
-                        $"Загрузка оборвалась на этапе {currentStage + 1}.\nОшибка: {ex.Message}\nПродолжить скачивание этого этапа?",
+                        Lang.F("Загрузка оборвалась на этапе {0}.\nОшибка: {1}\nПродолжить скачивание этого этапа?", currentStage + 1, ex.Message),
                         "Ошибка скачивания", true);
 
                     if (!retry)
                     {
-                        AppendConsoleOutput("[SYS] Установка отменена. Удаление файлов...");
+                        AppendConsoleOutput(Lang.T("[SYS] Установка отменена. Удаление файлов..."));
                         try { Directory.Delete(_activeServerConfig.ServerPath, true); } catch { }
                         SetServerBusy(false);
                         return;
@@ -3639,7 +3872,7 @@ namespace CustomLauncher
             AppSettings.Save(_settings);
 
             UpdateServerButtons();
-            AppendConsoleOutput("[SYS] Сервер установлен.");
+            AppendConsoleOutput(Lang.T("[SYS] Сервер установлен."));
             SetServerBusy(false);
         }
 
@@ -3658,7 +3891,7 @@ namespace CustomLauncher
         private async void BtnUpdateServerMods_Click(object s, RoutedEventArgs e)
         {
             if (_activeServerConfig == null || _isServerBusy) return;
-            SetServerBusy(true, "Обновление модов...");
+            SetServerBusy(true, Lang.T("Обновление модов..."));
             try
             {
                 var installer = new ServerInstaller();
@@ -3671,12 +3904,12 @@ namespace CustomLauncher
                 _settings.ServerBattleCraftModVersion = _onlineBattleCraftModVer;
                 _needsServerModpackUpdate = false;
                 AppSettings.Save(_settings);
-                AppendConsoleOutput("[SYS] Моды сервера обновлены.");
+                AppendConsoleOutput(Lang.T("[SYS] Моды сервера обновлены."));
             }
             catch (Exception ex)
             {
                 AppendConsoleOutput($"[ERR] {ex.Message}");
-                await ShowCustomDialog($"Ошибка обновления модов: {ex.Message}");
+                await ShowCustomDialog(Lang.F("Ошибка обновления модов: {0}", ex.Message));
             }
             finally
             {
@@ -3699,16 +3932,16 @@ namespace CustomLauncher
 
             if (_needsServerModpackUpdate)
             {
-                await ShowCustomDialog("Сначала обновите моды сервера!");
+                await ShowCustomDialog(Lang.T("Сначала обновите моды сервера!"));
                 return;
             }
 
             if (_needsServerMapUpdate)
             {
-                bool updateMap = await ShowCustomDialog("Доступно обновление карты сервера. Хотите обновить? (Текущая карта будет сброшена!)", "Обновление карты", true);
+                bool updateMap = await ShowCustomDialog(Lang.T("Доступно обновление карты сервера. Хотите обновить? (Текущая карта будет сброшена!)"), "Обновление карты", true);
                 if (updateMap)
                 {
-                    SetServerBusy(true, "Обновление карты...");
+                    SetServerBusy(true, Lang.T("Обновление карты..."));
                     try
                     {
                         var installer = new ServerInstaller();
@@ -3719,11 +3952,11 @@ namespace CustomLauncher
                         _settings.ServerMapVersion = _onlineServerMapVer;
                         _needsServerMapUpdate = false;
                         AppSettings.Save(_settings);
-                        AppendConsoleOutput("[SYS] Карта сервера обновлена.");
+                        AppendConsoleOutput(Lang.T("[SYS] Карта сервера обновлена."));
                     }
                     catch (Exception ex)
                     {
-                        AppendConsoleOutput($"[ERR] Ошибка обновления карты: {ex.Message}");
+                        AppendConsoleOutput(Lang.F("[ERR] Ошибка обновления карты: {0}", ex.Message));
                         SetServerBusy(false);
                         return;
                     }
@@ -3747,7 +3980,7 @@ namespace CustomLauncher
                 EnsureServerManagerInitialized();
 
                 ServerConsoleOutput.Text = "";
-                AppendConsoleOutput("[SYS] Запуск сервера...");
+                AppendConsoleOutput(Lang.T("[SYS] Запуск сервера..."));
                 UpdateServerButtons();
 
                 string javaPath = FindJava();
@@ -3768,12 +4001,12 @@ namespace CustomLauncher
             if (_serverManager == null) return;
             try
             {
-                AppendConsoleOutput("[SYS] Остановка сервера...");
+                AppendConsoleOutput(Lang.T("[SYS] Остановка сервера..."));
                 await _serverManager.StopAsync();
             }
             catch (Exception ex)
             {
-                AppendConsoleOutput($"[ERR] Ошибка при остановке: {ex.Message}");
+                AppendConsoleOutput(Lang.F("[ERR] Ошибка при остановке: {0}", ex.Message));
             }
         }
 
@@ -3782,13 +4015,13 @@ namespace CustomLauncher
             if (_serverManager == null || _activeServerConfig == null) return;
             try
             {
-                AppendConsoleOutput("[SYS] Перезапуск сервера...");
+                AppendConsoleOutput(Lang.T("[SYS] Перезапуск сервера..."));
                 string javaPath = FindJava();
                 await _serverManager.RestartAsync(_activeServerConfig, javaPath);
             }
             catch (Exception ex)
             {
-                AppendConsoleOutput($"[ERR] Ошибка при перезапуске: {ex.Message}");
+                AppendConsoleOutput(Lang.F("[ERR] Ошибка при перезапуске: {0}", ex.Message));
             }
         }
 
@@ -3799,24 +4032,24 @@ namespace CustomLauncher
             bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
             if (isRunning)
             {
-                await ShowCustomDialog("Сначала остановите сервер!");
+                await ShowCustomDialog(Lang.T("Сначала остановите сервер!"));
                 return;
             }
 
             string backupDir = Path.Combine(_activeServerConfig.ServerPath, "backup");
             if (!Directory.Exists(backupDir) || Directory.GetFileSystemEntries(backupDir).Length == 0)
             {
-                await ShowCustomDialog("Локальный бэкап не найден! Переустановите сервер.");
+                await ShowCustomDialog(Lang.T("Локальный бэкап не найден! Переустановите сервер."));
                 return;
             }
 
             bool confirmed = await ShowCustomDialog(
-                "Восстановить мир из локального бэкапа? Текущий мир будет перезаписан.",
+                Lang.T("Восстановить мир из локального бэкапа? Текущий мир будет перезаписан."),
                 "Подтверждение", true);
 
             if (!confirmed) return;
 
-            SetServerBusy(true, "Восстановление мира...");
+            SetServerBusy(true, Lang.T("Восстановление мира..."));
 
             try
             {
@@ -3838,11 +4071,11 @@ namespace CustomLauncher
                     }
                     ServerInstaller.CopyDirectoryContents(backupDir, serverDir);
                 });
-                AppendConsoleOutput("[SYS] Мир восстановлен из локального бэкапа.");
+                AppendConsoleOutput(Lang.T("[SYS] Мир восстановлен из локального бэкапа."));
             }
             catch (Exception ex)
             {
-                await ShowCustomDialog($"Ошибка восстановления: {ex.Message}");
+                await ShowCustomDialog(Lang.F("Ошибка восстановления: {0}", ex.Message));
             }
             finally
             {
@@ -3885,23 +4118,23 @@ namespace CustomLauncher
                 _waitingForPortKillConfirmation = false;
                 if (command.Equals("Y", StringComparison.OrdinalIgnoreCase))
                 {
-                    AppendConsoleOutput("[SYS] Принудительное завершение всех процессов Java...");
+                    AppendConsoleOutput(Lang.T("[SYS] Принудительное завершение всех процессов Java..."));
                     try
                     {
                         foreach (var process in Process.GetProcessesByName("java"))
                         {
                             process.Kill();
                         }
-                        AppendConsoleOutput("[SYS] Процессы завершены. Попробуйте запустить сервер снова.");
+                        AppendConsoleOutput(Lang.T("[SYS] Процессы завершены. Попробуйте запустить сервер снова."));
                     }
                     catch (Exception ex)
                     {
-                        AppendConsoleOutput($"[ERR] Не удалось завершить процессы: {ex.Message}");
+                        AppendConsoleOutput(Lang.F("[ERR] Не удалось завершить процессы: {0}", ex.Message));
                     }
                 }
                 else
                 {
-                    AppendConsoleOutput("[SYS] Действие отменено.");
+                    AppendConsoleOutput(Lang.T("[SYS] Действие отменено."));
                 }
                 return;
             }
@@ -3933,7 +4166,7 @@ namespace CustomLauncher
             if (portBusy && !_waitingForPortKillConfirmation)
             {
                 _waitingForPortKillConfirmation = true;
-                ServerConsoleOutput.AppendText("[SYS] ОШИБКА: Порт занят! Убить зависшие процессы Java? Введите Y или N\n");
+                ServerConsoleOutput.AppendText(Lang.T("[SYS] ОШИБКА: Порт занят! Убить зависшие процессы Java? Введите Y или N\n"));
             }
 
             if (ServerConsoleOutput.Text.Length > MAX_CONSOLE_CHARS)
@@ -3952,10 +4185,10 @@ namespace CustomLauncher
 
             string stateLabel = newState switch
             {
-                ServerState.Starting => "Запуск...",
-                ServerState.Running => "Работает",
-                ServerState.Stopping => "Остановка...",
-                _ => "Остановлен"
+                ServerState.Starting => Lang.T("Запуск..."),
+                ServerState.Running => Lang.T("Работает"),
+                ServerState.Stopping => Lang.T("Остановка..."),
+                _ => Lang.T("Остановлен")
             };
 
             ServerStatusText.Text = stateLabel;
@@ -3999,7 +4232,7 @@ namespace CustomLauncher
 
             ServerConfigForm.IsEnabled = hasConfig && !_isServerBusy;
             TabGeneralContent.IsEnabled = isStopped && !_isServerBusy;
-            TabGeneralContent.ToolTip = !isStopped ? "Остановите сервер, чтобы взаимодействовать" : null;
+            TabGeneralContent.ToolTip = !isStopped ? Lang.T("Остановите сервер, чтобы взаимодействовать") : null;
         }
 
         private void SetServerBusy(bool busy, string statusMessage = "")
@@ -4059,7 +4292,7 @@ namespace CustomLauncher
             bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
             if (isRunning)
             {
-                await ShowCustomDialog("Перезапустите сервер, чтобы изменения применились");
+                await ShowCustomDialog(Lang.T("Перезапустите сервер, чтобы изменения применились"));
             }
         }
 
@@ -4074,7 +4307,7 @@ namespace CustomLauncher
             bool isRunning = _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
             if (isRunning)
             {
-                await ShowCustomDialog("Перезапустите сервер, чтобы изменения применились");
+                await ShowCustomDialog(Lang.T("Перезапустите сервер, чтобы изменения применились"));
             }
         }
 
