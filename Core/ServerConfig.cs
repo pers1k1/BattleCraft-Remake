@@ -19,5 +19,8 @@ namespace CustomLauncher.Core
         public bool OnlineMode { get; set; } = false;
         public string ServerIp { get; set; } = "";
         public List<string> WhitelistedPlayers { get; set; } = new();
+        public string ModpackVersion { get; set; } = "0.0";
+        public string BattleCraftModVersion { get; set; } = "0.0";
+        public string MapVersion { get; set; } = "0.0";
     }
 }

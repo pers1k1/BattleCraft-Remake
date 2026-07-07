@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.0.2";
+        private const string VER = "8.1.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -90,6 +90,8 @@ namespace CustomLauncher
         private bool _needsServerModpackUpdate = false;
         private bool _needsServerMapUpdate = false;
         private bool _waitingForPortKillConfirmation = false;
+        private int _portKillPort = 25565;
+        private readonly HashSet<string> _mapUpdateDeclined = new();
         private bool _welcomeLoopStarted = false;
         private static readonly Random _rnd = new();
 
@@ -103,25 +105,34 @@ namespace CustomLauncher
             "-XX:+PerfDisableSharedMem","-XX:MaxTenuringThreshold=1"};
 
         private TaskCompletionSource<bool>? _dialogTcs;
+        private readonly System.Threading.SemaphoreSlim _dialogGate = new(1, 1);
 
-        private Task<bool> ShowCustomDialog(string message, string title = "Внимание", bool isYesNo = false)
+        private async Task<bool> ShowCustomDialog(string message, string title = "Внимание", bool isYesNo = false)
         {
-            CustomDialogTitle.Text = Lang.T(title);
-            CustomDialogMessage.Text = message;
-            CustomDialogBtnCancel.Visibility = isYesNo ? Visibility.Visible : Visibility.Collapsed;
-            CustomDialogBtnOk.Content = isYesNo ? Lang.T("Да") : "OK";
+            await _dialogGate.WaitAsync();
+            try
+            {
+                CustomDialogTitle.Text = Lang.T(title);
+                CustomDialogMessage.Text = message;
+                CustomDialogBtnCancel.Visibility = isYesNo ? Visibility.Visible : Visibility.Collapsed;
+                CustomDialogBtnOk.Content = isYesNo ? Lang.T("Да") : "OK";
 
-            CustomDialogOverlay.Visibility = Visibility.Visible;
-            CustomDialogOverlay.Opacity = 0;
-            CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+                CustomDialogOverlay.Visibility = Visibility.Visible;
+                CustomDialogOverlay.Opacity = 0;
+                CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
 
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-            CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-            CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
 
-            _dialogTcs = new TaskCompletionSource<bool>();
-            return _dialogTcs.Task;
+                _dialogTcs = new TaskCompletionSource<bool>();
+                return await _dialogTcs.Task;
+            }
+            finally
+            {
+                _dialogGate.Release();
+            }
         }
 
         private void CustomDialogOk_Click(object s, RoutedEventArgs e)
@@ -151,33 +162,41 @@ namespace CustomLauncher
 
         private async Task<string?> ShowInputDialogAsync(string title, string defaultValue = "")
         {
-            CustomDialogTitle.Text = Lang.T(title);
-            CustomDialogMessage.Text = "";
-            CustomDialogMessage.Visibility = Visibility.Collapsed;
-            CustomDialogInputBox.Visibility = Visibility.Visible;
-            CustomDialogInputBox.Text = defaultValue;
-            CustomDialogBtnCancel.Visibility = Visibility.Visible;
-            CustomDialogBtnOk.Content = "OK";
+            await _dialogGate.WaitAsync();
+            try
+            {
+                CustomDialogTitle.Text = Lang.T(title);
+                CustomDialogMessage.Text = "";
+                CustomDialogMessage.Visibility = Visibility.Collapsed;
+                CustomDialogInputBox.Visibility = Visibility.Visible;
+                CustomDialogInputBox.Text = defaultValue;
+                CustomDialogBtnCancel.Visibility = Visibility.Visible;
+                CustomDialogBtnOk.Content = "OK";
 
-            CustomDialogOverlay.Visibility = Visibility.Visible;
-            CustomDialogOverlay.Opacity = 0;
-            CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+                CustomDialogOverlay.Visibility = Visibility.Visible;
+                CustomDialogOverlay.Opacity = 0;
+                CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
 
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-            CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-            CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
 
-            _dialogTcs = new TaskCompletionSource<bool>();
-            bool confirmed = await _dialogTcs.Task;
+                _dialogTcs = new TaskCompletionSource<bool>();
+                bool confirmed = await _dialogTcs.Task;
 
-            CustomDialogMessage.Visibility = Visibility.Visible;
+                CustomDialogMessage.Visibility = Visibility.Visible;
 
-            if (!confirmed)
-                return null;
+                if (!confirmed)
+                    return null;
 
-            string trimmedInput = CustomDialogInputBox.Text.Trim();
-            return string.IsNullOrWhiteSpace(trimmedInput) ? null : trimmedInput;
+                string trimmedInput = CustomDialogInputBox.Text.Trim();
+                return string.IsNullOrWhiteSpace(trimmedInput) ? null : trimmedInput;
+            }
+            finally
+            {
+                _dialogGate.Release();
+            }
         }
 
         public MainWindow()
@@ -199,7 +218,8 @@ namespace CustomLauncher
 
         protected override void OnClosed(EventArgs e)
         {
-            try { _worldTimer?.Stop(); _weatherTimer?.Stop(); } catch { }
+            _sceneAlive = false;
+            try { _sceneGate.Set(); } catch { }
             _discordManager?.Dispose();
             base.OnClosed(e);
         }
@@ -216,11 +236,24 @@ namespace CustomLauncher
         private const int HORIZON = 74;
         private WriteableBitmap? _sceneBmp;
         private byte[] _sceneBuf = new byte[SCN_W * SCN_H * 4];
-        private System.Windows.Threading.DispatcherTimer? _worldTimer;
-        private System.Windows.Threading.DispatcherTimer? _weatherTimer;
-        private bool _sceneRunning = true;
+        private readonly byte[] _scenePresent = new byte[SCN_W * SCN_H * 4];
+        private System.Threading.Thread? _sceneThread;
+        private readonly System.Threading.ManualResetEventSlim _sceneGate = new(true);
+        private volatile bool _sceneAlive;
+        private volatile bool _framePending;
+        private readonly object _frameLock = new();
+        private double _weatherCountdown;
+        private volatile bool _sceneRunning = true;
         private int _frame;
-        private double CurHour() => DateTime.Now.Hour + DateTime.Now.Minute / 60.0;
+        private double _tickHour;
+        private int _tickMonth;
+        private volatile int _accentArgb = 0xF7CAD0;
+        private Color AccentSnapshot()
+        {
+            int v = _accentArgb;
+            return Color.FromRgb((byte)(v >> 16), (byte)(v >> 8), (byte)v);
+        }
+        private double CurHour() => _tickHour;
 
         private const int GBASE = HORIZON + 6;
         private readonly int[] _mtnFar = new int[SCN_W];
@@ -329,19 +362,74 @@ namespace CustomLauncher
                 int cc = 4; _cloudX = new double[cc]; _cloudY = new double[cc]; _cloudW = new double[cc];
                 for (int i = 0; i < cc; i++) { _cloudX[i] = _sceneRng.Next(SCN_W); _cloudY[i] = 10 + _sceneRng.Next(28); _cloudW[i] = 14 + _sceneRng.Next(16); }
 
+                SnapshotClock();
                 RollWeather(true);
+                _weatherCountdown = _sceneRng.Next(70, 165);
 
-                _worldTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
-                _worldTimer.Tick += (s, e) => WorldTick();
-                _worldTimer.Start();
-
-                _weatherTimer = new System.Windows.Threading.DispatcherTimer { Interval = RandWeatherInterval() };
-                _weatherTimer.Tick += (s, e) => { RollWeather(); _weatherTimer!.Interval = RandWeatherInterval(); };
-                _weatherTimer.Start();
-
-                WorldTick();
+                _sceneAlive = true;
+                _sceneThread = new System.Threading.Thread(SceneLoop)
+                {
+                    IsBackground = true,
+                    Name = "SceneRender",
+                    Priority = System.Threading.ThreadPriority.BelowNormal
+                };
+                _sceneThread.Start();
             }
             catch { }
+        }
+
+        private void SceneLoop()
+        {
+            var sw = Stopwatch.StartNew();
+            while (_sceneAlive)
+            {
+                try { _sceneGate.Wait(); } catch { break; }
+                if (!_sceneAlive) break;
+
+                long start = sw.ElapsedMilliseconds;
+                try
+                {
+                    WorldTick();
+                    PresentFrame();
+                }
+                catch { }
+                long spent = sw.ElapsedMilliseconds - start;
+                int sleep = (int)Math.Clamp(80 - spent, 1, 80);
+                System.Threading.Thread.Sleep(sleep);
+            }
+        }
+
+        private void PresentFrame()
+        {
+            lock (_frameLock)
+            {
+                Buffer.BlockCopy(_sceneBuf, 0, _scenePresent, 0, _sceneBuf.Length);
+                Buffer.BlockCopy(_blobBuf, 0, _blobPresent, 0, _blobBuf.Length);
+            }
+            if (_framePending) return;
+            _framePending = true;
+            try
+            {
+                Dispatcher.BeginInvoke(new Action(PushFrame), System.Windows.Threading.DispatcherPriority.Render);
+            }
+            catch { _framePending = false; }
+        }
+
+        private void PushFrame()
+        {
+            _framePending = false;
+            lock (_frameLock)
+            {
+                _sceneBmp?.WritePixels(new Int32Rect(0, 0, SCN_W, SCN_H), _scenePresent, SCN_W * 4, 0);
+                _blobBmp?.WritePixels(new Int32Rect(0, 0, BLOB_W, BLOB_H), _blobPresent, BLOB_W * 4, 0);
+            }
+        }
+
+        private void SnapshotClock()
+        {
+            var now = DateTime.Now;
+            _tickHour = now.Hour + now.Minute / 60.0;
+            _tickMonth = now.Month;
         }
 
         private void UpdateSceneAnimation()
@@ -349,17 +437,15 @@ namespace CustomLauncher
             bool shouldRun = WindowState != WindowState.Minimized && IsActive;
             if (shouldRun == _sceneRunning) return;
             _sceneRunning = shouldRun;
-            if (shouldRun) { _worldTimer?.Start(); _weatherTimer?.Start(); }
-            else { _worldTimer?.Stop(); _weatherTimer?.Stop(); }
+            if (shouldRun) _sceneGate.Set();
+            else _sceneGate.Reset();
         }
-
-        private TimeSpan RandWeatherInterval() => TimeSpan.FromSeconds(_sceneRng.Next(70, 165));
 
         private Weather PickWeather()
         {
-            int hour = DateTime.Now.Hour;
+            int hour = (int)_tickHour;
             bool night = hour >= 21 || hour < 4;
-            int month = DateTime.Now.Month;
+            int month = _tickMonth;
             bool winter = month == 12 || month <= 2;
             bool autumn = month >= 9 && month <= 11;
             bool spring = month >= 3 && month <= 5;
@@ -430,6 +516,13 @@ namespace CustomLauncher
         {
             _frame++;
             _blobT += 0.08;
+            SnapshotClock();
+            _weatherCountdown -= 0.08;
+            if (_weatherCountdown <= 0)
+            {
+                RollWeather();
+                _weatherCountdown = _sceneRng.Next(70, 165);
+            }
             StepWeatherIntensity();
             UpdateAccumulation();
             RenderScene();
@@ -497,11 +590,12 @@ namespace CustomLauncher
                     byte r = (byte)(top.r + (horiz.r - top.r) * t);
                     byte g = (byte)(top.g + (horiz.g - top.g) * t);
                     byte b = (byte)(top.b + (horiz.b - top.b) * t);
-                    for (int x = 0; x < SCN_W; x++) SP(x, y, r, g, b);
+                    FillRow(y, r, g, b);
                 }
 
+                byte ur = (byte)(20 * bright), ug = (byte)(16 * bright), ub = (byte)(30 * bright);
                 for (int y = HORIZON; y < SCN_H; y++)
-                    for (int x = 0; x < SCN_W; x++) SP(x, y, (byte)(20 * bright), (byte)(16 * bright), (byte)(30 * bright));
+                    FillRow(y, ur, ug, ub);
 
                 if (nightF > 0.01)
                 {
@@ -523,7 +617,7 @@ namespace CustomLauncher
                 }
                 if (storm > 0) DrawOvercast(storm, night, bright);
 
-                int gmonth = DateTime.Now.Month;
+                int gmonth = _tickMonth;
                 bool gWinter = gmonth == 12 || gmonth <= 2;
                 bool gAutumn = gmonth >= 9 && gmonth <= 11;
                 bool gSpring = gmonth >= 3 && gmonth <= 5;
@@ -575,10 +669,20 @@ namespace CustomLauncher
                 }
 
                 if (badWeather) DrawUmbrellaPerson(night);
-
-                _sceneBmp.WritePixels(new Int32Rect(0, 0, SCN_W, SCN_H), _sceneBuf, SCN_W * 4, 0);
             }
             catch { }
+        }
+
+        private void FillRow(int y, byte r, byte g, byte b)
+        {
+            int i = y * SCN_W * 4;
+            int end = i + SCN_W * 4;
+            var buf = _sceneBuf;
+            while (i < end)
+            {
+                buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = 255;
+                i += 4;
+            }
         }
 
         private void DrawSunMoon(bool night)
@@ -665,7 +769,7 @@ namespace CustomLauncher
             double by = 22 + Math.Sin(_frame * 0.06 + 1) * (3 + wind * 4);
             int kx = (int)bx, ky = (int)by;
 
-            var col = (Color)FindResource("AccentColor");
+            var col = AccentSnapshot();
             byte r = col.R, g = col.G, b = col.B;
             SP(kx, ky - 3, r, g, b);
             SP(kx - 1, ky - 2, r, g, b); SP(kx, ky - 2, 255, 255, 255); SP(kx + 1, ky - 2, r, g, b);
@@ -707,7 +811,7 @@ namespace CustomLauncher
 
             SP(px + 2, gy - 6, cr, cg, cb); SP(px + 1, gy - 8, cr, cg, cb);
 
-            var col = (Color)FindResource("AccentColor");
+            var col = AccentSnapshot();
             byte ar = (byte)(col.R * nf), ag = (byte)(col.G * nf), ab = (byte)(col.B * nf);
             byte ah = (byte)Math.Min(255, col.R * nf + 40), ah2 = (byte)Math.Min(255, col.G * nf + 40), ah3 = (byte)Math.Min(255, col.B * nf + 40);
             for (int dx = -3; dx <= 3; dx++) SP(px + dx, gy - 9, ar, ag, ab);
@@ -1192,7 +1296,7 @@ namespace CustomLauncher
 
         private void UpdateAccumulation()
         {
-            int m = DateTime.Now.Month;
+            int m = _tickMonth;
             bool winter = m == 12 || m <= 2;
             bool autumn = m >= 9 && m <= 11;
             bool snowing = _weather == Weather.Snow;
@@ -1418,7 +1522,7 @@ namespace CustomLauncher
                     bool feature = CreeperMap[r][c] == '1';
                     Brush fill = feature
                         ? featureBrush
-                        : new SolidColorBrush(_sceneRng.NextDouble() < 0.4 ? faceDark : faceMain);
+                        : new SolidColorBrush(_rnd.NextDouble() < 0.4 ? faceDark : faceMain);
 
                     var px = new System.Windows.Shapes.Rectangle
                     {
@@ -1585,7 +1689,7 @@ namespace CustomLauncher
             foreach (char ch in message)
             {
                 msgRun.Text += ch;
-                await Task.Delay(6 + _sceneRng.Next(7));
+                await Task.Delay(6 + _rnd.Next(7));
             }
         }
 
@@ -1622,6 +1726,10 @@ namespace CustomLauncher
         private const int BLOB_W = 44;
         private const int BLOB_H = 62;
         private readonly byte[] _blobBuf = new byte[BLOB_W * BLOB_H * 4];
+        private readonly byte[] _blobPresent = new byte[BLOB_W * BLOB_H * 4];
+        private readonly double[] _ballCx = new double[6];
+        private readonly double[] _ballCy = new double[6];
+        private readonly double[] _ballR = new double[6];
         private double _blobT;
 
         private void InitBlob()
@@ -1637,24 +1745,20 @@ namespace CustomLauncher
 
         private void RenderBlob()
         {
-            if (_blobBmp == null) return;
             try
             {
-                var accent = (Color)FindResource("AccentColor");
+                var accent = AccentSnapshot();
                 Color core = LerpColor(accent, Colors.White, 0.80);
                 Color rim = LerpColor(accent, Colors.White, 0.42);
 
                 double t = _blobT;
 
-                var balls = new (double cx, double cy, double r)[]
-                {
-                    (BLOB_W * 0.50 + Math.Sin(t * 0.50) * BLOB_W * 0.13,       BLOB_H * 0.50 + Math.Sin(t * 0.33) * BLOB_H * 0.40, BLOB_W * 0.22),
-                    (BLOB_W * 0.50 + Math.Sin(t * 0.40 + 2.0) * BLOB_W * 0.15, BLOB_H * 0.50 + Math.Sin(t * 0.28 + 2.0) * BLOB_H * 0.38, BLOB_W * 0.20),
-                    (BLOB_W * 0.50 + Math.Cos(t * 0.45 + 1.0) * BLOB_W * 0.12, BLOB_H * 0.50 + Math.Cos(t * 0.31 + 4.0) * BLOB_H * 0.42, BLOB_W * 0.19),
-                    (BLOB_W * 0.50 + Math.Sin(t * 0.60 + 3.0) * BLOB_W * 0.10, BLOB_H * 0.50 + Math.Sin(t * 0.37 + 1.0) * BLOB_H * 0.36, BLOB_W * 0.17),
-                    (BLOB_W * 0.50 + Math.Cos(t * 0.55 + 5.0) * BLOB_W * 0.14, BLOB_H * 0.50 + Math.Cos(t * 0.26 + 3.0) * BLOB_H * 0.44, BLOB_W * 0.18),
-                    (BLOB_W * 0.50 + Math.Sin(t * 0.48 + 4.0) * BLOB_W * 0.11, BLOB_H * 0.50 + Math.Sin(t * 0.30 + 5.0) * BLOB_H * 0.40, BLOB_W * 0.16),
-                };
+                _ballCx[0] = BLOB_W * 0.50 + Math.Sin(t * 0.50) * BLOB_W * 0.13;       _ballCy[0] = BLOB_H * 0.50 + Math.Sin(t * 0.33) * BLOB_H * 0.40;       _ballR[0] = BLOB_W * 0.22;
+                _ballCx[1] = BLOB_W * 0.50 + Math.Sin(t * 0.40 + 2.0) * BLOB_W * 0.15; _ballCy[1] = BLOB_H * 0.50 + Math.Sin(t * 0.28 + 2.0) * BLOB_H * 0.38; _ballR[1] = BLOB_W * 0.20;
+                _ballCx[2] = BLOB_W * 0.50 + Math.Cos(t * 0.45 + 1.0) * BLOB_W * 0.12; _ballCy[2] = BLOB_H * 0.50 + Math.Cos(t * 0.31 + 4.0) * BLOB_H * 0.42; _ballR[2] = BLOB_W * 0.19;
+                _ballCx[3] = BLOB_W * 0.50 + Math.Sin(t * 0.60 + 3.0) * BLOB_W * 0.10; _ballCy[3] = BLOB_H * 0.50 + Math.Sin(t * 0.37 + 1.0) * BLOB_H * 0.36; _ballR[3] = BLOB_W * 0.17;
+                _ballCx[4] = BLOB_W * 0.50 + Math.Cos(t * 0.55 + 5.0) * BLOB_W * 0.14; _ballCy[4] = BLOB_H * 0.50 + Math.Cos(t * 0.26 + 3.0) * BLOB_H * 0.44; _ballR[4] = BLOB_W * 0.18;
+                _ballCx[5] = BLOB_W * 0.50 + Math.Sin(t * 0.48 + 4.0) * BLOB_W * 0.11; _ballCy[5] = BLOB_H * 0.50 + Math.Sin(t * 0.30 + 5.0) * BLOB_H * 0.40; _ballR[5] = BLOB_W * 0.16;
 
                 int idx = 0;
                 for (int y = 0; y < BLOB_H; y++)
@@ -1662,10 +1766,10 @@ namespace CustomLauncher
                     for (int x = 0; x < BLOB_W; x++)
                     {
                         double f = 0;
-                        foreach (var b in balls)
+                        for (int b = 0; b < 6; b++)
                         {
-                            double dx = x - b.cx, dy = y - b.cy;
-                            f += (b.r * b.r) / (dx * dx + dy * dy + 1.0);
+                            double dx = x - _ballCx[b], dy = y - _ballCy[b];
+                            f += (_ballR[b] * _ballR[b]) / (dx * dx + dy * dy + 1.0);
                         }
 
                         byte rr, gg, bb, aa;
@@ -1678,7 +1782,6 @@ namespace CustomLauncher
                         _blobBuf[idx++] = aa;
                     }
                 }
-                _blobBmp.WritePixels(new Int32Rect(0, 0, BLOB_W, BLOB_H), _blobBuf, BLOB_W * 4, 0);
             }
             catch { }
         }
@@ -1708,7 +1811,7 @@ namespace CustomLauncher
             _logLines.Add($"{prefix} {message}");
             if (_logLines.Count > 200) _logLines.RemoveAt(0);
             LogTerminalText.Text = string.Join("\n", _logLines);
-            if (LogScroll != null) { LogScroll.UpdateLayout(); LogScroll.ScrollToBottom(); }
+            LogScroll?.Dispatcher.BeginInvoke(new Action(LogScroll.ScrollToBottom), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void StartTimers()
@@ -2074,6 +2177,7 @@ namespace CustomLauncher
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 this.Resources["AccentColor"] = c; this.Resources["AccentBrush"] = new SolidColorBrush(c);
+                _accentArgb = (c.R << 16) | (c.G << 8) | c.B;
 
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
@@ -2304,7 +2408,7 @@ namespace CustomLauncher
                 _gameProcess.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
-                _discordManager.SetPlayingState(_activeServerConfig?.Name ?? Lang.T("Одиночная игра"));
+                _discordManager.ReleaseForGame();
 
                 await _gameProcess.WaitForExitAsync();
                 _gameProcess = null;
@@ -3100,7 +3204,17 @@ namespace CustomLauncher
             string np = ResolveGamePath(PathBox.Text);
             if (!string.IsNullOrWhiteSpace(np) && !string.Equals(np, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
             {
-                await PrepareGameFolderAsync(np);
+                bool wipe = true;
+                bool hasFiles = false;
+                try { hasFiles = Directory.Exists(np) && Directory.EnumerateFileSystemEntries(np).Any(); } catch { }
+                if (hasFiles)
+                    wipe = await ShowCustomDialog(
+                        Lang.F("Папка {0} не пуста.\nУдалить её содержимое для чистой установки? Желательно удалить, иначе старые файлы могут конфликтовать с модпаком.", np),
+                        "Смена папки", true);
+
+                if (wipe) await PrepareGameFolderAsync(np);
+                else { try { Directory.CreateDirectory(np); } catch { } }
+
                 _settings.IsModpackInstalled = false;
                 _settings.ModpackVersion = "0.0";
                 _settings.GamePath = np;
@@ -3259,17 +3373,11 @@ namespace CustomLauncher
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
                 }
 
-                if (Version.TryParse(serverModpackVerStr, out var onSV) && Version.TryParse(_settings.ServerModpackVersion, out var loSV))
-                {
+                if (Version.TryParse(serverModpackVerStr, out _))
                     _onlineServerModpackVer = serverModpackVerStr;
-                    _needsServerModpackUpdate = onSV > loSV;
-                }
 
-                if (Version.TryParse(serverMapVerStr, out var onMV) && Version.TryParse(_settings.ServerMapVersion, out var loMV))
-                {
+                if (Version.TryParse(serverMapVerStr, out _))
                     _onlineServerMapVer = serverMapVerStr;
-                    _needsServerMapUpdate = onMV > loMV;
-                }
 
                 try
                 {
@@ -3279,8 +3387,6 @@ namespace CustomLauncher
                         _onlineBattleCraftModVer = bcVerStr;
                         if (Version.TryParse(_settings.BattleCraftModVersion, out var loBC))
                             _needsBattleCraftModUpdate = _settings.IsModpackInstalled && onBC > loBC;
-                        if (Version.TryParse(_settings.ServerBattleCraftModVersion, out var loSBC) && onBC > loSBC)
-                            _needsServerModpackUpdate = true;
                         if (_settings.IsModpackInstalled && _needsBattleCraftModUpdate && !_needsModpackUpdate)
                         {
                             BtnPlay.Content = Lang.T("ОБНОВИТЬ");
@@ -3290,6 +3396,7 @@ namespace CustomLauncher
                 }
                 catch { }
 
+                RecomputeServerUpdateFlags();
                 UpdateServerButtons();
                 StatusText.Text = Lang.F("Модпак v{0}", _settings.ModpackVersion);
                 if (Version.TryParse(launcherVerStr, out var onlineLauncherV) && Version.TryParse(VER, out var currentLauncherV)
@@ -3648,6 +3755,21 @@ namespace CustomLauncher
             LoadSelectedServerConfig();
         }
 
+        private void RecomputeServerUpdateFlags()
+        {
+            _needsServerModpackUpdate = false;
+            _needsServerMapUpdate = false;
+            var cfg = _activeServerConfig;
+            if (cfg == null || !cfg.IsInstalled) return;
+
+            if (Version.TryParse(_onlineServerModpackVer, out var onSV) && Version.TryParse(cfg.ModpackVersion, out var loSV))
+                _needsServerModpackUpdate = onSV > loSV;
+            if (Version.TryParse(_onlineBattleCraftModVer, out var onBC) && Version.TryParse(cfg.BattleCraftModVersion, out var loBC) && onBC > loBC)
+                _needsServerModpackUpdate = true;
+            if (Version.TryParse(_onlineServerMapVer, out var onMV) && Version.TryParse(cfg.MapVersion, out var loMV))
+                _needsServerMapUpdate = onMV > loMV;
+        }
+
         private void LoadSelectedServerConfig()
         {
             if (ServerSelector.SelectedItem is not ComboBoxItem selectedItem)
@@ -3655,6 +3777,7 @@ namespace CustomLauncher
                 _activeServerConfig = null;
                 ServerConfigForm.IsEnabled = false;
                 ServerConfigConsoleGrid.Visibility = Visibility.Collapsed;
+                RecomputeServerUpdateFlags();
                 UpdateServerButtons();
                 return;
             }
@@ -3666,6 +3789,7 @@ namespace CustomLauncher
             {
                 ServerConfigForm.IsEnabled = false;
                 ServerConfigConsoleGrid.Visibility = Visibility.Collapsed;
+                RecomputeServerUpdateFlags();
                 UpdateServerButtons();
                 return;
             }
@@ -3691,6 +3815,7 @@ namespace CustomLauncher
                 : Visibility.Collapsed;
 
             RebuildWhitelistUi();
+            RecomputeServerUpdateFlags();
             UpdateServerButtons();
         }
 
@@ -3864,11 +3989,10 @@ namespace CustomLauncher
             }
 
             _activeServerConfig.IsInstalled = true;
-            _settings.ServerModpackVersion = _onlineServerModpackVer;
-            _settings.ServerBattleCraftModVersion = _onlineBattleCraftModVer;
-            _settings.ServerMapVersion = _onlineServerMapVer;
-            _needsServerModpackUpdate = false;
-            _needsServerMapUpdate = false;
+            _activeServerConfig.ModpackVersion = _onlineServerModpackVer;
+            _activeServerConfig.BattleCraftModVersion = _onlineBattleCraftModVer;
+            _activeServerConfig.MapVersion = _onlineServerMapVer;
+            RecomputeServerUpdateFlags();
             AppSettings.Save(_settings);
 
             UpdateServerButtons();
@@ -3900,9 +4024,9 @@ namespace CustomLauncher
                 await installer.UpdateServerMods(serverModsDir, OnServerProgress);
                 if (_onlineBattleCraftModVer != "0.0" && Version.TryParse(_onlineBattleCraftModVer, out _))
                     await installer.InstallBattleCraftMod(serverModsDir, BattleCraftJarUrl(_onlineBattleCraftModVer), OnServerProgress);
-                _settings.ServerModpackVersion = _onlineServerModpackVer;
-                _settings.ServerBattleCraftModVersion = _onlineBattleCraftModVer;
-                _needsServerModpackUpdate = false;
+                _activeServerConfig.ModpackVersion = _onlineServerModpackVer;
+                _activeServerConfig.BattleCraftModVersion = _onlineBattleCraftModVer;
+                RecomputeServerUpdateFlags();
                 AppSettings.Save(_settings);
                 AppendConsoleOutput(Lang.T("[SYS] Моды сервера обновлены."));
             }
@@ -3936,7 +4060,7 @@ namespace CustomLauncher
                 return;
             }
 
-            if (_needsServerMapUpdate)
+            if (_needsServerMapUpdate && !_mapUpdateDeclined.Contains(_activeServerConfig.Name))
             {
                 bool updateMap = await ShowCustomDialog(Lang.T("Доступно обновление карты сервера. Хотите обновить? (Текущая карта будет сброшена!)"), "Обновление карты", true);
                 if (updateMap)
@@ -3949,8 +4073,8 @@ namespace CustomLauncher
                         string serverDir = Path.Combine(_activeServerConfig.ServerPath, "server");
                         string backupDir = Path.Combine(_activeServerConfig.ServerPath, "backup");
                         await installer.UpdateServerMap(serverDir, backupDir, OnServerProgress);
-                        _settings.ServerMapVersion = _onlineServerMapVer;
-                        _needsServerMapUpdate = false;
+                        _activeServerConfig.MapVersion = _onlineServerMapVer;
+                        RecomputeServerUpdateFlags();
                         AppSettings.Save(_settings);
                         AppendConsoleOutput(Lang.T("[SYS] Карта сервера обновлена."));
                     }
@@ -3967,10 +4091,8 @@ namespace CustomLauncher
                 }
                 else
                 {
-
-                    _settings.ServerMapVersion = _onlineServerMapVer;
-                    _needsServerMapUpdate = false;
-                    AppSettings.Save(_settings);
+                    _mapUpdateDeclined.Add(_activeServerConfig.Name);
+                    AppendConsoleOutput(Lang.T("[SYS] Обновление карты отложено — предложу снова при следующем запуске лаунчера."));
                 }
             }
 
@@ -4118,19 +4240,8 @@ namespace CustomLauncher
                 _waitingForPortKillConfirmation = false;
                 if (command.Equals("Y", StringComparison.OrdinalIgnoreCase))
                 {
-                    AppendConsoleOutput(Lang.T("[SYS] Принудительное завершение всех процессов Java..."));
-                    try
-                    {
-                        foreach (var process in Process.GetProcessesByName("java"))
-                        {
-                            process.Kill();
-                        }
-                        AppendConsoleOutput(Lang.T("[SYS] Процессы завершены. Попробуйте запустить сервер снова."));
-                    }
-                    catch (Exception ex)
-                    {
-                        AppendConsoleOutput(Lang.F("[ERR] Не удалось завершить процессы: {0}", ex.Message));
-                    }
+                    int port = _portKillPort;
+                    _ = Task.Run(() => KillPortOwners(port));
                 }
                 else
                 {
@@ -4141,6 +4252,67 @@ namespace CustomLauncher
 
             if (_serverManager == null) return;
             _serverManager.SendCommand(command);
+        }
+
+        private void KillPortOwners(int port)
+        {
+            AppendConsoleOutput(Lang.F("[SYS] Поиск процесса, занявшего порт {0}...", port));
+            var pids = FindPidsOnTcpPort(port);
+            int self = Environment.ProcessId;
+            pids.RemoveAll(pid => pid <= 4 || pid == self);
+            if (pids.Count == 0)
+            {
+                AppendConsoleOutput(Lang.T("[SYS] Процесс на порту не найден. Возможно, порт уже освобождён."));
+                return;
+            }
+
+            foreach (int pid in pids)
+            {
+                try
+                {
+                    var proc = Process.GetProcessById(pid);
+                    string name = proc.ProcessName;
+                    proc.Kill(true);
+                    AppendConsoleOutput(Lang.F("[SYS] Завершён процесс {0} (PID {1}), занимавший порт {2}.", name, pid, port));
+                }
+                catch (Exception ex)
+                {
+                    AppendConsoleOutput(Lang.F("[ERR] Не удалось завершить PID {0}: {1}", pid, ex.Message));
+                }
+            }
+            AppendConsoleOutput(Lang.T("[SYS] Попробуйте запустить сервер снова."));
+        }
+
+        private static List<int> FindPidsOnTcpPort(int port)
+        {
+            var pids = new List<int>();
+            try
+            {
+                var psi = new ProcessStartInfo("netstat", "-ano -p tcp")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+                using var p = Process.Start(psi);
+                if (p == null) return pids;
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(5000);
+
+                foreach (var raw in output.Split('\n'))
+                {
+                    var line = raw.Trim();
+                    if (!line.StartsWith("TCP", StringComparison.OrdinalIgnoreCase)) continue;
+                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < 4) continue;
+                    string local = parts[1];
+                    int colon = local.LastIndexOf(':');
+                    if (colon < 0 || !int.TryParse(local[(colon + 1)..], out int localPort) || localPort != port) continue;
+                    if (int.TryParse(parts[^1], out int pid) && pid > 0 && !pids.Contains(pid)) pids.Add(pid);
+                }
+            }
+            catch { }
+            return pids;
         }
 
         private void AppendConsoleOutput(string line)
@@ -4166,7 +4338,8 @@ namespace CustomLauncher
             if (portBusy && !_waitingForPortKillConfirmation)
             {
                 _waitingForPortKillConfirmation = true;
-                ServerConsoleOutput.AppendText(Lang.T("[SYS] ОШИБКА: Порт занят! Убить зависшие процессы Java? Введите Y или N\n"));
+                _portKillPort = _activeServerConfig?.ServerPort ?? 25565;
+                ServerConsoleOutput.AppendText(Lang.F("[SYS] ОШИБКА: Порт {0} занят! Завершить процесс, который его держит? Введите Y или N\n", _portKillPort));
             }
 
             if (ServerConsoleOutput.Text.Length > MAX_CONSOLE_CHARS)

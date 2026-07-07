@@ -67,7 +67,7 @@ namespace CustomLauncher.Core
             _client.SetPresence(presence);
         }
 
-        public void SetPlayingState(string serverName)
+        public void ReleaseForGame()
         {
             _currentState = "playing";
 

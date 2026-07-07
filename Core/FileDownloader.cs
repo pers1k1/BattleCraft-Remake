@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,15 +10,7 @@ namespace CustomLauncher.Core
 {
     public class FileDownloader
     {
-        private static readonly HttpClient _client = new HttpClient
-        {
-            Timeout = TimeSpan.FromHours(1)
-        };
-
-        static FileDownloader()
-        {
-            _client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-        }
+        private const int MaxAttempts = 5;
 
         public event Action<double>? ProgressChanged;
         public event Action<string>? SpeedChanged;
@@ -27,26 +20,72 @@ namespace CustomLauncher.Core
         public async Task DownloadFileAsync(string url, string destinationPath, CancellationToken cancellationToken = default)
         {
             string fileName = SafeName(url);
+            Exception? lastError = null;
 
-            using var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            for (int attempt = 1; attempt <= MaxAttempts; attempt++)
             {
-                LogMessage?.Invoke(Lang.F("Ошибка скачивания {0} (HTTP {1})", fileName, (int)response.StatusCode));
-                throw new Exception(Lang.F("Ошибка скачивания (HTTP {0})", response.StatusCode));
+                try
+                {
+                    await DownloadCoreAsync(url, destinationPath, fileName, resume: attempt > 1, cancellationToken);
+                    return;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
+                {
+                    lastError = ex;
+                    if (attempt == MaxAttempts) break;
+                    LogMessage?.Invoke(Lang.F("Обрыв загрузки {0} — повтор {1}/{2}", fileName, attempt + 1, MaxAttempts));
+                    await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(3000, 400 * attempt)), cancellationToken);
+                }
             }
 
-            long totalBytes = response.Content.Headers.ContentLength ?? -1L;
-            LogMessage?.Invoke(totalBytes > 0
-                ? Lang.F("Загрузка: {0} ({1})", fileName, FormatSize(totalBytes))
-                : Lang.F("Загрузка: {0}", fileName));
+            LogMessage?.Invoke(Lang.F("Ошибка скачивания {0}: {1}", fileName, lastError?.Message ?? ""));
+            throw new Exception(Lang.F("Не удалось скачать {0} за {1} попыток.", fileName, MaxAttempts), lastError);
+        }
+
+        private async Task DownloadCoreAsync(string url, string destinationPath, string fileName, bool resume, CancellationToken cancellationToken)
+        {
+            long existing = 0;
+            if (resume)
+            {
+                try { var fi = new FileInfo(destinationPath); if (fi.Exists) existing = fi.Length; }
+                catch { existing = 0; }
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            if (existing > 0)
+                request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existing, null);
+
+            using var response = await ResilientHttpClientFactory.Shared.SendAsync(
+                request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            bool resumed = response.StatusCode == HttpStatusCode.PartialContent && existing > 0;
+            if (!resumed && !response.IsSuccessStatusCode)
+            {
+                LogMessage?.Invoke(Lang.F("Ошибка скачивания {0} (HTTP {1})", fileName, (int)response.StatusCode));
+                throw new HttpRequestException(Lang.F("Ошибка скачивания (HTTP {0})", response.StatusCode));
+            }
+            if (!resumed) existing = 0;
+
+            long contentBytes = response.Content.Headers.ContentLength ?? -1L;
+            long totalBytes = contentBytes > 0 ? existing + contentBytes : -1L;
+            LogMessage?.Invoke(resumed
+                ? Lang.F("Докачка: {0} с {1}", fileName, FormatSize(existing))
+                : totalBytes > 0
+                    ? Lang.F("Загрузка: {0} ({1})", fileName, FormatSize(totalBytes))
+                    : Lang.F("Загрузка: {0}", fileName));
 
             byte[] buffer = new byte[81920];
 
             using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.Read, 81920, true);
+            using var fileStream = new FileStream(destinationPath,
+                resumed ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read, 81920, true);
 
-            long totalRead = 0;
+            long totalRead = existing;
             int bytesRead;
             long bytesReadSinceLastUpdate = 0;
             var stopwatch = Stopwatch.StartNew();
@@ -94,9 +133,12 @@ namespace CustomLauncher.Core
                 }
             }
 
+            if (totalBytes > 0 && totalRead < totalBytes)
+                throw new IOException(Lang.F("Загрузка оборвалась: получено {0} из {1}.", FormatSize(totalRead), FormatSize(totalBytes)));
+
             ProgressChanged?.Invoke(100);
 
-            double avg = total.Elapsed.TotalSeconds > 0 ? totalRead / total.Elapsed.TotalSeconds : 0;
+            double avg = total.Elapsed.TotalSeconds > 0 ? (totalRead - existing) / total.Elapsed.TotalSeconds : 0;
             LogMessage?.Invoke(Lang.F("Готово: {0} — {1} за {2} ({3})", fileName, FormatSize(totalRead), FormatDuration(total.Elapsed), FormatSpeed(avg)));
         }
 

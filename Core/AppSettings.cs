@@ -53,6 +53,20 @@ namespace CustomLauncher
             }
         }
 
+        private static void MigrateServerVersions(AppSettings s)
+        {
+            foreach (var server in s.Servers)
+            {
+                if (!server.IsInstalled) continue;
+                if (server.ModpackVersion == "0.0" && s.ServerModpackVersion != "0.0")
+                    server.ModpackVersion = s.ServerModpackVersion;
+                if (server.BattleCraftModVersion == "0.0" && s.ServerBattleCraftModVersion != "0.0")
+                    server.BattleCraftModVersion = s.ServerBattleCraftModVersion;
+                if (server.MapVersion == "0.0" && s.ServerMapVersion != "0.0")
+                    server.MapVersion = s.ServerMapVersion;
+            }
+        }
+
         public static AppSettings Load()
         {
             lock (_fileLock)
@@ -62,7 +76,12 @@ namespace CustomLauncher
                     try
                     {
                         var s = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(ConfigFile));
-                        if (s != null) { if (s.RamMb <= 0) s.RamMb = 4096; return s; }
+                        if (s != null)
+                        {
+                            if (s.RamMb <= 0) s.RamMb = 4096;
+                            MigrateServerVersions(s);
+                            return s;
+                        }
                     }
                     catch { }
                 }
