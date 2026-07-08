@@ -618,6 +618,8 @@ namespace CustomLauncher
             AddMeteor(meteors, Meteor1, 19, 4, 430, 155);
             AddMeteor(meteors, Meteor2, 31, 12, 370, 165);
             _staticSbs.Add(meteors);
+
+            foreach (var s in _staticSbs) Timeline.SetDesiredFrameRate(s, 20);
         }
 
         private static void AddAuroraDrift(Storyboard sb, FrameworkElement el, double dx, double dy, double sec)
@@ -778,6 +780,7 @@ namespace CustomLauncher
             AddBreath(sb, Flow2, 0.34, 0.56, 12);
             AddBreath(sb, Flow3, 0.30, 0.52, 10);
             AddBreath(sb, Flow4, 0.28, 0.48, 14);
+            Timeline.SetDesiredFrameRate(sb, 20);
             _gradientSbs.Add(sb);
         }
 
