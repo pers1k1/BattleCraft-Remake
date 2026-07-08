@@ -1,4 +1,4 @@
-﻿<Window x:Class="CustomLauncher.MainWindow"
+<Window x:Class="CustomLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
@@ -1161,12 +1161,12 @@
         <Separator VerticalAlignment="Top" Margin="0,40,0,0" Background="#444444" Opacity="0.5"/>
 
         <StackPanel x:Name="LoginPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Width="320">
-            <TextBlock x:Name="LoginMsLabel" Text="Р›РёС†РµРЅР·РёСЏ (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
-            <Button x:Name="LoginMsBtn" Content="Р’РѕР№С‚Рё С‡РµСЂРµР· Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+            <TextBlock x:Name="LoginMsLabel" Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <Button x:Name="LoginMsBtn" Content="Войти через Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
 
-            <TextBlock x:Name="LoginNickLabel" Text="РР›Р РџРёСЂР°С‚РєР° (РќРёРєРЅРµР№Рј):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
+            <TextBlock x:Name="LoginNickLabel" Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
             <TextBox x:Name="UsernameBox"/>
-            <Button x:Name="LoginOfflineBtn" Content="Р’РѕР№С‚Рё РѕС„С„Р»Р°Р№РЅ" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
+            <Button x:Name="LoginOfflineBtn" Content="Войти оффлайн" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
         </StackPanel>
 
         <Grid x:Name="MainPanel" Visibility="Hidden">
@@ -1197,7 +1197,7 @@
                         <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x25B6;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock x:Name="NavPlayText" Text="РРіСЂР°С‚СЊ" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="NavPlayText" Text="Играть" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -1205,7 +1205,7 @@
                         <Button x:Name="NavServerBtn" Click="NavServer_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock x:Name="NavServerText" Text="РЎРµСЂРІРµСЂС‹" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="NavServerText" Text="Серверы" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -1215,7 +1215,7 @@
                         <Button x:Name="BtnReinstall" Click="BtnReinstall_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x21BB;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock x:Name="BtnReinstallText" Text="РџРµСЂРµРєР°С‡Р°С‚СЊ РјРѕРґС‹" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BtnReinstallText" Text="Перекачать моды" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnChangelogs" Click="BtnChangelogs_Click" Style="{StaticResource NavButton}">
@@ -1227,7 +1227,7 @@
                         <Button x:Name="BtnSettingsOpen" Click="BtnSettings_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x2699;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock x:Name="BtnSettingsText" Text="РќР°СЃС‚СЂРѕР№РєРё" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BtnSettingsText" Text="Настройки" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnGitHub" Click="BtnGitHub_Click" Style="{StaticResource NavButton}" ToolTip="github.com/pers1k1">
@@ -1308,15 +1308,15 @@
                                                     <RowDefinition Height="21"/>
                                                 </Grid.RowDefinitions>
                                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="OS" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="Windows 10 В· WPF .NET 8" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="Windows 10 · WPF .NET 8" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="LAUNCHER" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.7" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="MINECRAFT" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 В· Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 · Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="MODPACK" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock x:Name="ModpackVerText" Grid.Row="3" Grid.Column="1" Text="вЂ”" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock x:Name="ModpackVerText" Grid.Row="3" Grid.Column="1" Text="—" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="0" Text="MEMORY" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock x:Name="MemoryText" Grid.Row="4" Grid.Column="1" Text="вЂ”" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
+                                                <TextBlock x:Name="MemoryText" Grid.Row="4" Grid.Column="1" Text="—" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="5" Grid.Column="0" Text="SHELL" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock Grid.Row="5" Grid.Column="1" Text="bcr-terminal" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                             </Grid>
@@ -1325,15 +1325,15 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="0,14,0,0">
-                                    <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="РРіСЂРѕРє" Foreground="{DynamicResource AccentBrush}" Opacity="0.85" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <TextBlock x:Name="WelcomeText" FontFamily="Consolas, Courier New" Text="Игрок" Foreground="{DynamicResource AccentBrush}" Opacity="0.85" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,10"/>
                                     <ScrollViewer x:Name="LogScroll" Height="72" VerticalScrollBarVisibility="Hidden" Margin="0,0,0,8" CanContentScroll="False">
-                                        <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Р“РѕС‚РѕРІ Рє Р·Р°РїСѓСЃРєСѓ." Foreground="#AAFFFFFF" FontSize="12" TextAlignment="Left" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="LogTerminalText" FontFamily="Consolas, Courier New" Text="[SYS] Готов к запуску." Foreground="#AAFFFFFF" FontSize="12" TextAlignment="Left" TextWrapping="Wrap"/>
                                     </ScrollViewer>
                                     <ProgressBar x:Name="GameProgressBar" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
                                     <Border x:Name="ForgeWarningPanel" Visibility="Collapsed" Margin="0,10,0,0" Padding="10,7" Background="#22BB86FC" CornerRadius="6" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#x26A0;" FontFamily="Consolas, Courier New" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock x:Name="ForgeWarnText" Text="РЈСЃС‚Р°РЅРѕРІРєР° Р±РёР±Р»РёРѕС‚РµРє Forge. Р­С‚РѕС‚ СЌС‚Р°Рї Р·Р°Р№РјС‘С‚ РѕС‚ 1 РґРѕ 5 РјРёРЅСѓС‚." FontFamily="Consolas, Courier New" FontSize="12" Foreground="#E6FFFFFF" TextWrapping="Wrap"/>
+                                            <TextBlock x:Name="ForgeWarnText" Text="Установка библиотек Forge. Этот этап займёт от 1 до 5 минут." FontFamily="Consolas, Courier New" FontSize="12" Foreground="#E6FFFFFF" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -1390,8 +1390,8 @@
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
                     <ComboBox x:Name="ServerSelector" Width="220" SelectionChanged="ServerSelector_Changed"/>
-                    <Button x:Name="BtnAddServer" Content="+ РЎРѕР·РґР°С‚СЊ" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
-                    <Button x:Name="BtnRemoveServer" Content="РЈРґР°Р»РёС‚СЊ" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
+                    <Button x:Name="BtnAddServer" Content="+ Создать" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
+                    <Button x:Name="BtnRemoveServer" Content="Удалить" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
                 </StackPanel>
 
                 <Grid x:Name="ServerConfigConsoleGrid" Grid.Row="1" Visibility="Collapsed">
@@ -1401,33 +1401,33 @@
                     </Grid.RowDefinitions>
                     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
                         <StackPanel x:Name="ServerConfigForm">
-                            <TextBlock x:Name="ServerConfigTitle" Text="РљРћРќР¤РР“РЈР РђР¦РРЇ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="ServerConfigTitle" Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Button x:Name="TabGeneralBtn" Content="РћСЃРЅРѕРІРЅС‹Рµ" Style="{StaticResource ServerActionButton}" Click="TabGeneralBtn_Click"/>
-                                    <Button x:Name="TabWhitelistBtn" Content="Р’Р°Р№С‚Р»РёСЃС‚" Style="{StaticResource ServerActionButton}" Click="TabWhitelistBtn_Click"/>
+                                    <Button x:Name="TabGeneralBtn" Content="Основные" Style="{StaticResource ServerActionButton}" Click="TabGeneralBtn_Click"/>
+                                    <Button x:Name="TabWhitelistBtn" Content="Вайтлист" Style="{StaticResource ServerActionButton}" Click="TabWhitelistBtn_Click"/>
                                 </StackPanel>
 
                                 <StackPanel x:Name="TabGeneralContent">
                                     <WrapPanel Orientation="Horizontal">
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock x:Name="ServerMotdLabel" Text="РРјСЏ СЃРµСЂРІРµСЂР° (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerMotdLabel" Text="Имя сервера (MOTD):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerMotdBox" Text="BattleCraft Server" Width="250"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock x:Name="ServerMaxPlayersLabel" Text="РњР°РєСЃ. РёРіСЂРѕРєРѕРІ:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerMaxPlayersLabel" Text="Макс. игроков:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerMaxPlayersBox" Text="20" Width="80"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock x:Name="ServerPortLabel" Text="РџРѕСЂС‚:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerPortLabel" Text="Порт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <TextBox x:Name="ServerPortBox" Text="25565" Width="80"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8">
-                                            <TextBlock x:Name="ServerIpLabel" Text="IP РЎРµСЂРІРµСЂР°:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="ServerIpBox" Width="120" ToolTip="РћСЃС‚Р°РІСЊС‚Рµ РїСѓСЃС‚С‹Рј РґР»СЏ РІСЃРµС… РёРЅС‚РµСЂС„РµР№СЃРѕРІ"/>
+                                            <TextBlock x:Name="ServerIpLabel" Text="IP Сервера:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="ServerIpBox" Width="120" ToolTip="Оставьте пустым для всех интерфейсов"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8" Width="200">
-                                            <TextBlock x:Name="ServerViewDistanceLabel" Text="Р”Р°Р»СЊРЅРѕСЃС‚СЊ РїСЂРѕСЂРёСЃРѕРІРєРё:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerViewDistanceLabel" Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -1438,7 +1438,7 @@
                                             </Grid>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,25,8" Width="200">
-                                            <TextBlock x:Name="ServerRamLabel" Text="РћР—РЈ (РњР‘):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="ServerRamLabel" Text="ОЗУ (МБ):" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -1451,16 +1451,16 @@
                                     </WrapPanel>
 
                                     <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <CheckBox x:Name="ServerSpawnAnimalsCheck" Content="Р–РёРІРѕС‚РЅС‹Рµ" Margin="0,0,25,0" VerticalAlignment="Center"/>
-                                        <CheckBox x:Name="ServerSpawnMonstersCheck" Content="РњРѕРЅСЃС‚СЂС‹" Margin="0,0,25,0" VerticalAlignment="Center"/>
-                                        <CheckBox x:Name="ServerOnlineModeCheck" Content="РўРѕР»СЊРєРѕ Р»РёС†." Margin="0,0,25,0" VerticalAlignment="Center"/>
-                                        <CheckBox x:Name="ServerEulaCheck" Content="РџСЂРёРЅРёРјР°СЋ EULA Mojang" Margin="0,0,25,0" VerticalAlignment="Center" Checked="ServerEulaCheck_Changed" Unchecked="ServerEulaCheck_Changed"/>
+                                        <CheckBox x:Name="ServerSpawnAnimalsCheck" Content="Животные" Margin="0,0,25,0" VerticalAlignment="Center"/>
+                                        <CheckBox x:Name="ServerSpawnMonstersCheck" Content="Монстры" Margin="0,0,25,0" VerticalAlignment="Center"/>
+                                        <CheckBox x:Name="ServerOnlineModeCheck" Content="Только лиц." Margin="0,0,25,0" VerticalAlignment="Center"/>
+                                        <CheckBox x:Name="ServerEulaCheck" Content="Принимаю EULA Mojang" Margin="0,0,25,0" VerticalAlignment="Center" Checked="ServerEulaCheck_Changed" Unchecked="ServerEulaCheck_Changed"/>
                                     </WrapPanel>
                                 </StackPanel>
 
                                 <StackPanel x:Name="TabWhitelistContent" Visibility="Collapsed">
                                     <WrapPanel Orientation="Horizontal" Margin="0,4,0,8">
-                                        <CheckBox x:Name="ServerWhitelistCheck" Content="Р’РєР»СЋС‡РёС‚СЊ РІР°Р№С‚Р»РёСЃС‚" Margin="0,0,25,0" VerticalAlignment="Center" Checked="ServerWhitelistCheck_Changed" Unchecked="ServerWhitelistCheck_Changed"/>
+                                        <CheckBox x:Name="ServerWhitelistCheck" Content="Включить вайтлист" Margin="0,0,25,0" VerticalAlignment="Center" Checked="ServerWhitelistCheck_Changed" Unchecked="ServerWhitelistCheck_Changed"/>
                                     </WrapPanel>
                                     <StackPanel x:Name="WhitelistPanel" Visibility="Collapsed" Margin="0,8,0,0">
                                         <Grid>
@@ -1488,7 +1488,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock x:Name="ServerConsoleTitle" Grid.Row="0" Text="РљРћРќРЎРћР›Р¬" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="ServerConsoleTitle" Grid.Row="0" Text="КОНСОЛЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
 
                         <Border Grid.Row="1" Background="#0AFFFFFF" CornerRadius="6" BorderBrush="#15FFFFFF" BorderThickness="1" Padding="0">
                             <TextBox x:Name="ServerConsoleOutput"
@@ -1519,13 +1519,13 @@
                 </Grid>
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
-                    <Button x:Name="BtnInstallServer" Content="РЎРѕР·РґР°С‚СЊ СЃРµСЂРІРµСЂ" Click="BtnInstallServer_Click" Style="{StaticResource ServerActionButton}" IsEnabled="False"/>
-                    <Button x:Name="BtnUpdateServerMods" Content="РћР±РЅРѕРІРёС‚СЊ РјРѕРґС‹" Click="BtnUpdateServerMods_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnStartServer" Content="Р—Р°РїСѓСЃС‚РёС‚СЊ" Click="BtnStartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnStopServer" Content="РћСЃС‚Р°РЅРѕРІРёС‚СЊ" Click="BtnStopServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed" Foreground="#FF6B6B"/>
-                    <Button x:Name="BtnRestartServer" Content="РџРµСЂРµР·Р°РїСѓСЃС‚РёС‚СЊ" Click="BtnRestartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnRestoreBackup" Content="Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ РјРёСЂ" Click="BtnRestoreBackup_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnOpenServerFolder" Content="РћС‚РєСЂС‹С‚СЊ РїР°РїРєСѓ" Click="BtnOpenServerFolder_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnInstallServer" Content="Создать сервер" Click="BtnInstallServer_Click" Style="{StaticResource ServerActionButton}" IsEnabled="False"/>
+                    <Button x:Name="BtnUpdateServerMods" Content="Обновить моды" Click="BtnUpdateServerMods_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnStartServer" Content="Запустить" Click="BtnStartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnStopServer" Content="Остановить" Click="BtnStopServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed" Foreground="#FF6B6B"/>
+                    <Button x:Name="BtnRestartServer" Content="Перезапустить" Click="BtnRestartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnRestoreBackup" Content="Восстановить мир" Click="BtnRestoreBackup_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnOpenServerFolder" Content="Открыть папку" Click="BtnOpenServerFolder_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
                     <TextBlock x:Name="ServerStatusText" Foreground="{DynamicResource AccentBrush}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     <ProgressBar x:Name="ServerProgressBar" Width="200" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="Collapsed"/>
                 </StackPanel>
@@ -1536,18 +1536,18 @@
         </Grid>
 
         <StackPanel x:Name="SetupPanel" Visibility="Hidden" VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
-            <TextBlock Text="РЇР·С‹Рє / Language:" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
+            <TextBlock Text="Язык / Language:" Foreground="#CCFFFFFF" Margin="0,0,0,5"/>
             <ComboBox x:Name="SetupLangCombo" SelectionChanged="LangCombo_Changed">
-                <ComboBoxItem Content="Р СѓСЃСЃРєРёР№" Tag="ru"/>
+                <ComboBoxItem Content="Русский" Tag="ru"/>
                 <ComboBoxItem Content="English" Tag="en"/>
             </ComboBox>
 
-            <TextBlock x:Name="SetupMsLabel" Text="Р›РёС†РµРЅР·РёСЏ (Microsoft):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
-            <Button x:Name="SetupMsBtn" Content="Р’РѕР№С‚Рё С‡РµСЂРµР· Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
+            <TextBlock x:Name="SetupMsLabel" Text="Лицензия (Microsoft):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
+            <Button x:Name="SetupMsBtn" Content="Войти через Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
 
-            <TextBlock x:Name="SetupNickLabel" Text="РР›Р РџРёСЂР°С‚РєР° (РќРёРєРЅРµР№Рј):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
+            <TextBlock x:Name="SetupNickLabel" Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <TextBox x:Name="SetupUsernameBox"/>
-            <TextBlock x:Name="SetupFolderLabel" Text="РџР°РїРєР° РґР»СЏ Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
+            <TextBlock x:Name="SetupFolderLabel" Text="Папка для Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -1556,7 +1556,7 @@
                 <TextBox x:Name="SetupPathBox" Grid.Column="0" IsReadOnly="True"/>
                 <Button Content="..." Click="BtnSetupSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
             </Grid>
-            <Button x:Name="SetupStartBtn" Content="РќР°С‡Р°С‚СЊ" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
+            <Button x:Name="SetupStartBtn" Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
         </StackPanel>
 
         <Grid x:Name="SettingsPanel" Background="#CC000000" Visibility="Hidden">
@@ -1586,7 +1586,7 @@
                     <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
                         <Grid>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Ellipse x:Name="SettingsCloseDot" Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseSettings_Click" ToolTip="Р—Р°РєСЂС‹С‚СЊ"/>
+                                <Ellipse x:Name="SettingsCloseDot" Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseSettings_Click" ToolTip="Закрыть"/>
                                 <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
                                 <Ellipse Width="11" Height="11" Fill="#28C840"/>
                             </StackPanel>
@@ -1597,7 +1597,7 @@
                     <ScrollViewer Grid.Row="1" x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto" Margin="0,10,0,10" PreviewMouseWheel="SettingsScroll_PreviewMouseWheel" ScrollChanged="SettingsScroll_ScrollChanged">
                         <StackPanel Margin="25,15,25,25" TextElement.FontFamily="Consolas, Courier New">
                             <TextBlock x:Name="SettingsTitle" FontSize="20" FontWeight="Bold" Margin="0,0,0,18" FontFamily="Consolas, Courier New">
-                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run x:Name="SettingsTitleRun" Text="РЅР°СЃС‚СЂРѕР№РєРё" Foreground="White"/>
+                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run x:Name="SettingsTitleRun" Text="настройки" Foreground="White"/>
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform x:Name="SettingsTitleTranslate" Y="0"/>
                                 </TextBlock.RenderTransform>
@@ -1610,14 +1610,14 @@
                             </TextBlock>
 
                             <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
-                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="AppearanceHeaderRun" Text="Р’РќР•РЁРќРР™ Р’РР”"/>
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="AppearanceHeaderRun" Text="ВНЕШНИЙ ВИД"/>
                             </TextBlock>
 
-                            <Button x:Name="BtnChangeIconBtn" Click="BtnChangeIcon_Click" HorizontalAlignment="Center" Margin="0,0,0,15" Style="{StaticResource GlowButton}" ToolTip="РР·РјРµРЅРёС‚СЊ РёРєРѕРЅРєСѓ РІ РїР°РЅРµР»Рё Р·Р°РґР°С‡ Рё С€Р°РїРєРµ">
-                                <TextBlock x:Name="BtnChangeIconText" Text="РЎРјРµРЅРёС‚СЊ РёРєРѕРЅРєСѓ Р»Р°СѓРЅС‡РµСЂР° (ICO)" Margin="35,0"/>
+                            <Button x:Name="BtnChangeIconBtn" Click="BtnChangeIcon_Click" HorizontalAlignment="Center" Margin="0,0,0,15" Style="{StaticResource GlowButton}" ToolTip="Изменить иконку в панели задач и шапке">
+                                <TextBlock x:Name="BtnChangeIconText" Text="Сменить иконку лаунчера (ICO)" Margin="35,0"/>
                             </Button>
 
-                            <TextBlock x:Name="PresetsLabel" Text="Р“РѕС‚РѕРІС‹Рµ РїСЂРµСЃРµС‚С‹:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
+                            <TextBlock x:Name="PresetsLabel" Text="Готовые пресеты:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
 
                             <ComboBox x:Name="ColorPresetCombo" SelectionChanged="ColorPreset_Changed" Height="40" VerticalContentAlignment="Center" MaxDropDownHeight="480">
                                 <ComboBox.ItemTemplate>
@@ -1633,7 +1633,7 @@
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
-                            <TextBlock x:Name="ManualColorsLabel" Text="Р СѓС‡РЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° С†РІРµС‚РѕРІ:" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="ManualColorsLabel" Text="Ручная настройка цветов:" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
@@ -1642,7 +1642,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                                    <TextBlock x:Name="PrimaryHexLabel" Text="РћСЃРЅРѕРІРЅРѕР№ (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
+                                    <TextBlock x:Name="PrimaryHexLabel" Text="Основной (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBox x:Name="PrimaryColorBox" Width="100" Margin="0,0,5,0"/>
                                         <Button Content="OK" Click="BtnApplyPrimaryColor_Click" Width="40" Style="{StaticResource GlowButton}"/>
@@ -1650,7 +1650,7 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                                    <TextBlock x:Name="AccentHexLabel" Text="РђРєС†РµРЅС‚ (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
+                                    <TextBlock x:Name="AccentHexLabel" Text="Акцент (HEX):" Foreground="White" FontSize="12" Margin="0,0,0,3"/>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBox x:Name="AccentColorBox" Width="100" Margin="0,0,5,0"/>
                                         <Button Content="OK" Click="BtnApplyAccentColor_Click" Width="40" Style="{StaticResource GlowButton}"/>
@@ -1658,35 +1658,35 @@
                                 </StackPanel>
                             </Grid>
 
-                            <CheckBox x:Name="BloomEnabledCheck" Content="Р’РєР»СЋС‡РёС‚СЊ СЃРІРµС‡РµРЅРёРµ (Neon Glow)" IsChecked="True" Checked="BloomEnabledCheck_Changed" Unchecked="BloomEnabledCheck_Changed" Margin="0,5,0,5"/>
+                            <CheckBox x:Name="BloomEnabledCheck" Content="Включить свечение (Neon Glow)" IsChecked="True" Checked="BloomEnabledCheck_Changed" Unchecked="BloomEnabledCheck_Changed" Margin="0,5,0,5"/>
 
-                            <TextBlock x:Name="BloomStrengthLabel" Text="РЎРёР»Р° СЃРІРµС‡РµРЅРёСЏ:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
+                            <TextBlock x:Name="BloomStrengthLabel" Text="Сила свечения:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="BloomStrengthSlider" Minimum="0" Maximum="100" Value="60" ValueChanged="BloomStrengthSlider_ValueChanged"/>
 
-                            <TextBlock x:Name="ConsoleOpacityLabel" Text="РџСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ С‚РµСЂРјРёРЅР°Р»Р°:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
+                            <TextBlock x:Name="ConsoleOpacityLabel" Text="Прозрачность терминала:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="ConsoleOpacitySlider" Minimum="5" Maximum="100" Value="100" ValueChanged="ConsoleOpacitySlider_ValueChanged"/>
 
-                            <TextBlock x:Name="BgLabel" Text="Р¤РѕРЅ:" Foreground="White" FontSize="12" Margin="0,10,0,3"/>
+                            <TextBlock x:Name="BgLabel" Text="Фон:" Foreground="White" FontSize="12" Margin="0,10,0,3"/>
                             <ComboBox x:Name="BackgroundCombo" SelectionChanged="BackgroundCombo_Changed">
-                                <ComboBoxItem x:Name="BgItemAnimated" Content="РђРЅРёРјРёСЂРѕРІР°РЅРЅР°СЏ СЃС†РµРЅР°" Tag="animated"/>
-                                <ComboBoxItem x:Name="BgItemGradient" Content="РџРµСЂРµР»РёРІС‹ С‚РµРјС‹ (Р°РЅРёРјРёСЂРѕРІР°РЅРЅС‹Р№)" Tag="gradient"/>
-                                <ComboBoxItem x:Name="BgItemStatic" Content="РќРѕС‡РЅР°СЏ Р°РІСЂРѕСЂР° (СЃС‚Р°С‚РёС‡РЅС‹Р№)" Tag="static"/>
-                                <ComboBoxItem x:Name="BgItemPlain" Content="РњРёРЅРёРјР°Р»РёР·Рј (СЃС‚Р°С‚РёС‡РЅС‹Р№)" Tag="plain"/>
+                                <ComboBoxItem x:Name="BgItemAnimated" Content="Анимированная сцена" Tag="animated"/>
+                                <ComboBoxItem x:Name="BgItemGradient" Content="Переливы темы (анимированный)" Tag="gradient"/>
+                                <ComboBoxItem x:Name="BgItemStatic" Content="Ночная аврора (статичный)" Tag="static"/>
+                                <ComboBoxItem x:Name="BgItemPlain" Content="Минимализм (статичный)" Tag="plain"/>
                             </ComboBox>
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
                             <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
-                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="SystemHeaderRun" Text="РЎРРЎРўР•РњРђ"/>
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="SystemHeaderRun" Text="СИСТЕМА"/>
                             </TextBlock>
 
-                            <TextBlock x:Name="LangLabel" Text="РЇР·С‹Рє:" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="LangLabel" Text="Язык:" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
                             <ComboBox x:Name="SettingsLangCombo" SelectionChanged="LangCombo_Changed" Margin="0,0,0,15">
-                                <ComboBoxItem Content="Р СѓСЃСЃРєРёР№" Tag="ru"/>
+                                <ComboBoxItem Content="Русский" Tag="ru"/>
                                 <ComboBoxItem Content="English" Tag="en"/>
                             </ComboBox>
 
-                            <TextBlock x:Name="RamLabel" Text="Р’С‹РґРµР»РµРЅРЅР°СЏ РїР°РјСЏС‚СЊ (RAM РњР‘):" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="RamLabel" Text="Выделенная память (RAM МБ):" Foreground="White" FontSize="13" Margin="0,0,0,5"/>
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -1696,7 +1696,7 @@
                                 <TextBox x:Name="RamBox" Text="{Binding Value, ElementName=RamSlider, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat={}{0:0}}" Grid.Column="1" TextAlignment="Center" IsReadOnly="True" Focusable="False" Cursor="Arrow"/>
                             </Grid>
 
-                            <TextBlock x:Name="GamePathLabel" Text="РџСѓС‚СЊ Рє РёРіСЂРµ:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
+                            <TextBlock x:Name="GamePathLabel" Text="Путь к игре:" Foreground="White" FontSize="13" Margin="0,10,0,5"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -1706,9 +1706,9 @@
                                 <Button Content="..." Click="BtnSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
                             </Grid>
 
-                            <Button x:Name="BtnResetAll" Content="РЎР‘Р РћРЎРРўР¬ Р’РЎР• РќРђРЎРўР РћР™РљР" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
+                            <Button x:Name="BtnResetAll" Content="СБРОСИТЬ ВСЕ НАСТРОЙКИ" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
 
-                            <Button x:Name="BtnSaveClose" Content="РЎРѕС…СЂР°РЅРёС‚СЊ Рё Р—Р°РєСЂС‹С‚СЊ" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
+                            <Button x:Name="BtnSaveClose" Content="Сохранить и Закрыть" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
@@ -1740,7 +1740,7 @@
                     <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
                         <Grid>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <Ellipse x:Name="ChangelogCloseDot" Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseChangelog_Click" ToolTip="Р—Р°РєСЂС‹С‚СЊ"/>
+                                <Ellipse x:Name="ChangelogCloseDot" Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseChangelog_Click" ToolTip="Закрыть"/>
                                 <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
                                 <Ellipse Width="11" Height="11" Fill="#28C840"/>
                             </StackPanel>
@@ -1754,7 +1754,7 @@
                     </StackPanel>
 
                     <ScrollViewer x:Name="ChangelogScrollViewer" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="6,0,6,14">
-                        <TextBlock x:Name="ChangelogText" Margin="18,4,18,14" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap" LineHeight="20" Text="Р—Р°РіСЂСѓР·РєР°вЂ¦"/>
+                        <TextBlock x:Name="ChangelogText" Margin="18,4,18,14" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap" LineHeight="20" Text="Загрузка…"/>
                     </ScrollViewer>
                 </Grid>
             </Border>
@@ -1776,7 +1776,7 @@
                     <TextBlock x:Name="CustomDialogMessage" Text="Message" FontSize="14" Foreground="#CCCCCC" TextWrapping="Wrap" Margin="0,0,0,15"/>
                     <TextBox x:Name="CustomDialogInputBox" Visibility="Collapsed" Margin="0,0,0,15"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" x:Name="CustomDialogButtons">
-                        <Button x:Name="CustomDialogBtnCancel" Content="РћС‚РјРµРЅР°" Width="100" Margin="0,0,10,0" Style="{StaticResource GlowButton}" Click="CustomDialogCancel_Click"/>
+                        <Button x:Name="CustomDialogBtnCancel" Content="Отмена" Width="100" Margin="0,0,10,0" Style="{StaticResource GlowButton}" Click="CustomDialogCancel_Click"/>
                         <Button x:Name="CustomDialogBtnOk" Content="OK" Width="100" Style="{StaticResource GlowButton}" Click="CustomDialogOk_Click"/>
                     </StackPanel>
                 </StackPanel>
@@ -1808,8 +1808,8 @@
                         </Ellipse>
                         <TextBlock x:Name="UpdatePercentText" Text="0%" FontFamily="Consolas, Courier New" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
-                    <TextBlock x:Name="UpdateTitleText" Text="РћР±РЅРѕРІР»РµРЅРёРµ Р»Р°СѓРЅС‡РµСЂР°" FontSize="17" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,6"/>
-                    <TextBlock x:Name="UpdateSubText" Text="РЎРєР°С‡РёРІР°РЅРёРµ РЅРѕРІРѕР№ РІРµСЂСЃРёРёвЂ¦" FontSize="12" Foreground="#AAFFFFFF" HorizontalAlignment="Center" Margin="0,0,0,18"/>
+                    <TextBlock x:Name="UpdateTitleText" Text="Обновление лаунчера" FontSize="17" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="UpdateSubText" Text="Скачивание новой версии…" FontSize="12" Foreground="#AAFFFFFF" HorizontalAlignment="Center" Margin="0,0,0,18"/>
                     <ProgressBar x:Name="UpdateProgressBar" Width="270" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}"/>
                 </StackPanel>
             </Border>
