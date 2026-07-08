@@ -425,6 +425,8 @@ namespace CustomLauncher
                 _sceneBmp?.WritePixels(new Int32Rect(0, 0, SCN_W, SCN_H), _scenePresent, SCN_W * 4, 0);
                 _blobBmp?.WritePixels(new Int32Rect(0, 0, BLOB_W, BLOB_H), _blobPresent, BLOB_W * 4, 0);
             }
+            if (_bgModeApplied == "static" && _staticInit) TickAurora();
+            else if (_bgModeApplied == "gradient" && _gradientInit) TickGradient();
         }
 
         private void SnapshotClock()
@@ -443,7 +445,6 @@ namespace CustomLauncher
                 if (shouldRun) _sceneGate.Set();
                 else _sceneGate.Reset();
             }
-            SetAmbientPaused(!shouldRun);
         }
 
         private volatile bool _bgAnimated = true;
@@ -453,12 +454,16 @@ namespace CustomLauncher
         private bool _plainInit;
         private FrameworkElement? _activeBackdrop;
         private ScaleTransform? _activeScale;
-        private List<Storyboard>? _activeAmbient;
-        private bool _ambientPaused;
-        private readonly List<Storyboard> _staticSbs = new();
-        private readonly List<Storyboard> _gradientSbs = new();
         private Color _bgPrimary = (Color)ColorConverter.ConvertFromString(DefPrimary);
         private Color _bgAccent = (Color)ColorConverter.ConvertFromString(DefAccent);
+        private readonly Stopwatch _fxClock = Stopwatch.StartNew();
+        private System.Windows.Shapes.Ellipse[] _twinkleStars = Array.Empty<System.Windows.Shapes.Ellipse>();
+        private double[] _twinkleHi = Array.Empty<double>(), _twinkleLo = Array.Empty<double>();
+        private double[] _twinklePeriod = Array.Empty<double>(), _twinklePhase = Array.Empty<double>();
+        private TranslateTransform[] _auroraTr = Array.Empty<TranslateTransform>();
+        private TranslateTransform[] _meteorTr = Array.Empty<TranslateTransform>();
+        private TranslateTransform[] _flowTr = Array.Empty<TranslateTransform>();
+        private RotateTransform[] _flowRot = Array.Empty<RotateTransform>();
 
         private void BackgroundCombo_Changed(object s, SelectionChangedEventArgs e)
         {
@@ -478,20 +483,18 @@ namespace CustomLauncher
 
             var oldBackdrop = _activeBackdrop;
             var oldScale = _activeScale;
-            var oldAmbient = _activeAmbient;
 
             FrameworkElement? target = null;
             ScaleTransform? targetScale = null;
-            List<Storyboard>? targetAmbient = null;
             switch (mode)
             {
                 case "static":
                     EnsureStaticBackdrop();
-                    target = StaticBackdrop; targetScale = StaticScale; targetAmbient = _staticSbs;
+                    target = StaticBackdrop; targetScale = StaticScale;
                     break;
                 case "gradient":
                     EnsureGradientBackdrop();
-                    target = GradientBackdrop; targetScale = GradientScale; targetAmbient = _gradientSbs;
+                    target = GradientBackdrop; targetScale = GradientScale;
                     break;
                 case "plain":
                     EnsurePlainBackdrop();
@@ -505,7 +508,6 @@ namespace CustomLauncher
             if (oldBackdrop != null && oldBackdrop != target)
             {
                 var ob = oldBackdrop;
-                var oa = oldAmbient;
                 if (animate)
                 {
                     var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(550));
@@ -513,7 +515,6 @@ namespace CustomLauncher
                     {
                         if (_activeBackdrop == ob) return;
                         ob.Visibility = Visibility.Collapsed;
-                        if (oa != null) StopAmbient(oa);
                     };
                     ob.BeginAnimation(OpacityProperty, fade);
                     if (oldScale != null && target == null)
@@ -528,7 +529,6 @@ namespace CustomLauncher
                     ob.BeginAnimation(OpacityProperty, null);
                     ob.Opacity = 0;
                     ob.Visibility = Visibility.Collapsed;
-                    if (oa != null) StopAmbient(oa);
                 }
             }
 
@@ -539,7 +539,6 @@ namespace CustomLauncher
             }
 
             target.Visibility = Visibility.Visible;
-            if (targetAmbient != null) StartAmbient(targetAmbient);
             if (targetScale != null)
             {
                 targetScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); targetScale.ScaleX = 1;
@@ -573,7 +572,9 @@ namespace CustomLauncher
 
             var rnd = new Random(7);
             var starTints = new[] { Colors.White, Color.FromRgb(0xCF, 0xE2, 0xFF), Color.FromRgb(0xFF, 0xEF, 0xD8) };
-            var twinkle = new Storyboard();
+            var tw = new List<System.Windows.Shapes.Ellipse>();
+            var twHi = new List<double>(); var twLo = new List<double>();
+            var twPeriod = new List<double>(); var twPhase = new List<double>();
             for (int i = 0; i < 120; i++)
             {
                 double d = 1.2 + rnd.NextDouble() * 2.2;
@@ -590,95 +591,83 @@ namespace CustomLauncher
                 StaticStarCanvas.Children.Add(star);
                 if (i % 4 == 0)
                 {
-                    var a = new DoubleAnimation(star.Opacity, 0.08 + rnd.NextDouble() * 0.2, TimeSpan.FromSeconds(1.6 + rnd.NextDouble() * 3.4))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = RepeatBehavior.Forever,
-                        BeginTime = TimeSpan.FromSeconds(rnd.NextDouble() * 5),
-                        EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-                    };
-                    Storyboard.SetTarget(a, star);
-                    Storyboard.SetTargetProperty(a, new PropertyPath(OpacityProperty));
-                    twinkle.Children.Add(a);
+                    tw.Add(star);
+                    twHi.Add(star.Opacity);
+                    twLo.Add(0.08 + rnd.NextDouble() * 0.2);
+                    twPeriod.Add(2 * (1.6 + rnd.NextDouble() * 3.4));
+                    twPhase.Add(rnd.NextDouble() * 2 * Math.PI);
                 }
             }
-            _staticSbs.Add(twinkle);
+            _twinkleStars = tw.ToArray();
+            _twinkleHi = twHi.ToArray(); _twinkleLo = twLo.ToArray();
+            _twinklePeriod = twPeriod.ToArray(); _twinklePhase = twPhase.ToArray();
 
-            var drift = new Storyboard();
-            AddAuroraDrift(drift, Aurora1, 46, 14, 26);
-            AddAuroraDrift(drift, Aurora2, -56, 10, 34);
-            AddAuroraDrift(drift, Aurora3, 34, 18, 41);
-            AddBreath(drift, Aurora1, 0.40, 0.62, 11);
-            AddBreath(drift, Aurora2, 0.34, 0.56, 15);
-            AddBreath(drift, Aurora3, 0.28, 0.46, 19);
-            AddBreath(drift, MoonGlow, 0.5, 0.72, 13);
-            _staticSbs.Add(drift);
-
-            var meteors = new Storyboard();
-            AddMeteor(meteors, Meteor1, 19, 4, 430, 155);
-            AddMeteor(meteors, Meteor2, 31, 12, 370, 165);
-            _staticSbs.Add(meteors);
-
-            foreach (var s in _staticSbs) Timeline.SetDesiredFrameRate(s, 20);
+            _auroraTr = new[] { FxTr(Aurora1), FxTr(Aurora2), FxTr(Aurora3) };
+            _meteorTr = new[] { FxTr(Meteor1), FxTr(Meteor2) };
         }
 
-        private static void AddAuroraDrift(Storyboard sb, FrameworkElement el, double dx, double dy, double sec)
+        private static TranslateTransform FxTr(FrameworkElement el) =>
+            (TranslateTransform)((TransformGroup)el.RenderTransform).Children[1];
+
+        private static RotateTransform FxRot(FrameworkElement el) =>
+            (RotateTransform)((TransformGroup)el.RenderTransform).Children[0];
+
+        private static void Drift(TranslateTransform tr, double t, double dx, double dy, double sec)
         {
-            var ease = new SineEase { EasingMode = EasingMode.EaseInOut };
-            var ax = new DoubleAnimation(-dx, dx, TimeSpan.FromSeconds(sec)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = ease };
-            Storyboard.SetTarget(ax, el);
-            Storyboard.SetTargetProperty(ax, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)"));
-            sb.Children.Add(ax);
-            var ay = new DoubleAnimation(dy, -dy, TimeSpan.FromSeconds(sec * 1.37)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = ease };
-            Storyboard.SetTarget(ay, el);
-            Storyboard.SetTargetProperty(ay, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"));
-            sb.Children.Add(ay);
+            tr.X = dx * Math.Sin(t * Math.PI / sec);
+            tr.Y = dy * Math.Sin(t * Math.PI / (sec * 1.37));
         }
 
-        private static void AddBreath(Storyboard sb, FrameworkElement el, double from, double to, double sec)
+        private static double Breath(double t, double from, double to, double sec) =>
+            from + (to - from) * (0.5 + 0.5 * Math.Sin(t * Math.PI / sec - Math.PI / 2));
+
+        private static void Meteor(FrameworkElement el, TranslateTransform tr, double t, double period, double delay, double dx, double dy)
         {
-            var a = new DoubleAnimation(from, to, TimeSpan.FromSeconds(sec))
+            double tau = (t - delay) % period;
+            if (tau < 0) tau += period;
+            double start = period - 2.4, peak = period - 2.05, end = period - 0.2;
+            if (tau < start || tau >= end)
             {
-                AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever,
-                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-            };
-            Storyboard.SetTarget(a, el);
-            Storyboard.SetTargetProperty(a, new PropertyPath(OpacityProperty));
-            sb.Children.Add(a);
+                if (el.Opacity != 0) el.Opacity = 0;
+                return;
+            }
+            double k = (tau - start) / (end - start);
+            tr.X = dx * k;
+            tr.Y = dy * k;
+            el.Opacity = tau < peak ? 0.9 * (tau - start) / (peak - start) : 0.9 * (end - tau) / (end - peak);
         }
 
-        private static void AddMeteor(Storyboard sb, FrameworkElement el, double periodSec, double delaySec, double dx, double dy)
+        private void TickAurora()
         {
-            var period = TimeSpan.FromSeconds(periodSec);
-            var t0 = TimeSpan.FromSeconds(periodSec - 1.6);
-            var t1 = TimeSpan.FromSeconds(periodSec - 1.35);
-            var t2 = TimeSpan.FromSeconds(periodSec - 0.2);
+            double t = _fxClock.Elapsed.TotalSeconds;
+            Drift(_auroraTr[0], t, 46, 14, 26);
+            Drift(_auroraTr[1], t, -56, 10, 34);
+            Drift(_auroraTr[2], t, 34, 18, 41);
+            Aurora1.Opacity = Breath(t, 0.40, 0.62, 11);
+            Aurora2.Opacity = Breath(t, 0.34, 0.56, 15);
+            Aurora3.Opacity = Breath(t, 0.28, 0.46, 19);
+            MoonGlow.Opacity = Breath(t, 0.5, 0.72, 13);
+            for (int i = 0; i < _twinkleStars.Length; i++)
+                _twinkleStars[i].Opacity = _twinkleLo[i] + (_twinkleHi[i] - _twinkleLo[i]) * (0.5 + 0.5 * Math.Sin(t * 2 * Math.PI / _twinklePeriod[i] + _twinklePhase[i]));
+            Meteor(Meteor1, _meteorTr[0], t, 19, 4, 430, 155);
+            Meteor(Meteor2, _meteorTr[1], t, 31, 12, 370, 165);
+        }
 
-            var op = new DoubleAnimationUsingKeyFrames { Duration = period, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(delaySec) };
-            op.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            op.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(t0)));
-            op.KeyFrames.Add(new LinearDoubleKeyFrame(0.9, KeyTime.FromTimeSpan(t1)));
-            op.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(t2)));
-            Storyboard.SetTarget(op, el);
-            Storyboard.SetTargetProperty(op, new PropertyPath(OpacityProperty));
-            sb.Children.Add(op);
-
-            var tx = new DoubleAnimationUsingKeyFrames { Duration = period, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(delaySec) };
-            tx.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            tx.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(t0)));
-            tx.KeyFrames.Add(new LinearDoubleKeyFrame(dx, KeyTime.FromTimeSpan(t2)));
-            Storyboard.SetTarget(tx, el);
-            Storyboard.SetTargetProperty(tx, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)"));
-            sb.Children.Add(tx);
-
-            var ty = new DoubleAnimationUsingKeyFrames { Duration = period, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(delaySec) };
-            ty.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            ty.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(t0)));
-            ty.KeyFrames.Add(new LinearDoubleKeyFrame(dy, KeyTime.FromTimeSpan(t2)));
-            Storyboard.SetTarget(ty, el);
-            Storyboard.SetTargetProperty(ty, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"));
-            sb.Children.Add(ty);
+        private void TickGradient()
+        {
+            double t = _fxClock.Elapsed.TotalSeconds;
+            Drift(_flowTr[0], t, 150, 90, 21);
+            Drift(_flowTr[1], t, -170, 110, 27);
+            Drift(_flowTr[2], t, 130, -100, 24);
+            Drift(_flowTr[3], t, -120, -80, 31);
+            _flowRot[0].Angle = t * 360 / 120;
+            _flowRot[1].Angle = -t * 360 / 150;
+            _flowRot[2].Angle = t * 360 / 100;
+            _flowRot[3].Angle = -t * 360 / 170;
+            Flow1.Opacity = Breath(t, 0.40, 0.62, 9);
+            Flow2.Opacity = Breath(t, 0.34, 0.56, 12);
+            Flow3.Opacity = Breath(t, 0.30, 0.52, 10);
+            Flow4.Opacity = Breath(t, 0.28, 0.48, 14);
         }
 
         private void UpdateStaticAccent(Color accent)
@@ -731,57 +720,13 @@ namespace CustomLauncher
             return Color.FromRgb((byte)((r2 + m) * 255), (byte)((g2 + m) * 255), (byte)((b2 + m) * 255));
         }
 
-        private void StartAmbient(List<Storyboard> sbs)
-        {
-            if (_activeAmbient == sbs) return;
-            _activeAmbient = sbs;
-            _ambientPaused = false;
-            foreach (var sb in sbs) sb.Begin(this, true);
-            if (!_sceneRunning) SetAmbientPaused(true);
-        }
-
-        private void StopAmbient(List<Storyboard> sbs)
-        {
-            foreach (var sb in sbs) sb.Stop(this);
-            if (_activeAmbient == sbs)
-            {
-                _activeAmbient = null;
-                _ambientPaused = false;
-            }
-        }
-
-        private void SetAmbientPaused(bool paused)
-        {
-            if (_activeAmbient == null || paused == _ambientPaused) return;
-            _ambientPaused = paused;
-            foreach (var sb in _activeAmbient)
-            {
-                if (paused) sb.Pause(this);
-                else sb.Resume(this);
-            }
-        }
-
         private void EnsureGradientBackdrop()
         {
             if (_gradientInit) return;
             _gradientInit = true;
             UpdateGradientTheme();
-
-            var sb = new Storyboard();
-            AddAuroraDrift(sb, Flow1, 150, 90, 21);
-            AddAuroraDrift(sb, Flow2, -170, 110, 27);
-            AddAuroraDrift(sb, Flow3, 130, -100, 24);
-            AddAuroraDrift(sb, Flow4, -120, -80, 31);
-            AddSpin(sb, Flow1, 120, true);
-            AddSpin(sb, Flow2, 150, false);
-            AddSpin(sb, Flow3, 100, true);
-            AddSpin(sb, Flow4, 170, false);
-            AddBreath(sb, Flow1, 0.40, 0.62, 9);
-            AddBreath(sb, Flow2, 0.34, 0.56, 12);
-            AddBreath(sb, Flow3, 0.30, 0.52, 10);
-            AddBreath(sb, Flow4, 0.28, 0.48, 14);
-            Timeline.SetDesiredFrameRate(sb, 20);
-            _gradientSbs.Add(sb);
+            _flowTr = new[] { FxTr(Flow1), FxTr(Flow2), FxTr(Flow3), FxTr(Flow4) };
+            _flowRot = new[] { FxRot(Flow1), FxRot(Flow2), FxRot(Flow3), FxRot(Flow4) };
         }
 
         private void EnsurePlainBackdrop()
@@ -789,14 +734,6 @@ namespace CustomLauncher
             if (_plainInit) return;
             _plainInit = true;
             UpdatePlainTheme();
-        }
-
-        private static void AddSpin(Storyboard sb, FrameworkElement el, double sec, bool cw)
-        {
-            var a = new DoubleAnimation(0, cw ? 360 : -360, TimeSpan.FromSeconds(sec)) { RepeatBehavior = RepeatBehavior.Forever };
-            Storyboard.SetTarget(a, el);
-            Storyboard.SetTargetProperty(a, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[0].(RotateTransform.Angle)"));
-            sb.Children.Add(a);
         }
 
         private void UpdateBackdropTheme()
