@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.4.0";
+        private const string VER = "8.4.1";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -2205,30 +2205,18 @@ namespace CustomLauncher
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 AnimateColorResource("PrimaryColor", c); AnimateBrushResource("PrimaryBrush", c);
                 if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); }
-            } catch { }
-        }
-
-        private void AnimateBrushResource(string key, Color to, int ms = 600)
-        {
-            if (!IsLoaded) { this.Resources[key] = new SolidColorBrush(to); return; }
-            Color from = this.Resources[key] is SolidColorBrush ob ? ob.Color : to;
-            var nb = new SolidColorBrush(from);
-            this.Resources[key] = nb;
-            nb.BeginAnimation(SolidColorBrush.ColorProperty,
-                new ColorAnimation(to, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyPrimaryColor: " + ex.Message); }
         }
 
         private readonly Dictionary<string, System.Windows.Threading.DispatcherTimer> _colorResTimers = new();
 
-        private void AnimateColorResource(string key, Color to, int ms = 600, Action<Color>? onStep = null)
+        private void AnimateThemeValue(string timerKey, Color from, Color to, int ms, Action<Color> apply)
         {
-            if (_colorResTimers.TryGetValue(key, out var old)) { old.Stop(); _colorResTimers.Remove(key); }
+            if (_colorResTimers.TryGetValue(timerKey, out var old)) { old.Stop(); _colorResTimers.Remove(timerKey); }
 
-            Color from = this.Resources[key] is Color c ? c : to;
             if (from == to || !IsLoaded)
             {
-                this.Resources[key] = to;
-                onStep?.Invoke(to);
+                apply(to);
                 return;
             }
 
@@ -2242,16 +2230,36 @@ namespace CustomLauncher
                     (byte)(from.R + (to.R - from.R) * ease),
                     (byte)(from.G + (to.G - from.G) * ease),
                     (byte)(from.B + (to.B - from.B) * ease));
-                this.Resources[key] = cur;
-                onStep?.Invoke(cur);
+                apply(cur);
                 if (f >= 1)
                 {
                     timer.Stop();
-                    _colorResTimers.Remove(key);
+                    _colorResTimers.Remove(timerKey);
                 }
             };
-            _colorResTimers[key] = timer;
+            _colorResTimers[timerKey] = timer;
             timer.Start();
+        }
+
+        private void AnimateBrushResource(string key, Color to, int ms = 600)
+        {
+            Color from = this.Resources[key] is SolidColorBrush ob ? ob.Color : to;
+            AnimateThemeValue("b:" + key, from, to, ms, cur =>
+            {
+                var b = new SolidColorBrush(cur);
+                b.Freeze();
+                this.Resources[key] = b;
+            });
+        }
+
+        private void AnimateColorResource(string key, Color to, int ms = 600, Action<Color>? onStep = null)
+        {
+            Color from = this.Resources[key] is Color c ? c : to;
+            AnimateThemeValue("c:" + key, from, to, ms, cur =>
+            {
+                this.Resources[key] = cur;
+                onStep?.Invoke(cur);
+            });
         }
 
         private void ApplyAccentColor(string hex, bool save = true)
@@ -2265,7 +2273,7 @@ namespace CustomLauncher
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
                 AnimateBrushResource("OnAccentBrush", onAccent);
                 if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); }
-            } catch { }
+            } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyAccentColor: " + ex.Message); }
         }
 
         private void ApplyBloom(bool on, double str, bool save = true)
@@ -3663,8 +3671,13 @@ namespace CustomLauncher
             if (btn.Template.FindName("BtnTr", btn) is TranslateTransform t)
             {
                 if (btn.ActualWidth <= 0 || btn.ActualHeight <= 0) return;
+                double curX = t.X, curY = t.Y;
+                if (double.IsInfinity(curX) || double.IsNaN(curX)) curX = 0;
+                if (double.IsInfinity(curY) || double.IsNaN(curY)) curY = 0;
                 t.BeginAnimation(TranslateTransform.XProperty, null);
                 t.BeginAnimation(TranslateTransform.YProperty, null);
+                t.X = curX;
+                t.Y = curY;
                 var p = e.GetPosition(btn);
                 double cx = btn.ActualWidth / 2, cy = btn.ActualHeight / 2;
                 double tx = (cx - p.X) / cx * 5;
@@ -3679,11 +3692,16 @@ namespace CustomLauncher
             var btn = (Button)sender;
             if (btn.Template.FindName("BtnTr", btn) is TranslateTransform t)
             {
-                if (double.IsInfinity(t.X) || double.IsNaN(t.X)) t.X = 0;
-                if (double.IsInfinity(t.Y) || double.IsNaN(t.Y)) t.Y = 0;
+                double curX = t.X, curY = t.Y;
+                if (double.IsInfinity(curX) || double.IsNaN(curX)) curX = 0;
+                if (double.IsInfinity(curY) || double.IsNaN(curY)) curY = 0;
+                t.BeginAnimation(TranslateTransform.XProperty, null);
+                t.BeginAnimation(TranslateTransform.YProperty, null);
+                t.X = 0;
+                t.Y = 0;
                 var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                t.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
-                t.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
+                t.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(curX, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
+                t.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(curY, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
             }
         }
 
