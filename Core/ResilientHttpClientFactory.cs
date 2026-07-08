@@ -71,7 +71,7 @@ namespace CustomLauncher.Core
                             return response;
 
                         long? length = response.Content.Headers.ContentLength;
-                        if (length > MaxBufferBytes)
+                        if (length is null || length > MaxBufferBytes)
                             return await BuildStreamingResponse(response).ConfigureAwait(false);
 
                         byte[] body = await ReadWithIdleTimeout(response, cancellationToken).ConfigureAwait(false);

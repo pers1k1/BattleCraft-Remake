@@ -187,13 +187,13 @@ namespace CustomLauncher.Core
 
             foreach (string directoryPath in Directory.GetDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
             {
-                string targetSubDirectory = directoryPath.Replace(sourceDirectory, destinationDirectory);
+                string targetSubDirectory = Path.Combine(destinationDirectory, Path.GetRelativePath(sourceDirectory, directoryPath));
                 EnsureDirectoryExists(targetSubDirectory);
             }
 
             foreach (string filePath in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
             {
-                string targetFilePath = filePath.Replace(sourceDirectory, destinationDirectory);
+                string targetFilePath = Path.Combine(destinationDirectory, Path.GetRelativePath(sourceDirectory, filePath));
                 File.Copy(filePath, targetFilePath, overwrite: true);
             }
         }

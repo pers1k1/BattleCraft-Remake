@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.1.0";
+        private const string VER = "8.1.1";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -1804,6 +1804,8 @@ namespace CustomLauncher
 
         private void LogNet(string message) => LogTagged("[NET]", message);
 
+        private void LogError(string message) => LogTagged("[ERR]", message);
+
         private void LogTagged(string prefix, string message)
         {
             if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => LogTagged(prefix, message)); return; }
@@ -1943,7 +1945,7 @@ namespace CustomLauncher
                     Directory.CreateDirectory(path);
                 });
             }
-            catch (Exception ex) { Log(Lang.F("Ошибка подготовки папки игры: {0}", ex.Message)); }
+            catch (Exception ex) { LogError(Lang.F("Ошибка подготовки папки игры: {0}", ex.Message)); }
         }
 
         private async void BtnSetupMicrosoft_Click(object s, RoutedEventArgs e)
@@ -2305,7 +2307,7 @@ namespace CustomLauncher
         {
             if (_gameProcess != null)
             {
-                try { _gameProcess.Kill(); } catch { }
+                try { _gameProcess.Kill(entireProcessTree: true); } catch { }
                 _gameProcess = null;
                 Show();
                 SetPlayState("idle");
@@ -2554,9 +2556,7 @@ namespace CustomLauncher
         {
             string logPath = LauncherLog.WriteCrash(context, ex);
 
-            bool isJavaError = ex is System.ComponentModel.Win32Exception
-                || ex.Message.Contains("не удается найти")
-                || ex.Message.Contains("cannot find the file");
+            bool isJavaError = IsJavaMissingError(ex);
 
             if (isJavaError)
             {
@@ -2572,6 +2572,21 @@ namespace CustomLauncher
                 string toOpen = !string.IsNullOrEmpty(logPath) && File.Exists(logPath) ? logPath : AppSettings.GetConfigDir();
                 try { Process.Start(new ProcessStartInfo(toOpen) { UseShellExecute = true }); } catch { }
             }
+        }
+
+        private static bool IsJavaMissingError(Exception ex)
+        {
+            const int ERROR_FILE_NOT_FOUND = 2;
+            const int ERROR_PATH_NOT_FOUND = 3;
+            for (Exception? e = ex; e != null; e = e.InnerException)
+            {
+                if (e is System.ComponentModel.Win32Exception w &&
+                    (w.NativeErrorCode == ERROR_FILE_NOT_FOUND || w.NativeErrorCode == ERROR_PATH_NOT_FOUND))
+                    return true;
+                if (e is FileNotFoundException || e is DirectoryNotFoundException)
+                    return true;
+            }
+            return ex.Message.Contains("не удается найти") || ex.Message.Contains("cannot find the file");
         }
 
         private async Task DownloadAndInstallJava()
@@ -3403,7 +3418,7 @@ namespace CustomLauncher
                     && onlineLauncherV > currentLauncherV
                     && await ShowCustomDialog(Lang.F("Обновить лаунчер до {0}?", launcherVerStr), "Обновление", true)) await UpdateLauncher();
             }
-            catch { StatusText.Text = Lang.T("Ошибка сети"); }
+            catch { LogError(Lang.T("Ошибка сети")); }
         }
 
         private async Task UpdateLauncher()
@@ -3431,7 +3446,7 @@ namespace CustomLauncher
                 Process.Start(new ProcessStartInfo(cur) { UseShellExecute = true });
                 Application.Current.Shutdown();
             }
-            catch { HideUpdateOverlay(); StatusText.Text = Lang.T("Ошибка обновления"); }
+            catch { HideUpdateOverlay(); LogError(Lang.T("Ошибка обновления")); }
         }
 
         private void ShowUpdateOverlay() => ShowSpinnerOverlay(Lang.T("Обновление лаунчера"), Lang.T("Скачивание новой версии…"), true);
