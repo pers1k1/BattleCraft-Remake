@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.20 |
-| Launcher | 8.2.0 |
+| Launcher | 8.3.0 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Client Features
@@ -20,6 +20,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 - Customizable interface: 18 color theme presets (Sakura by default) plus manual HEX colors, custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
 - Bilingual interface (Russian and English): the language is chosen during first-run setup and can be switched at any time in the settings.
 - Tactile, animated UI: buttons burst into particles on click, the sidebar reacts with glow and motion, and tabs, settings, and login transitions are fully animated. Theme presets cross-fade smoothly instead of switching instantly, dropdowns slide open with sprung easing and their items glide on hover, slider thumbs grow and emit a pulsing halo while dragged, text fields swell on focus and gently bounce with every keystroke.
+- Cohesive squircle design language: dropdown menus, tooltips, and context menus are rounded, soft-shadowed, and themed to the active colors — no stock-gray Windows chrome leaks anywhere; combo arrows flip over with a spring, checkboxes spring on hover.
 - In-app ChangeLogs viewer with separate launcher and modpack/server-map tabs, fetched live from the remote config.
 - Living pixel-art background: a hand-rendered seasonal scene with a day/night cycle, parallax mountains and a forest of swaying trees, and dynamic weather — rain with thunderstorms, snow that drifts and piles up, fog, falling autumn leaves and spring cherry-blossom petals. The scene is simulated and rendered on a dedicated background thread, so the UI stays responsive even while it animates; animation pauses while the window is minimized or in the background to keep idle resource usage low.
 - Discord Rich Presence integration.
