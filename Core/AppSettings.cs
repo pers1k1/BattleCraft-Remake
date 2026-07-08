@@ -21,6 +21,7 @@ namespace CustomLauncher
         public bool? BloomEnabled { get; set; } = true;
         public double? BloomStrength { get; set; } = 60.0;
         public double? ConsoleOpacity { get; set; } = 1.0;
+        public string BackgroundMode { get; set; } = "animated";
         public string Username { get; set; } = "";
         public string UserType { get; set; } = "";
         public int RamMb { get; set; } = 4096;

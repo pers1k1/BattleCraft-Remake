@@ -955,6 +955,114 @@
 
         <Grid x:Name="SceneBackground" IsHitTestVisible="False" Panel.ZIndex="-3" ClipToBounds="True">
             <Image x:Name="PixelSceneImage" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" SnapsToDevicePixels="True"/>
+            <Grid x:Name="StaticBackdrop" Visibility="Collapsed" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="StaticScale" ScaleX="1" ScaleY="1"/>
+                </Grid.RenderTransform>
+                <Viewbox Stretch="Fill">
+                    <Canvas Width="1280" Height="760" ClipToBounds="True">
+                        <Rectangle Width="1280" Height="760">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#04050D" Offset="0"/>
+                                    <GradientStop Color="#0A0D22" Offset="0.42"/>
+                                    <GradientStop Color="#141034" Offset="0.72"/>
+                                    <GradientStop Color="#1C1130" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Ellipse x:Name="Aurora3" Width="1150" Height="360" Canvas.Left="80" Canvas.Top="-70" Opacity="0.4" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="-6"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="Aurora1" Width="980" Height="300" Canvas.Left="-140" Canvas.Top="50" Opacity="0.55" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="-14"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="Aurora2" Width="900" Height="270" Canvas.Left="380" Canvas.Top="120" Opacity="0.5" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="10"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Canvas x:Name="StaticStarCanvas" Width="1280" Height="760"/>
+                        <Ellipse x:Name="MoonGlow" Canvas.Left="905" Canvas.Top="35" Width="240" Height="240" Opacity="0.6">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="#50DCE6FF" Offset="0"/>
+                                    <GradientStop Color="#00DCE6FF" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Ellipse Canvas.Left="998" Canvas.Top="128" Width="54" Height="54">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush GradientOrigin="0.38,0.35">
+                                    <GradientStop Color="#FFF6F4FF" Offset="0"/>
+                                    <GradientStop Color="#FFDAD6EE" Offset="0.85"/>
+                                    <GradientStop Color="#FFC9C4E4" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Rectangle x:Name="Meteor1" Width="110" Height="2" Canvas.Left="180" Canvas.Top="110" Opacity="0" RenderTransformOrigin="0,0.5">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#FFFFFFFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="18"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                        <Rectangle x:Name="Meteor2" Width="90" Height="2" Canvas.Left="690" Canvas.Top="55" Opacity="0" RenderTransformOrigin="0,0.5">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#FFFFFFFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="24"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                        <Rectangle Width="1280" Height="120" Canvas.Top="445" Opacity="0.5">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#00AFC4E8" Offset="0"/>
+                                    <GradientStop Color="#22AFC4E8" Offset="0.7"/>
+                                    <GradientStop Color="#00AFC4E8" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Path Fill="#0F0B20" Opacity="0.95" Data="M0,560 L80,505 L175,548 L265,480 L365,540 L470,465 L585,536 L700,486 L820,546 L935,498 L1045,552 L1155,506 L1280,556 L1280,760 L0,760 Z"/>
+                        <Path Fill="#080512" Data="M0,622 L110,568 L232,616 L345,558 L482,626 L622,574 L764,630 L892,584 L1024,636 L1162,590 L1280,642 L1280,760 L0,760 Z"/>
+                    </Canvas>
+                </Viewbox>
+                <Border>
+                    <Border.Background>
+                        <RadialGradientBrush RadiusX="0.85" RadiusY="0.8">
+                            <GradientStop Color="#00000000" Offset="0.55"/>
+                            <GradientStop Color="#55000000" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Border.Background>
+                </Border>
+            </Grid>
         </Grid>
 
         <Rectangle IsHitTestVisible="False" Opacity="0.04" Panel.ZIndex="-1" CacheMode="BitmapCache">
@@ -1492,6 +1600,12 @@
 
                             <TextBlock x:Name="ConsoleOpacityLabel" Text="Прозрачность терминала:" Foreground="White" FontSize="12" Margin="0,5,0,2"/>
                             <Slider x:Name="ConsoleOpacitySlider" Minimum="5" Maximum="100" Value="100" ValueChanged="ConsoleOpacitySlider_ValueChanged"/>
+
+                            <TextBlock x:Name="BgLabel" Text="Фон:" Foreground="White" FontSize="12" Margin="0,10,0,3"/>
+                            <ComboBox x:Name="BackgroundCombo" SelectionChanged="BackgroundCombo_Changed">
+                                <ComboBoxItem x:Name="BgItemAnimated" Content="Анимированная сцена" Tag="animated"/>
+                                <ComboBoxItem x:Name="BgItemStatic" Content="Ночная аврора (статичный)" Tag="static"/>
+                            </ComboBox>
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 

@@ -78,6 +78,8 @@ namespace CustomLauncher
         private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
         private const string LAUNCHER_CHANGELOG_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/Launcher_changelog.txt";
         private const string MODPACK_CHANGELOG_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/ModPack_ServerMap_Changelog.txt";
+        private const string LAUNCHER_CHANGELOG_EN_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/Launcher_changelog_en.txt";
+        private const string MODPACK_CHANGELOG_EN_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/ModPack_ServerMap_Changelog_en.txt";
 
         private static string BattleCraftJarUrl(string ver) =>
             $"https://github.com/pers1k1/BattleCraft-mod/releases/download/v{ver}/battlecraft-{ver}-all.jar";
@@ -435,10 +437,278 @@ namespace CustomLauncher
         private void UpdateSceneAnimation()
         {
             bool shouldRun = WindowState != WindowState.Minimized && IsActive;
-            if (shouldRun == _sceneRunning) return;
-            _sceneRunning = shouldRun;
-            if (shouldRun) _sceneGate.Set();
-            else _sceneGate.Reset();
+            if (shouldRun != _sceneRunning)
+            {
+                _sceneRunning = shouldRun;
+                if (shouldRun) _sceneGate.Set();
+                else _sceneGate.Reset();
+            }
+            SetAmbientPaused(!shouldRun);
+        }
+
+        private volatile bool _bgAnimated = true;
+        private string _bgModeApplied = "";
+        private bool _staticInit;
+        private bool _ambientActive;
+        private bool _ambientPaused;
+        private readonly List<Storyboard> _ambientSbs = new();
+
+        private void BackgroundCombo_Changed(object s, SelectionChangedEventArgs e)
+        {
+            if (_settings == null) return;
+            if (BackgroundCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string mode) return;
+            if (mode == _settings.BackgroundMode) return;
+            _settings.BackgroundMode = mode;
+            AppSettings.Save(_settings);
+            ApplyBackgroundMode(mode, true);
+        }
+
+        private void ApplyBackgroundMode(string mode, bool animate)
+        {
+            mode = mode == "static" ? "static" : "animated";
+            if (mode == _bgModeApplied) return;
+            _bgModeApplied = mode;
+
+            if (mode == "static")
+            {
+                EnsureStaticBackdrop();
+                StaticBackdrop.Visibility = Visibility.Visible;
+                StartAmbient();
+                if (animate)
+                {
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(650));
+                    fade.Completed += (s2, e2) => { if (_bgModeApplied == "static") _bgAnimated = false; };
+                    StaticBackdrop.BeginAnimation(OpacityProperty, fade);
+                    StaticScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
+                    StaticScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
+                }
+                else
+                {
+                    StaticBackdrop.BeginAnimation(OpacityProperty, null);
+                    StaticBackdrop.Opacity = 1;
+                    StaticScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); StaticScale.ScaleX = 1;
+                    StaticScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); StaticScale.ScaleY = 1;
+                    _bgAnimated = false;
+                }
+            }
+            else
+            {
+                _bgAnimated = true;
+                if (animate && StaticBackdrop.Visibility == Visibility.Visible)
+                {
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+                    var fade = new DoubleAnimation(StaticBackdrop.Opacity, 0, TimeSpan.FromMilliseconds(550));
+                    fade.Completed += (s2, e2) =>
+                    {
+                        if (_bgModeApplied != "animated") return;
+                        StaticBackdrop.Visibility = Visibility.Collapsed;
+                        StopAmbient();
+                    };
+                    StaticBackdrop.BeginAnimation(OpacityProperty, fade);
+                    StaticScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
+                    StaticScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
+                }
+                else
+                {
+                    StaticBackdrop.BeginAnimation(OpacityProperty, null);
+                    StaticBackdrop.Opacity = 0;
+                    StaticBackdrop.Visibility = Visibility.Collapsed;
+                    StopAmbient();
+                }
+            }
+        }
+
+        private void EnsureStaticBackdrop()
+        {
+            if (_staticInit) return;
+            _staticInit = true;
+            UpdateStaticAccent(AccentSnapshot());
+
+            var rnd = new Random(7);
+            var starTints = new[] { Colors.White, Color.FromRgb(0xCF, 0xE2, 0xFF), Color.FromRgb(0xFF, 0xEF, 0xD8) };
+            var twinkle = new Storyboard();
+            for (int i = 0; i < 120; i++)
+            {
+                double d = 1.2 + rnd.NextDouble() * 2.2;
+                var star = new System.Windows.Shapes.Ellipse
+                {
+                    Width = d,
+                    Height = d,
+                    Opacity = 0.25 + rnd.NextDouble() * 0.65,
+                    Fill = new SolidColorBrush(starTints[rnd.Next(starTints.Length)])
+                };
+                ((SolidColorBrush)star.Fill).Freeze();
+                Canvas.SetLeft(star, rnd.NextDouble() * 1280);
+                Canvas.SetTop(star, rnd.NextDouble() * (i % 5 == 0 ? 620 : 460));
+                StaticStarCanvas.Children.Add(star);
+                if (i % 4 == 0)
+                {
+                    var a = new DoubleAnimation(star.Opacity, 0.08 + rnd.NextDouble() * 0.2, TimeSpan.FromSeconds(1.6 + rnd.NextDouble() * 3.4))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = RepeatBehavior.Forever,
+                        BeginTime = TimeSpan.FromSeconds(rnd.NextDouble() * 5),
+                        EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                    };
+                    Storyboard.SetTarget(a, star);
+                    Storyboard.SetTargetProperty(a, new PropertyPath(OpacityProperty));
+                    twinkle.Children.Add(a);
+                }
+            }
+            _ambientSbs.Add(twinkle);
+
+            var drift = new Storyboard();
+            AddAuroraDrift(drift, Aurora1, 46, 14, 26);
+            AddAuroraDrift(drift, Aurora2, -56, 10, 34);
+            AddAuroraDrift(drift, Aurora3, 34, 18, 41);
+            AddBreath(drift, Aurora1, 0.40, 0.62, 11);
+            AddBreath(drift, Aurora2, 0.34, 0.56, 15);
+            AddBreath(drift, Aurora3, 0.28, 0.46, 19);
+            AddBreath(drift, MoonGlow, 0.5, 0.72, 13);
+            _ambientSbs.Add(drift);
+
+            var meteors = new Storyboard();
+            AddMeteor(meteors, Meteor1, 19, 4, 430, 155);
+            AddMeteor(meteors, Meteor2, 31, 12, 370, 165);
+            _ambientSbs.Add(meteors);
+        }
+
+        private static void AddAuroraDrift(Storyboard sb, FrameworkElement el, double dx, double dy, double sec)
+        {
+            var ease = new SineEase { EasingMode = EasingMode.EaseInOut };
+            var ax = new DoubleAnimation(-dx, dx, TimeSpan.FromSeconds(sec)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = ease };
+            Storyboard.SetTarget(ax, el);
+            Storyboard.SetTargetProperty(ax, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)"));
+            sb.Children.Add(ax);
+            var ay = new DoubleAnimation(dy, -dy, TimeSpan.FromSeconds(sec * 1.37)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = ease };
+            Storyboard.SetTarget(ay, el);
+            Storyboard.SetTargetProperty(ay, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"));
+            sb.Children.Add(ay);
+        }
+
+        private static void AddBreath(Storyboard sb, FrameworkElement el, double from, double to, double sec)
+        {
+            var a = new DoubleAnimation(from, to, TimeSpan.FromSeconds(sec))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            Storyboard.SetTarget(a, el);
+            Storyboard.SetTargetProperty(a, new PropertyPath(OpacityProperty));
+            sb.Children.Add(a);
+        }
+
+        private static void AddMeteor(Storyboard sb, FrameworkElement el, double periodSec, double delaySec, double dx, double dy)
+        {
+            var period = TimeSpan.FromSeconds(periodSec);
+            var t0 = TimeSpan.FromSeconds(periodSec - 1.6);
+            var t1 = TimeSpan.FromSeconds(periodSec - 1.35);
+            var t2 = TimeSpan.FromSeconds(periodSec - 0.2);
+
+            var op = new DoubleAnimationUsingKeyFrames { Duration = period, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(delaySec) };
+            op.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            op.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(t0)));
+            op.KeyFrames.Add(new LinearDoubleKeyFrame(0.9, KeyTime.FromTimeSpan(t1)));
+            op.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(t2)));
+            Storyboard.SetTarget(op, el);
+            Storyboard.SetTargetProperty(op, new PropertyPath(OpacityProperty));
+            sb.Children.Add(op);
+
+            var tx = new DoubleAnimationUsingKeyFrames { Duration = period, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(delaySec) };
+            tx.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            tx.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(t0)));
+            tx.KeyFrames.Add(new LinearDoubleKeyFrame(dx, KeyTime.FromTimeSpan(t2)));
+            Storyboard.SetTarget(tx, el);
+            Storyboard.SetTargetProperty(tx, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)"));
+            sb.Children.Add(tx);
+
+            var ty = new DoubleAnimationUsingKeyFrames { Duration = period, RepeatBehavior = RepeatBehavior.Forever, BeginTime = TimeSpan.FromSeconds(delaySec) };
+            ty.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            ty.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(t0)));
+            ty.KeyFrames.Add(new LinearDoubleKeyFrame(dy, KeyTime.FromTimeSpan(t2)));
+            Storyboard.SetTarget(ty, el);
+            Storyboard.SetTargetProperty(ty, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"));
+            sb.Children.Add(ty);
+        }
+
+        private void UpdateStaticAccent(Color accent)
+        {
+            if (!_staticInit) return;
+            Aurora1.Fill = AuroraBrush(accent, 0x6E);
+            Aurora3.Fill = AuroraBrush(accent, 0x48);
+            Aurora2.Fill = AuroraBrush(ShiftHue(accent, 150), 0x5A);
+        }
+
+        private static Brush AuroraBrush(Color c, byte alpha)
+        {
+            var b = new RadialGradientBrush();
+            b.GradientStops.Add(new GradientStop(Color.FromArgb(alpha, c.R, c.G, c.B), 0));
+            b.GradientStops.Add(new GradientStop(Color.FromArgb((byte)(alpha * 0.45), c.R, c.G, c.B), 0.5));
+            b.GradientStops.Add(new GradientStop(Color.FromArgb(0, c.R, c.G, c.B), 1));
+            b.Freeze();
+            return b;
+        }
+
+        private static Color ShiftHue(Color c, double deg)
+        {
+            double r = c.R / 255.0, g = c.G / 255.0, bl = c.B / 255.0;
+            double max = Math.Max(r, Math.Max(g, bl)), min = Math.Min(r, Math.Min(g, bl));
+            double d = max - min;
+            double h = 0;
+            if (d > 0)
+            {
+                if (max == r) h = 60 * (((g - bl) / d) % 6);
+                else if (max == g) h = 60 * ((bl - r) / d + 2);
+                else h = 60 * ((r - g) / d + 4);
+            }
+            if (h < 0) h += 360;
+            double s = max <= 0 ? 0 : d / max;
+            double v = max;
+            h = (h + deg) % 360;
+            if (h < 0) h += 360;
+            double cc = v * s;
+            double x = cc * (1 - Math.Abs(h / 60 % 2 - 1));
+            double m = v - cc;
+            (double r2, double g2, double b2) = ((int)(h / 60)) switch
+            {
+                0 => (cc, x, 0.0),
+                1 => (x, cc, 0.0),
+                2 => (0.0, cc, x),
+                3 => (0.0, x, cc),
+                4 => (x, 0.0, cc),
+                _ => (cc, 0.0, x)
+            };
+            return Color.FromRgb((byte)((r2 + m) * 255), (byte)((g2 + m) * 255), (byte)((b2 + m) * 255));
+        }
+
+        private void StartAmbient()
+        {
+            if (_ambientActive) return;
+            _ambientActive = true;
+            _ambientPaused = false;
+            foreach (var sb in _ambientSbs) sb.Begin(this, true);
+            if (!_sceneRunning) SetAmbientPaused(true);
+        }
+
+        private void StopAmbient()
+        {
+            if (!_ambientActive) return;
+            _ambientActive = false;
+            _ambientPaused = false;
+            foreach (var sb in _ambientSbs) sb.Stop(this);
+        }
+
+        private void SetAmbientPaused(bool paused)
+        {
+            if (!_ambientActive || paused == _ambientPaused) return;
+            _ambientPaused = paused;
+            foreach (var sb in _ambientSbs)
+            {
+                if (paused) sb.Pause(this);
+                else sb.Resume(this);
+            }
         }
 
         private Weather PickWeather()
@@ -525,7 +795,7 @@ namespace CustomLauncher
             }
             StepWeatherIntensity();
             UpdateAccumulation();
-            RenderScene();
+            if (_bgAnimated) RenderScene();
             RenderBlob();
         }
 
@@ -2156,6 +2426,9 @@ namespace CustomLauncher
             BloomEnabledCheck.Content = Lang.T("Включить свечение (Neon Glow)");
             BloomStrengthLabel.Text = Lang.T("Сила свечения:");
             ConsoleOpacityLabel.Text = Lang.T("Прозрачность терминала:");
+            BgLabel.Text = Lang.T("Фон:");
+            BgItemAnimated.Content = Lang.T("Анимированная сцена");
+            BgItemStatic.Content = Lang.T("Ночная аврора (статичный)");
             LangLabel.Text = Lang.T("Язык:");
             RamLabel.Text = Lang.T("Выделенная память (RAM МБ):");
             GamePathLabel.Text = Lang.T("Путь к игре:");
@@ -2182,6 +2455,14 @@ namespace CustomLauncher
             double consolePct = (_settings.ConsoleOpacity ?? 1.0) * 100.0;
             ApplyConsoleOpacity(consolePct, false);
             if (ConsoleOpacitySlider != null) ConsoleOpacitySlider.Value = consolePct;
+
+            ApplyBackgroundMode(_settings.BackgroundMode, IsLoaded);
+            if (BackgroundCombo != null)
+            {
+                BackgroundCombo.SelectionChanged -= BackgroundCombo_Changed;
+                BackgroundCombo.SelectedItem = _settings.BackgroundMode == "static" ? BgItemStatic : BgItemAnimated;
+                BackgroundCombo.SelectionChanged += BackgroundCombo_Changed;
+            }
 
             if (ColorPresetCombo != null)
             {
@@ -2267,7 +2548,11 @@ namespace CustomLauncher
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 AnimateBrushResource("AccentBrush", c);
                 AnimateColorResource("AccentColor", c,
-                    onStep: cur => _accentArgb = (cur.R << 16) | (cur.G << 8) | cur.B);
+                    onStep: cur =>
+                    {
+                        _accentArgb = (cur.R << 16) | (cur.G << 8) | cur.B;
+                        UpdateStaticAccent(cur);
+                    });
 
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
@@ -3375,8 +3660,8 @@ namespace CustomLauncher
             try
             {
                 string ts = "?t=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                var tl = _httpClient.GetStringAsync(LAUNCHER_CHANGELOG_URL + ts);
-                var tm = _httpClient.GetStringAsync(MODPACK_CHANGELOG_URL + ts);
+                var tl = _httpClient.GetStringAsync((Lang.IsEn ? LAUNCHER_CHANGELOG_EN_URL : LAUNCHER_CHANGELOG_URL) + ts);
+                var tm = _httpClient.GetStringAsync((Lang.IsEn ? MODPACK_CHANGELOG_EN_URL : MODPACK_CHANGELOG_URL) + ts);
                 await Task.WhenAll(tl, tm);
                 _launcherChangelog = NormalizeChangelog(tl.Result);
                 _modpackChangelog = NormalizeChangelog(tm.Result);
