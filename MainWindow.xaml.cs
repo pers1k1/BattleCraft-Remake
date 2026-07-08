@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.4.2";
+        private const string VER = "8.4.3";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -3646,7 +3646,7 @@ namespace CustomLauncher
             if (sender is not ScrollViewer sv || sv.ScrollableHeight <= 0) return;
             e.Handled = true;
             double cur = _smoothTargets.TryGetValue(sv, out var t) ? t : sv.VerticalOffset;
-            _smoothTargets[sv] = Math.Clamp(cur - e.Delta * 0.55, 0, sv.ScrollableHeight);
+            _smoothTargets[sv] = Math.Clamp(cur - e.Delta * 0.5, 0, sv.ScrollableHeight);
             if (!_smoothScrolling)
             {
                 _smoothScrolling = true;
