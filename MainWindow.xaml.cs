@@ -449,9 +449,16 @@ namespace CustomLauncher
         private volatile bool _bgAnimated = true;
         private string _bgModeApplied = "";
         private bool _staticInit;
-        private bool _ambientActive;
+        private bool _gradientInit;
+        private bool _plainInit;
+        private FrameworkElement? _activeBackdrop;
+        private ScaleTransform? _activeScale;
+        private List<Storyboard>? _activeAmbient;
         private bool _ambientPaused;
-        private readonly List<Storyboard> _ambientSbs = new();
+        private readonly List<Storyboard> _staticSbs = new();
+        private readonly List<Storyboard> _gradientSbs = new();
+        private Color _bgPrimary = (Color)ColorConverter.ConvertFromString(DefPrimary);
+        private Color _bgAccent = (Color)ColorConverter.ConvertFromString(DefAccent);
 
         private void BackgroundCombo_Changed(object s, SelectionChangedEventArgs e)
         {
@@ -465,57 +472,96 @@ namespace CustomLauncher
 
         private void ApplyBackgroundMode(string mode, bool animate)
         {
-            mode = mode == "static" ? "static" : "animated";
+            mode = mode is "static" or "gradient" or "plain" ? mode : "animated";
             if (mode == _bgModeApplied) return;
             _bgModeApplied = mode;
 
-            if (mode == "static")
+            var oldBackdrop = _activeBackdrop;
+            var oldScale = _activeScale;
+            var oldAmbient = _activeAmbient;
+
+            FrameworkElement? target = null;
+            ScaleTransform? targetScale = null;
+            List<Storyboard>? targetAmbient = null;
+            switch (mode)
             {
-                EnsureStaticBackdrop();
-                StaticBackdrop.Visibility = Visibility.Visible;
-                StartAmbient();
+                case "static":
+                    EnsureStaticBackdrop();
+                    target = StaticBackdrop; targetScale = StaticScale; targetAmbient = _staticSbs;
+                    break;
+                case "gradient":
+                    EnsureGradientBackdrop();
+                    target = GradientBackdrop; targetScale = GradientScale; targetAmbient = _gradientSbs;
+                    break;
+                case "plain":
+                    EnsurePlainBackdrop();
+                    target = PlainBackdrop; targetScale = PlainScale;
+                    break;
+            }
+
+            _activeBackdrop = target;
+            _activeScale = targetScale;
+
+            if (oldBackdrop != null && oldBackdrop != target)
+            {
+                var ob = oldBackdrop;
+                var oa = oldAmbient;
                 if (animate)
                 {
-                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                    var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(650));
-                    fade.Completed += (s2, e2) => { if (_bgModeApplied == "static") _bgAnimated = false; };
-                    StaticBackdrop.BeginAnimation(OpacityProperty, fade);
-                    StaticScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
-                    StaticScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
+                    var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(550));
+                    fade.Completed += (s2, e2) =>
+                    {
+                        if (_activeBackdrop == ob) return;
+                        ob.Visibility = Visibility.Collapsed;
+                        if (oa != null) StopAmbient(oa);
+                    };
+                    ob.BeginAnimation(OpacityProperty, fade);
+                    if (oldScale != null && target == null)
+                    {
+                        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
+                        oldScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
+                        oldScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
+                    }
                 }
                 else
                 {
-                    StaticBackdrop.BeginAnimation(OpacityProperty, null);
-                    StaticBackdrop.Opacity = 1;
-                    StaticScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); StaticScale.ScaleX = 1;
-                    StaticScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); StaticScale.ScaleY = 1;
-                    _bgAnimated = false;
+                    ob.BeginAnimation(OpacityProperty, null);
+                    ob.Opacity = 0;
+                    ob.Visibility = Visibility.Collapsed;
+                    if (oa != null) StopAmbient(oa);
+                }
+            }
+
+            if (target == null)
+            {
+                _bgAnimated = true;
+                return;
+            }
+
+            target.Visibility = Visibility.Visible;
+            if (targetAmbient != null) StartAmbient(targetAmbient);
+            if (targetScale != null)
+            {
+                targetScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); targetScale.ScaleX = 1;
+                targetScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); targetScale.ScaleY = 1;
+            }
+            if (animate)
+            {
+                var fade = new DoubleAnimation(1, TimeSpan.FromMilliseconds(650));
+                fade.Completed += (s2, e2) => { if (_activeBackdrop == target) _bgAnimated = false; };
+                target.BeginAnimation(OpacityProperty, fade);
+                if (targetScale != null && oldBackdrop == null)
+                {
+                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+                    targetScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
+                    targetScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
                 }
             }
             else
             {
-                _bgAnimated = true;
-                if (animate && StaticBackdrop.Visibility == Visibility.Visible)
-                {
-                    var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
-                    var fade = new DoubleAnimation(StaticBackdrop.Opacity, 0, TimeSpan.FromMilliseconds(550));
-                    fade.Completed += (s2, e2) =>
-                    {
-                        if (_bgModeApplied != "animated") return;
-                        StaticBackdrop.Visibility = Visibility.Collapsed;
-                        StopAmbient();
-                    };
-                    StaticBackdrop.BeginAnimation(OpacityProperty, fade);
-                    StaticScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
-                    StaticScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
-                }
-                else
-                {
-                    StaticBackdrop.BeginAnimation(OpacityProperty, null);
-                    StaticBackdrop.Opacity = 0;
-                    StaticBackdrop.Visibility = Visibility.Collapsed;
-                    StopAmbient();
-                }
+                target.BeginAnimation(OpacityProperty, null);
+                target.Opacity = 1;
+                _bgAnimated = false;
             }
         }
 
@@ -523,7 +569,7 @@ namespace CustomLauncher
         {
             if (_staticInit) return;
             _staticInit = true;
-            UpdateStaticAccent(AccentSnapshot());
+            UpdateStaticAccent(_bgAccent);
 
             var rnd = new Random(7);
             var starTints = new[] { Colors.White, Color.FromRgb(0xCF, 0xE2, 0xFF), Color.FromRgb(0xFF, 0xEF, 0xD8) };
@@ -556,7 +602,7 @@ namespace CustomLauncher
                     twinkle.Children.Add(a);
                 }
             }
-            _ambientSbs.Add(twinkle);
+            _staticSbs.Add(twinkle);
 
             var drift = new Storyboard();
             AddAuroraDrift(drift, Aurora1, 46, 14, 26);
@@ -566,12 +612,12 @@ namespace CustomLauncher
             AddBreath(drift, Aurora2, 0.34, 0.56, 15);
             AddBreath(drift, Aurora3, 0.28, 0.46, 19);
             AddBreath(drift, MoonGlow, 0.5, 0.72, 13);
-            _ambientSbs.Add(drift);
+            _staticSbs.Add(drift);
 
             var meteors = new Storyboard();
             AddMeteor(meteors, Meteor1, 19, 4, 430, 155);
             AddMeteor(meteors, Meteor2, 31, 12, 370, 165);
-            _ambientSbs.Add(meteors);
+            _staticSbs.Add(meteors);
         }
 
         private static void AddAuroraDrift(Storyboard sb, FrameworkElement el, double dx, double dy, double sec)
@@ -683,33 +729,120 @@ namespace CustomLauncher
             return Color.FromRgb((byte)((r2 + m) * 255), (byte)((g2 + m) * 255), (byte)((b2 + m) * 255));
         }
 
-        private void StartAmbient()
+        private void StartAmbient(List<Storyboard> sbs)
         {
-            if (_ambientActive) return;
-            _ambientActive = true;
+            if (_activeAmbient == sbs) return;
+            _activeAmbient = sbs;
             _ambientPaused = false;
-            foreach (var sb in _ambientSbs) sb.Begin(this, true);
+            foreach (var sb in sbs) sb.Begin(this, true);
             if (!_sceneRunning) SetAmbientPaused(true);
         }
 
-        private void StopAmbient()
+        private void StopAmbient(List<Storyboard> sbs)
         {
-            if (!_ambientActive) return;
-            _ambientActive = false;
-            _ambientPaused = false;
-            foreach (var sb in _ambientSbs) sb.Stop(this);
+            foreach (var sb in sbs) sb.Stop(this);
+            if (_activeAmbient == sbs)
+            {
+                _activeAmbient = null;
+                _ambientPaused = false;
+            }
         }
 
         private void SetAmbientPaused(bool paused)
         {
-            if (!_ambientActive || paused == _ambientPaused) return;
+            if (_activeAmbient == null || paused == _ambientPaused) return;
             _ambientPaused = paused;
-            foreach (var sb in _ambientSbs)
+            foreach (var sb in _activeAmbient)
             {
                 if (paused) sb.Pause(this);
                 else sb.Resume(this);
             }
         }
+
+        private void EnsureGradientBackdrop()
+        {
+            if (_gradientInit) return;
+            _gradientInit = true;
+            UpdateGradientTheme();
+
+            var sb = new Storyboard();
+            AddAuroraDrift(sb, Flow1, 150, 90, 21);
+            AddAuroraDrift(sb, Flow2, -170, 110, 27);
+            AddAuroraDrift(sb, Flow3, 130, -100, 24);
+            AddAuroraDrift(sb, Flow4, -120, -80, 31);
+            AddSpin(sb, Flow1, 120, true);
+            AddSpin(sb, Flow2, 150, false);
+            AddSpin(sb, Flow3, 100, true);
+            AddSpin(sb, Flow4, 170, false);
+            AddBreath(sb, Flow1, 0.40, 0.62, 9);
+            AddBreath(sb, Flow2, 0.34, 0.56, 12);
+            AddBreath(sb, Flow3, 0.30, 0.52, 10);
+            AddBreath(sb, Flow4, 0.28, 0.48, 14);
+            _gradientSbs.Add(sb);
+        }
+
+        private void EnsurePlainBackdrop()
+        {
+            if (_plainInit) return;
+            _plainInit = true;
+            UpdatePlainTheme();
+        }
+
+        private static void AddSpin(Storyboard sb, FrameworkElement el, double sec, bool cw)
+        {
+            var a = new DoubleAnimation(0, cw ? 360 : -360, TimeSpan.FromSeconds(sec)) { RepeatBehavior = RepeatBehavior.Forever };
+            Storyboard.SetTarget(a, el);
+            Storyboard.SetTargetProperty(a, new PropertyPath("(UIElement.RenderTransform).(TransformGroup.Children)[0].(RotateTransform.Angle)"));
+            sb.Children.Add(a);
+        }
+
+        private void UpdateBackdropTheme()
+        {
+            UpdateStaticAccent(_bgAccent);
+            UpdateGradientTheme();
+            UpdatePlainTheme();
+        }
+
+        private void UpdateGradientTheme()
+        {
+            if (!_gradientInit) return;
+            var p = _bgPrimary;
+            var a = _bgAccent;
+            var b = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+            b.GradientStops.Add(new GradientStop(Darken(p, 0.5), 0));
+            b.GradientStops.Add(new GradientStop(p, 1));
+            b.Freeze();
+            GradientBase.Fill = b;
+            Flow1.Fill = AuroraBrush(a, 0x80);
+            Flow2.Fill = AuroraBrush(ShiftHue(a, 45), 0x6C);
+            Flow3.Fill = AuroraBrush(ShiftHue(a, -50), 0x62);
+            Flow4.Fill = AuroraBrush(Lighten(p, 0.4), 0x6C);
+        }
+
+        private void UpdatePlainTheme()
+        {
+            if (!_plainInit) return;
+            var p = _bgPrimary;
+            var a = _bgAccent;
+            var b = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0.7, 1) };
+            b.GradientStops.Add(new GradientStop(Darken(p, 0.55), 0));
+            b.GradientStops.Add(new GradientStop(p, 0.55));
+            b.GradientStops.Add(new GradientStop(Darken(p, 0.72), 1));
+            b.Freeze();
+            PlainBase.Fill = b;
+
+            var g = new RadialGradientBrush { Center = new Point(0.5, 1.15), GradientOrigin = new Point(0.5, 1.15), RadiusX = 0.95, RadiusY = 0.8 };
+            g.GradientStops.Add(new GradientStop(Color.FromArgb(0x30, a.R, a.G, a.B), 0));
+            g.GradientStops.Add(new GradientStop(Color.FromArgb(0, a.R, a.G, a.B), 1));
+            g.Freeze();
+            PlainGlow.Fill = g;
+        }
+
+        private static Color Darken(Color c, double f) =>
+            Color.FromRgb((byte)(c.R * f), (byte)(c.G * f), (byte)(c.B * f));
+
+        private static Color Lighten(Color c, double f) =>
+            Color.FromRgb((byte)(c.R + (255 - c.R) * f), (byte)(c.G + (255 - c.G) * f), (byte)(c.B + (255 - c.B) * f));
 
         private Weather PickWeather()
         {
@@ -2428,7 +2561,9 @@ namespace CustomLauncher
             ConsoleOpacityLabel.Text = Lang.T("Прозрачность терминала:");
             BgLabel.Text = Lang.T("Фон:");
             BgItemAnimated.Content = Lang.T("Анимированная сцена");
+            BgItemGradient.Content = Lang.T("Переливы темы (анимированный)");
             BgItemStatic.Content = Lang.T("Ночная аврора (статичный)");
+            BgItemPlain.Content = Lang.T("Минимализм (статичный)");
             LangLabel.Text = Lang.T("Язык:");
             RamLabel.Text = Lang.T("Выделенная память (RAM МБ):");
             GamePathLabel.Text = Lang.T("Путь к игре:");
@@ -2460,7 +2595,13 @@ namespace CustomLauncher
             if (BackgroundCombo != null)
             {
                 BackgroundCombo.SelectionChanged -= BackgroundCombo_Changed;
-                BackgroundCombo.SelectedItem = _settings.BackgroundMode == "static" ? BgItemStatic : BgItemAnimated;
+                BackgroundCombo.SelectedItem = _settings.BackgroundMode switch
+                {
+                    "static" => BgItemStatic,
+                    "gradient" => BgItemGradient,
+                    "plain" => BgItemPlain,
+                    _ => BgItemAnimated
+                };
                 BackgroundCombo.SelectionChanged += BackgroundCombo_Changed;
             }
 
@@ -2484,7 +2625,7 @@ namespace CustomLauncher
         private void ApplyPrimaryColor(string hex, bool save = true)
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
-                AnimateColorResource("PrimaryColor", c); AnimateBrushResource("PrimaryBrush", c);
+                AnimateColorResource("PrimaryColor", c, onStep: cur => { _bgPrimary = cur; UpdateBackdropTheme(); }); AnimateBrushResource("PrimaryBrush", c);
                 if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); }
             } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyPrimaryColor: " + ex.Message); }
         }
@@ -2551,7 +2692,8 @@ namespace CustomLauncher
                     onStep: cur =>
                     {
                         _accentArgb = (cur.R << 16) | (cur.G << 8) | cur.B;
-                        UpdateStaticAccent(cur);
+                        _bgAccent = cur;
+                        UpdateBackdropTheme();
                     });
 
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;

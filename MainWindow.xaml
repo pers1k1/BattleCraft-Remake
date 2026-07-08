@@ -1063,6 +1063,71 @@
                     </Border.Background>
                 </Border>
             </Grid>
+            <Grid x:Name="GradientBackdrop" Visibility="Collapsed" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="GradientScale" ScaleX="1" ScaleY="1"/>
+                </Grid.RenderTransform>
+                <Rectangle x:Name="GradientBase"/>
+                <Viewbox Stretch="Fill">
+                    <Canvas Width="1280" Height="760" ClipToBounds="True">
+                        <Ellipse x:Name="Flow1" Width="1050" Height="760" Canvas.Left="-320" Canvas.Top="-260" Opacity="0.55" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="0"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="Flow2" Width="1150" Height="820" Canvas.Left="560" Canvas.Top="-220" Opacity="0.5" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="0"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="Flow3" Width="1000" Height="720" Canvas.Left="180" Canvas.Top="280" Opacity="0.45" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="0"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="Flow4" Width="920" Height="680" Canvas.Left="-260" Canvas.Top="330" Opacity="0.42" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <RotateTransform Angle="0"/>
+                                    <TranslateTransform/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Canvas>
+                </Viewbox>
+                <Border>
+                    <Border.Background>
+                        <RadialGradientBrush RadiusX="0.85" RadiusY="0.8">
+                            <GradientStop Color="#00000000" Offset="0.6"/>
+                            <GradientStop Color="#44000000" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Border.Background>
+                </Border>
+            </Grid>
+            <Grid x:Name="PlainBackdrop" Visibility="Collapsed" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="PlainScale" ScaleX="1" ScaleY="1"/>
+                </Grid.RenderTransform>
+                <Rectangle x:Name="PlainBase"/>
+                <Rectangle x:Name="PlainGlow"/>
+                <Border>
+                    <Border.Background>
+                        <RadialGradientBrush RadiusX="0.9" RadiusY="0.85">
+                            <GradientStop Color="#00000000" Offset="0.6"/>
+                            <GradientStop Color="#3C000000" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Border.Background>
+                </Border>
+            </Grid>
         </Grid>
 
         <Rectangle IsHitTestVisible="False" Opacity="0.04" Panel.ZIndex="-1" CacheMode="BitmapCache">
@@ -1604,7 +1669,9 @@
                             <TextBlock x:Name="BgLabel" Text="Фон:" Foreground="White" FontSize="12" Margin="0,10,0,3"/>
                             <ComboBox x:Name="BackgroundCombo" SelectionChanged="BackgroundCombo_Changed">
                                 <ComboBoxItem x:Name="BgItemAnimated" Content="Анимированная сцена" Tag="animated"/>
+                                <ComboBoxItem x:Name="BgItemGradient" Content="Переливы темы (анимированный)" Tag="gradient"/>
                                 <ComboBoxItem x:Name="BgItemStatic" Content="Ночная аврора (статичный)" Tag="static"/>
+                                <ComboBoxItem x:Name="BgItemPlain" Content="Минимализм (статичный)" Tag="plain"/>
                             </ComboBox>
 
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
