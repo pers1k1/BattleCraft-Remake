@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.3.0";
+        private const string VER = "8.4.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -2011,10 +2011,30 @@ namespace CustomLauncher
             SetupPanel.BeginAnimation(OpacityProperty, fade);
         }
 
+        public sealed class ColorPreset
+        {
+            public string Name { get; init; } = "";
+            public string Primary { get; init; } = "";
+            public string Accent { get; init; } = "";
+            public Brush PrimarySwatch { get; init; } = Brushes.Transparent;
+            public Brush AccentSwatch { get; init; } = Brushes.Transparent;
+        }
+
+        private static Brush SwatchBrush(string hex)
+        {
+            try
+            {
+                var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+                b.Freeze();
+                return b;
+            }
+            catch { return Brushes.Transparent; }
+        }
+
         private void FillColorPresets()
         {
             if (ColorPresetCombo == null) return;
-            ColorPresetCombo.Items.Clear();
+            ColorPresetCombo.ItemsSource = null;
             ColorPresetCombo.MaxDropDownHeight = 480;
             (string name, string tag)[] presets =
             {
@@ -2037,8 +2057,20 @@ namespace CustomLauncher
                 ("Олива",        "#4C511F|#FFA9D6"),
                 ("Ультрафиолет", "#5B3FA8|#FFC49B"),
             };
+            var list = new List<ColorPreset>();
             foreach (var (name, tag) in presets)
-                ColorPresetCombo.Items.Add(new ComboBoxItem { Content = Lang.T(name), Tag = tag });
+            {
+                var p = tag.Split('|');
+                list.Add(new ColorPreset
+                {
+                    Name = Lang.T(name),
+                    Primary = p[0],
+                    Accent = p[1],
+                    PrimarySwatch = SwatchBrush(p[0]),
+                    AccentSwatch = SwatchBrush(p[1])
+                });
+            }
+            ColorPresetCombo.ItemsSource = list;
         }
 
         private static void SelectLangCombo(ComboBox combo, string code)
@@ -2153,11 +2185,12 @@ namespace CustomLauncher
 
             if (ColorPresetCombo != null)
             {
-                string tagToFind = $"{p}|{a}".ToUpper();
                 ColorPresetCombo.SelectionChanged -= ColorPreset_Changed;
-                foreach (ComboBoxItem item in ColorPresetCombo.Items)
+                foreach (var item in ColorPresetCombo.Items)
                 {
-                    if (item.Tag is string tg && tg.ToUpper() == tagToFind)
+                    if (item is ColorPreset cp
+                        && string.Equals(cp.Primary, p, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(cp.Accent, a, StringComparison.OrdinalIgnoreCase))
                     {
                         ColorPresetCombo.SelectedItem = item;
                         break;
@@ -2170,13 +2203,14 @@ namespace CustomLauncher
         private void ApplyPrimaryColor(string hex, bool save = true)
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
-                this.Resources["PrimaryColor"] = c; AnimateBrushResource("PrimaryBrush", c);
+                AnimateColorResource("PrimaryColor", c); AnimateBrushResource("PrimaryBrush", c);
                 if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); }
             } catch { }
         }
 
-        private void AnimateBrushResource(string key, Color to, int ms = 500)
+        private void AnimateBrushResource(string key, Color to, int ms = 600)
         {
+            if (!IsLoaded) { this.Resources[key] = new SolidColorBrush(to); return; }
             Color from = this.Resources[key] is SolidColorBrush ob ? ob.Color : to;
             var nb = new SolidColorBrush(from);
             this.Resources[key] = nb;
@@ -2184,11 +2218,48 @@ namespace CustomLauncher
                 new ColorAnimation(to, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
 
+        private readonly Dictionary<string, System.Windows.Threading.DispatcherTimer> _colorResTimers = new();
+
+        private void AnimateColorResource(string key, Color to, int ms = 600, Action<Color>? onStep = null)
+        {
+            if (_colorResTimers.TryGetValue(key, out var old)) { old.Stop(); _colorResTimers.Remove(key); }
+
+            Color from = this.Resources[key] is Color c ? c : to;
+            if (from == to || !IsLoaded)
+            {
+                this.Resources[key] = to;
+                onStep?.Invoke(to);
+                return;
+            }
+
+            var sw = Stopwatch.StartNew();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+            timer.Tick += (s, e) =>
+            {
+                double f = Math.Min(1, sw.ElapsedMilliseconds / (double)ms);
+                double ease = 1 - Math.Pow(1 - f, 3);
+                var cur = Color.FromRgb(
+                    (byte)(from.R + (to.R - from.R) * ease),
+                    (byte)(from.G + (to.G - from.G) * ease),
+                    (byte)(from.B + (to.B - from.B) * ease));
+                this.Resources[key] = cur;
+                onStep?.Invoke(cur);
+                if (f >= 1)
+                {
+                    timer.Stop();
+                    _colorResTimers.Remove(key);
+                }
+            };
+            _colorResTimers[key] = timer;
+            timer.Start();
+        }
+
         private void ApplyAccentColor(string hex, bool save = true)
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
-                this.Resources["AccentColor"] = c; AnimateBrushResource("AccentBrush", c);
-                _accentArgb = (c.R << 16) | (c.G << 8) | c.B;
+                AnimateBrushResource("AccentBrush", c);
+                AnimateColorResource("AccentColor", c,
+                    onStep: cur => _accentArgb = (cur.R << 16) | (cur.G << 8) | cur.B);
 
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
@@ -2231,8 +2302,13 @@ namespace CustomLauncher
         private void ColorPreset_Changed(object s, SelectionChangedEventArgs e)
         {
             if (!IsLoaded) return;
-            if (ColorPresetCombo.SelectedItem is ComboBoxItem item && item.Tag is string td)
-            { try { var p = td.Split('|'); ApplyPrimaryColor(p[0]); ApplyAccentColor(p[1]); PrimaryColorBox.Text = p[0]; AccentColorBox.Text = p[1]; } catch { } }
+            if (ColorPresetCombo.SelectedItem is ColorPreset cp)
+            {
+                ApplyPrimaryColor(cp.Primary);
+                ApplyAccentColor(cp.Accent);
+                PrimaryColorBox.Text = cp.Primary.ToUpper();
+                AccentColorBox.Text = cp.Accent.ToUpper();
+            }
         }
 
         private async void BtnResetAllSettings_Click(object s, RoutedEventArgs e)
