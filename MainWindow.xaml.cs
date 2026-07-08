@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.4.1";
+        private const string VER = "8.4.2";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -3636,6 +3636,46 @@ namespace CustomLauncher
             if (!ReferenceEquals(e.OriginalSource, SettingsScrollViewer)) return;
             if (Math.Abs(e.VerticalChange) < 0.5) return;
             if (ColorPresetCombo != null && ColorPresetCombo.IsDropDownOpen) ColorPresetCombo.IsDropDownOpen = false;
+        }
+
+        private readonly Dictionary<ScrollViewer, double> _smoothTargets = new();
+        private bool _smoothScrolling;
+
+        public void SmoothWheel_Preview(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is not ScrollViewer sv || sv.ScrollableHeight <= 0) return;
+            e.Handled = true;
+            double cur = _smoothTargets.TryGetValue(sv, out var t) ? t : sv.VerticalOffset;
+            _smoothTargets[sv] = Math.Clamp(cur - e.Delta * 0.55, 0, sv.ScrollableHeight);
+            if (!_smoothScrolling)
+            {
+                _smoothScrolling = true;
+                CompositionTarget.Rendering += SmoothScrollTick;
+            }
+        }
+
+        private void SmoothScrollTick(object? s, EventArgs e)
+        {
+            List<ScrollViewer>? done = null;
+            foreach (var kv in _smoothTargets)
+            {
+                var sv = kv.Key;
+                double target = kv.Value;
+                double cur = sv.VerticalOffset, diff = target - cur;
+                if (!sv.IsVisible || Math.Abs(diff) < 0.5)
+                {
+                    sv.ScrollToVerticalOffset(target);
+                    (done ??= new List<ScrollViewer>()).Add(sv);
+                    continue;
+                }
+                sv.ScrollToVerticalOffset(cur + diff * 0.25);
+            }
+            if (done != null) foreach (var sv in done) _smoothTargets.Remove(sv);
+            if (_smoothTargets.Count == 0)
+            {
+                _smoothScrolling = false;
+                CompositionTarget.Rendering -= SmoothScrollTick;
+            }
         }
 
         public void Combo_Pop(object sender, SelectionChangedEventArgs e)

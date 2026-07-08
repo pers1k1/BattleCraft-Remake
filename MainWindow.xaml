@@ -617,7 +617,7 @@
                                         </Border.Effect>
                                     </Border>
                                     <Border CornerRadius="12" Background="White" Opacity="0.04" IsHitTestVisible="False"/>
-                                    <ScrollViewer Margin="6,8,6,8" SnapsToDevicePixels="True">
+                                    <ScrollViewer Margin="6,8,6,8" SnapsToDevicePixels="True" PreviewMouseWheel="SmoothWheel_Preview">
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
                                     </ScrollViewer>
                                 </Grid>
