@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.1.1";
+        private const string VER = "8.2.0";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -2170,20 +2170,29 @@ namespace CustomLauncher
         private void ApplyPrimaryColor(string hex, bool save = true)
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
-                this.Resources["PrimaryColor"] = c; this.Resources["PrimaryBrush"] = new SolidColorBrush(c);
+                this.Resources["PrimaryColor"] = c; AnimateBrushResource("PrimaryBrush", c);
                 if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); }
             } catch { }
+        }
+
+        private void AnimateBrushResource(string key, Color to, int ms = 500)
+        {
+            Color from = this.Resources[key] is SolidColorBrush ob ? ob.Color : to;
+            var nb = new SolidColorBrush(from);
+            this.Resources[key] = nb;
+            nb.BeginAnimation(SolidColorBrush.ColorProperty,
+                new ColorAnimation(to, TimeSpan.FromMilliseconds(ms)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
         }
 
         private void ApplyAccentColor(string hex, bool save = true)
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
-                this.Resources["AccentColor"] = c; this.Resources["AccentBrush"] = new SolidColorBrush(c);
+                this.Resources["AccentColor"] = c; AnimateBrushResource("AccentBrush", c);
                 _accentArgb = (c.R << 16) | (c.G << 8) | c.B;
 
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
-                this.Resources["OnAccentBrush"] = new SolidColorBrush(onAccent);
+                AnimateBrushResource("OnAccentBrush", onAccent);
                 if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); }
             } catch { }
         }
@@ -3539,7 +3548,38 @@ namespace CustomLauncher
         }
 
         private void SettingsScroll_ScrollChanged(object s, ScrollChangedEventArgs e)
-        { if (ColorPresetCombo != null && ColorPresetCombo.IsDropDownOpen) ColorPresetCombo.IsDropDownOpen = false; }
+        {
+            if (!ReferenceEquals(e.OriginalSource, SettingsScrollViewer)) return;
+            if (Math.Abs(e.VerticalChange) < 0.5) return;
+            if (ColorPresetCombo != null && ColorPresetCombo.IsDropDownOpen) ColorPresetCombo.IsDropDownOpen = false;
+        }
+
+        public void Combo_Pop(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.IsLoaded && fe.IsVisible) PopElement(fe, 0.95, 320);
+        }
+
+        public void TextBox_TypePulse(object sender, TextChangedEventArgs e)
+        {
+            if (sender is not TextBox tb || tb.IsReadOnly || !tb.IsKeyboardFocused) return;
+            PopElement(tb, 1.025, 150);
+        }
+
+        private static void PopElement(FrameworkElement fe, double from, int ms)
+        {
+            fe.RenderTransformOrigin = new Point(0.5, 0.5);
+            if (fe.RenderTransform is not ScaleTransform sc)
+            {
+                sc = new ScaleTransform(1, 1);
+                fe.RenderTransform = sc;
+            }
+            var a = new DoubleAnimation(from, 1, TimeSpan.FromMilliseconds(ms))
+            {
+                EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 1.4 }
+            };
+            sc.BeginAnimation(ScaleTransform.ScaleXProperty, a);
+            sc.BeginAnimation(ScaleTransform.ScaleYProperty, a.Clone());
+        }
 
         public void Btn_MouseTrack(object sender, MouseEventArgs e)
         {
