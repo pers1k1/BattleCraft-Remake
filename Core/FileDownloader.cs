@@ -64,6 +64,16 @@ namespace CustomLauncher.Core
                 request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
             bool resumed = response.StatusCode == HttpStatusCode.PartialContent && existing > 0;
+            if (!resumed && existing > 0 && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+            {
+                if (response.Content.Headers.ContentRange?.Length == existing)
+                {
+                    LogMessage?.Invoke(Lang.F("Уже скачан: {0}", fileName));
+                    ProgressChanged?.Invoke(100);
+                    return;
+                }
+                try { File.Delete(destinationPath); } catch { }
+            }
             if (!resumed && !response.IsSuccessStatusCode)
             {
                 LogMessage?.Invoke(Lang.F("Ошибка скачивания {0} (HTTP {1})", fileName, (int)response.StatusCode));

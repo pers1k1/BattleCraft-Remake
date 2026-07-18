@@ -116,6 +116,8 @@ namespace CustomLauncher
             {
                 CustomDialogTitle.Text = Lang.T(title);
                 CustomDialogMessage.Text = message;
+                CustomDialogMessage.Visibility = Visibility.Visible;
+                CustomDialogInputBox.Visibility = Visibility.Collapsed;
                 CustomDialogBtnCancel.Visibility = isYesNo ? Visibility.Visible : Visibility.Collapsed;
                 CustomDialogBtnOk.Content = isYesNo ? Lang.T("Да") : "OK";
 
@@ -222,6 +224,7 @@ namespace CustomLauncher
         {
             _sceneAlive = false;
             try { _sceneGate.Set(); } catch { }
+            _serverManager?.ForceKillProcess();
             _discordManager?.Dispose();
             base.OnClosed(e);
         }
@@ -2769,7 +2772,6 @@ namespace CustomLauncher
             {
                 try { _gameProcess.Kill(entireProcessTree: true); } catch { }
                 _gameProcess = null;
-                Show();
                 SetPlayState("idle");
                 StatusText.Text = Lang.T("Готов");
                 SetProgress(0);
@@ -2837,10 +2839,11 @@ namespace CustomLauncher
                     dynamic? sessionObj = null;
                     try { sessionObj = await handler.AuthenticateSilently(); } catch { }
 
-                    if (sessionObj != null && !string.IsNullOrEmpty(sessionObj.Username))
+                    string? msaName = sessionObj is null ? null : (string?)sessionObj.Username;
+                    if (sessionObj is not null && !string.IsNullOrEmpty(msaName))
                     {
                         mSession = new MSession();
-                        mSession.Username = sessionObj.Username;
+                        mSession.Username = msaName;
                         mSession.AccessToken = sessionObj.AccessToken;
                         mSession.UUID = sessionObj.UUID;
                         mSession.UserType = "msa";
@@ -2942,8 +2945,7 @@ namespace CustomLauncher
                 CleanForgeLog();
                 Log(Lang.T("Forge установлен."));
             }
-            catch (Exception ex) { ShowForgeWarning(false); await HandleErrorAsync(ex, Lang.T("Ошибка Forge")); }
-            finally { GameProgressBar.IsIndeterminate = false; }
+            finally { ShowForgeWarning(false); GameProgressBar.IsIndeterminate = false; }
         }
 
         private async Task RunForgeInstaller(string jar)
@@ -2960,7 +2962,7 @@ namespace CustomLauncher
                 StandardErrorEncoding = System.Text.Encoding.UTF8
             };
 
-            var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+            using var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
             DataReceivedEventHandler onData = (s, e) =>
             {
                 if (string.IsNullOrWhiteSpace(e.Data)) return;
@@ -2976,6 +2978,9 @@ namespace CustomLauncher
             var creep = StartCreepProgress(95, 200);
             try { await proc.WaitForExitAsync(); }
             finally { StopCreepProgress(creep); SetProgress(100); }
+
+            if (proc.ExitCode != 0)
+                throw new Exception(Lang.F("Установщик Forge завершился с кодом {0}", proc.ExitCode));
         }
 
         private System.Windows.Threading.DispatcherTimer StartCreepProgress(double to, double seconds)

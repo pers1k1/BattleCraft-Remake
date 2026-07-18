@@ -130,6 +130,10 @@ namespace CustomLauncher.Core
                     buffer.Write(chunk, 0, read);
                 }
 
+                if (expected is > 0 && buffer.Length != expected.Value)
+                    throw new IOException(Lang.F("Загрузка оборвалась: получено {0} из {1}.",
+                        FileDownloader.FormatSize(buffer.Length), FileDownloader.FormatSize(expected.Value)));
+
                 return buffer.ToArray();
             }
 
