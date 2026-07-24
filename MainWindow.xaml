@@ -1286,8 +1286,24 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <Image Grid.Column="0" Source="winlogo.png" Width="150" Height="150" VerticalAlignment="Top" Margin="0,1,20,0"
-                                               Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" SnapsToDevicePixels="True"/>
+                                        <TextBlock Grid.Column="0" xml:space="preserve" VerticalAlignment="Top" Margin="0,18,20,0"
+                                                   FontFamily="Consolas, Courier New" FontSize="7.5" LineHeight="7" LineStackingStrategy="BlockLineHeight"
+                                                   Foreground="{DynamicResource AccentBrush}" TextAlignment="Left">                                     . {#{+ ..
+           . . .                           &gt;###[~....
+      +###{^:  .                                -&lt;{#(.
+    ... .  .                         .=+=.      .    .
+                .~^&gt;]#                (#######[-..
+      ...^{#########{..                  .*########+.
+ .=############^  .                         ]##########{:.
+.*###{^ {######^                            *#######*  ##
+  ##[.  :######=                            &gt;#######..*#~
+   ##.   ######       .              .       ######&gt; .#[
+  .~##  . [###^.      +              -~.    . .###].+{#
+  . ~{#.     .    ..#}             .  .{####].  . ###.
+    ..*###=. .  .}#&gt; ..                   .+]####{~.
+      ...:]{###&gt;...
+
+                         .######{(.</TextBlock>
 
                                         <StackPanel Grid.Column="1">
                                             <TextBlock FontFamily="Consolas, Courier New" FontSize="15" Margin="0,0,0,6">

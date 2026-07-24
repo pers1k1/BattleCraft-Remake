@@ -23,7 +23,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <Resource Include="app_icon.ico" />
     <Resource Include="logo_main.png" />
-    <Resource Include="winlogo.png" />
   </ItemGroup>
 
 </Project>
