@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "8.6.4";
+        private const string VER = "8.6.5";
         private const string MC = "1.20.1";
         private const string FORGE = "47.4.20";
         private const string FULL_ID = MC + "-forge-" + FORGE;
@@ -122,13 +122,9 @@ namespace CustomLauncher
                 CustomDialogBtnOk.Content = isYesNo ? Lang.T("Да") : "OK";
 
                 CustomDialogOverlay.Visibility = Visibility.Visible;
-                CustomDialogOverlay.Opacity = 0;
-                CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
-
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-                CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                TweenOpacity(CustomDialogOverlay, 0, 1, 200, Linear);
+                TweenScale(CustomDialogScale, 0.95, 1, 250, OutCubic);
+                TweenY(CustomDialogTranslate, 15, 0, 250, OutCubic);
 
                 _dialogTcs = new TaskCompletionSource<bool>();
                 return await _dialogTcs.Task;
@@ -153,15 +149,12 @@ namespace CustomLauncher
 
         private void CloseCustomDialog()
         {
-            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(150));
-            fade.Completed += (s2, e2) =>
+            TweenOpacity(CustomDialogOverlay, 1, 0, 150, Linear, 0, () =>
             {
                 CustomDialogOverlay.Visibility = Visibility.Hidden;
-                CustomDialogOverlay.BeginAnimation(OpacityProperty, null);
                 CustomDialogOverlay.Opacity = 1;
                 CustomDialogInputBox.Visibility = Visibility.Collapsed;
-            };
-            CustomDialogOverlay.BeginAnimation(OpacityProperty, fade);
+            });
         }
 
         private async Task<string?> ShowInputDialogAsync(string title, string defaultValue = "")
@@ -178,13 +171,9 @@ namespace CustomLauncher
                 CustomDialogBtnOk.Content = "OK";
 
                 CustomDialogOverlay.Visibility = Visibility.Visible;
-                CustomDialogOverlay.Opacity = 0;
-                CustomDialogOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
-
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-                CustomDialogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.95, 1, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
-                CustomDialogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(15, 0, TimeSpan.FromMilliseconds(250)) { EasingFunction = ease });
+                TweenOpacity(CustomDialogOverlay, 0, 1, 200, Linear);
+                TweenScale(CustomDialogScale, 0.95, 1, 250, OutCubic);
+                TweenY(CustomDialogTranslate, 15, 0, 250, OutCubic);
 
                 _dialogTcs = new TaskCompletionSource<bool>();
                 bool confirmed = await _dialogTcs.Task;
@@ -206,6 +195,7 @@ namespace CustomLauncher
         public MainWindow()
         {
             LauncherLog.Init();
+            RefreshDisplayRate(true);
             InitializeComponent();
             _consoleFlushTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
             _consoleFlushTimer.Tick += (s, e) => FlushConsoleQueue();
@@ -215,9 +205,22 @@ namespace CustomLauncher
             StateChanged += (s, e) => UpdateSceneAnimation();
             Activated += (s, e) => UpdateSceneAnimation();
             Deactivated += (s, e) => UpdateSceneAnimation();
+            LocationChanged += (s, e) => RefreshDisplayRate();
             _ = BootSequenceAsync();
 
             ResilientHttpClientFactory.DownloadRetry += notice => Log(notice);
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            RefreshDisplayRate(true);
+            if (System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle) is { } src)
+                src.AddHook((IntPtr h, int msg, IntPtr w, IntPtr l, ref bool handled) =>
+                {
+                    if (msg == WM_DISPLAYCHANGE || msg == WM_SETTINGCHANGE) RefreshDisplayRate(true);
+                    return IntPtr.Zero;
+                });
         }
 
         protected override void OnClosed(EventArgs e)
@@ -513,23 +516,16 @@ namespace CustomLauncher
                 var ob = oldBackdrop;
                 if (animate)
                 {
-                    var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(550));
-                    fade.Completed += (s2, e2) =>
+                    TweenOpacity(ob, ob.Opacity, 0, 550, Linear, 0, () =>
                     {
                         if (_activeBackdrop == ob) return;
                         ob.Visibility = Visibility.Collapsed;
-                    };
-                    ob.BeginAnimation(OpacityProperty, fade);
-                    if (oldScale != null && target == null)
-                    {
-                        var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
-                        oldScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
-                        oldScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.04, TimeSpan.FromMilliseconds(550)) { EasingFunction = ease });
-                    }
+                    });
+                    if (oldScale != null && target == null) TweenScale(oldScale, 1, 1.04, 550, InCubic);
                 }
                 else
                 {
-                    ob.BeginAnimation(OpacityProperty, null);
+                    StopTween(ob, SLOT_OPACITY);
                     ob.Opacity = 0;
                     ob.Visibility = Visibility.Collapsed;
                 }
@@ -544,24 +540,17 @@ namespace CustomLauncher
             target.Visibility = Visibility.Visible;
             if (targetScale != null)
             {
-                targetScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); targetScale.ScaleX = 1;
-                targetScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); targetScale.ScaleY = 1;
+                StopTween(targetScale, SLOT_SCALE);
+                targetScale.ScaleX = 1; targetScale.ScaleY = 1;
             }
             if (animate)
             {
-                var fade = new DoubleAnimation(1, TimeSpan.FromMilliseconds(650));
-                fade.Completed += (s2, e2) => { if (_activeBackdrop == target) _bgAnimated = false; };
-                target.BeginAnimation(OpacityProperty, fade);
-                if (targetScale != null && oldBackdrop == null)
-                {
-                    var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                    targetScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
-                    targetScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.05, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = ease });
-                }
+                TweenOpacity(target, target.Opacity, 1, 650, Linear, 0, () => { if (_activeBackdrop == target) _bgAnimated = false; });
+                if (targetScale != null && oldBackdrop == null) TweenScale(targetScale, 1.05, 1, 800, OutCubic);
             }
             else
             {
-                target.BeginAnimation(OpacityProperty, null);
+                StopTween(target, SLOT_OPACITY);
                 target.Opacity = 1;
                 _bgAnimated = false;
             }
@@ -1884,33 +1873,15 @@ namespace CustomLauncher
                     Canvas.SetTop(px, offY + r * cell);
                     BootPixelCanvas.Children.Add(px);
 
-                    var begin = TimeSpan.FromMilliseconds((r + c) * 24);
-                    var fade = new DoubleAnimation(1, TimeSpan.FromMilliseconds(160)) { BeginTime = begin };
-                    var pop = new DoubleAnimation(1, TimeSpan.FromMilliseconds(240))
-                    {
-                        BeginTime = begin,
-                        EasingFunction = new BackEase { Amplitude = 0.6, EasingMode = EasingMode.EaseOut }
-                    };
-                    px.BeginAnimation(UIElement.OpacityProperty, fade);
-                    sc.BeginAnimation(ScaleTransform.ScaleXProperty, pop);
-                    sc.BeginAnimation(ScaleTransform.ScaleYProperty, pop.Clone());
+                    double begin = (r + c) * 24;
+                    TweenOpacity(px, 0, 1, 160, Linear, begin);
+                    TweenScale(sc, 0, 1, 240, OutBackSoft, begin);
                 }
             }
 
             var glow = new DropShadowEffect { Color = accentBase, BlurRadius = 26, ShadowDepth = 0, Opacity = 0 };
             BootPixelCanvas.Effect = glow;
-            var glowIn = new DoubleAnimation(0, 0.7, TimeSpan.FromMilliseconds(450)) { BeginTime = TimeSpan.FromMilliseconds(380) };
-            glowIn.Completed += (s, e) =>
-            {
-                var pulse = new DoubleAnimation(0.45, 0.8, TimeSpan.FromSeconds(1.6))
-                {
-                    AutoReverse = true,
-                    RepeatBehavior = RepeatBehavior.Forever,
-                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-                };
-                glow.BeginAnimation(DropShadowEffect.OpacityProperty, pulse);
-            };
-            glow.BeginAnimation(DropShadowEffect.OpacityProperty, glowIn);
+            TweenEffectOpacity(glow, 0, 0.7, 450, Linear, 380, () => StartPulse(glow, 0.45, 0.8, 3200));
         }
 
         private async Task BootSequenceAsync()
@@ -1923,12 +1894,11 @@ namespace CustomLauncher
 
                 if (BootTitle != null)
                 {
-                    BootTitle.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(400)));
-                    BootTitleTr?.BeginAnimation(TranslateTransform.YProperty,
-                        new DoubleAnimation(0, TimeSpan.FromMilliseconds(450)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+                    TweenOpacity(BootTitle, BootTitle.Opacity, 1, 400, Linear);
+                    if (BootTitleTr != null) TweenY(BootTitleTr, BootTitleTr.Y, 0, 450, OutCubic);
                 }
                 if (BootSubtitle != null)
-                    BootSubtitle.BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(350)) { BeginTime = TimeSpan.FromMilliseconds(100) });
+                    TweenOpacity(BootSubtitle, BootSubtitle.Opacity, 1, 350, Linear, 100);
 
                 await Task.Delay(200);
 
@@ -2042,8 +2012,7 @@ namespace CustomLauncher
         private void SetBootProgress(double target)
         {
             if (BootProgress == null) return;
-            BootProgress.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty,
-                new DoubleAnimation(target, TimeSpan.FromMilliseconds(280)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            TweenValue(BootProgress, target, 280, OutCubic);
             if (BootPercent != null) BootPercent.Text = $"{Math.Round(target)}%";
         }
 
@@ -2051,16 +2020,13 @@ namespace CustomLauncher
         {
             var tcs = new TaskCompletionSource<bool>();
             if (BootOverlay == null) { tcs.SetResult(true); return tcs.Task; }
-            var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(400)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            fade.Completed += (s, e) =>
+            TweenOpacity(BootOverlay, BootOverlay.Opacity, 0, 400, InCubic, 0, () =>
             {
-                if (BootPixelCanvas?.Effect is DropShadowEffect dse) dse.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+                StopPulse();
                 if (BootPixelCanvas != null) { BootPixelCanvas.Effect = null; BootPixelCanvas.Children.Clear(); }
                 BootOverlay.Visibility = Visibility.Collapsed;
-                BootOverlay.BeginAnimation(OpacityProperty, null);
                 tcs.TrySetResult(true);
-            };
-            BootOverlay.BeginAnimation(OpacityProperty, fade);
+            });
             return tcs.Task;
         }
 
@@ -2265,7 +2231,7 @@ namespace CustomLauncher
             SetupPathBox.Text = _settings.GamePath;
 
             SetupPanel.Opacity = 0;
-            SetupPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = new QuarticEase { EasingMode = EasingMode.EaseOut }, BeginTime = TimeSpan.FromMilliseconds(200) });
+            TweenOpacity(SetupPanel, 0, 1, 800, OutQuart, 200);
         }
 
         private void BtnSetupSelectFolder_Click(object s, RoutedEventArgs e)
@@ -2346,15 +2312,12 @@ namespace CustomLauncher
             UsernameBox.Text = nick; RamSlider.Value = 4096; SetupPathBox.Text = path; PathBox.Text = path;
             _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
 
-            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            fade.Completed += (s2, e2) =>
+            TweenOpacity(SetupPanel, 1, 0, 220, InCubic, 0, () =>
             {
                 SetupPanel.Visibility = Visibility.Hidden;
-                SetupPanel.BeginAnimation(OpacityProperty, null);
                 SetupPanel.Opacity = 1;
                 SwitchToMain();
-            };
-            SetupPanel.BeginAnimation(OpacityProperty, fade);
+            });
         }
 
         public sealed class ColorPreset
@@ -2701,6 +2664,7 @@ namespace CustomLauncher
         private void InitializeLauncher()
         {
             Log(Lang.F("Платформа: {0} ({1})", GetWindowsVersionName(), Environment.OSVersion.Version));
+            Log(Lang.F("Дисплей: {0} Гц — анимации идут в такт монитору", Math.Round(_refreshHz)));
             _minecraftPath = new MinecraftPath(_settings.GamePath);
 
             var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath, ResilientHttpClientFactory.Shared);
@@ -3540,21 +3504,11 @@ namespace CustomLauncher
 
             WelcomeText.Text = ""; VersionText.Text = "";
 
-            var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
-
-            MainPanel.Opacity = 0;
-            MainPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320)) { EasingFunction = ease });
-            if (SideBarTransform != null)
-                SideBarTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-70, 0, TimeSpan.FromMilliseconds(520)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-
-            TopButtons.Opacity = 0;
-            TopButtons.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(300) });
-
-            BtnPlay.Opacity = 0;
-            BtnPlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(500) });
-
-            BtnGitHub.Opacity = 0;
-            BtnGitHub.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 0.7, TimeSpan.FromMilliseconds(600)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(400) });
+            TweenOpacity(MainPanel, 0, 1, 320, OutQuart);
+            if (SideBarTransform != null) TweenX(SideBarTransform, -70, 0, 520, OutCubic);
+            TweenOpacity(TopButtons, 0, 1, 600, OutQuart, 300);
+            TweenOpacity(BtnPlay, 0, 1, 600, OutQuart, 500);
+            TweenOpacity(BtnGitHub, 0, 0.7, 600, OutQuart, 400);
 
             InitializeLauncher(); await CheckUpdates();
 
@@ -3572,12 +3526,8 @@ namespace CustomLauncher
             if (_settings.UserType == "msa") UsernameBox.Text = "";
             else UsernameBox.Text = _settings.Username;
 
-            var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
-            LoginPanel.Opacity = 0;
-            LoginPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(450)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(80) });
-            var tr = EnsureTabTransform(LoginPanel);
-            tr.Y = 22;
-            tr.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(22, 0, TimeSpan.FromMilliseconds(520)) { EasingFunction = ease, BeginTime = TimeSpan.FromMilliseconds(80) });
+            TweenOpacity(LoginPanel, 0, 1, 450, OutQuart, 80);
+            TweenY(EnsureTabTransform(LoginPanel), 22, 0, 520, OutQuart, 80);
         }
 
         private async void BtnLoginMicrosoft_Click(object s, RoutedEventArgs e)
@@ -3631,7 +3581,7 @@ namespace CustomLauncher
         private void SetProgress(double v)
         {
             if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => SetProgress(v)); return; }
-            GameProgressBar.BeginAnimation(ProgressBar.ValueProperty, new DoubleAnimation { To = v, Duration = TimeSpan.FromMilliseconds(250), EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+            TweenValue(GameProgressBar, v, 250, OutQuad);
         }
 
         private string GetThemeDir() { string p = Path.Combine(_settings.GamePath, "launcher_theme"); if (_settings.HasGamePath && !Directory.Exists(p)) try { Directory.CreateDirectory(p); } catch { } return p; }
@@ -3662,20 +3612,17 @@ namespace CustomLauncher
 
             RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
             PathBox.Text = _settings.GamePath;
-            SettingsScale.ScaleX = 1; SettingsScale.ScaleY = 1; SettingsTranslate.Y = 0;
-            SettingsPanel.Opacity = 0;
-            SettingsPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
-            var pop = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 1.4 };
-            var slide = new CubicEase { EasingMode = EasingMode.EaseOut };
-            SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
-            SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
-            SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(420)) { EasingFunction = slide });
-
-            var titleEase = new QuarticEase { EasingMode = EasingMode.EaseOut };
             SettingsTitle.Opacity = 0;
             SettingsTitleTranslate.Y = 20;
-            SettingsTitle.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(800)) { EasingFunction = titleEase, BeginTime = TimeSpan.FromMilliseconds(150) });
-            SettingsTitleTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(800)) { EasingFunction = titleEase, BeginTime = TimeSpan.FromMilliseconds(150) });
+            CacheWhileMoving(SettingsBox, true);
+            TweenOpacity(SettingsPanel, 0, 1, 180, Linear);
+            TweenScale(SettingsScale, 0.85, 1, 420, OutBackWide);
+            TweenY(SettingsTranslate, 30, 0, 420, OutCubic, 0, () =>
+            {
+                CacheWhileMoving(SettingsBox, false);
+                TweenOpacity(SettingsTitle, 0, 1, 650, OutQuart);
+                TweenY(SettingsTitleTranslate, 20, 0, 650, OutQuart);
+            });
         }
 
         private async void BtnCloseSettings_Click(object s, RoutedEventArgs e)
@@ -3701,25 +3648,17 @@ namespace CustomLauncher
                 PathBox.Text = np;
             }
             AppSettings.Save(_settings); if (_settings.HasGamePath) InitializeLauncher();
-            var dur = TimeSpan.FromMilliseconds(200);
-            var collapse = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.6 };
-            var sink = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var sx = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
-            var sy = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
-            var ty = new DoubleAnimation(0, 18, dur) { EasingFunction = sink };
-            var fade = new DoubleAnimation(1, 0, dur);
-            fade.Completed += (s2, e2) =>
+            CacheWhileMoving(SettingsBox, true);
+            TweenScale(SettingsScale, 1, 0.88, 200, InBackSoft);
+            TweenY(SettingsTranslate, 0, 18, 200, InCubic);
+            TweenOpacity(SettingsPanel, 1, 0, 200, Linear, 0, () =>
             {
+                CacheWhileMoving(SettingsBox, false);
                 SettingsPanel.Visibility = Visibility.Hidden;
-                SettingsPanel.BeginAnimation(OpacityProperty, null); SettingsPanel.Opacity = 1;
-                SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); SettingsScale.ScaleX = 1;
-                SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); SettingsScale.ScaleY = 1;
-                SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, null); SettingsTranslate.Y = 0;
-            };
-            SettingsScale.BeginAnimation(ScaleTransform.ScaleXProperty, sx);
-            SettingsScale.BeginAnimation(ScaleTransform.ScaleYProperty, sy);
-            SettingsTranslate.BeginAnimation(TranslateTransform.YProperty, ty);
-            SettingsPanel.BeginAnimation(OpacityProperty, fade);
+                SettingsPanel.Opacity = 1;
+                SettingsScale.ScaleX = 1; SettingsScale.ScaleY = 1;
+                SettingsTranslate.Y = 0;
+            });
         }
 
         private void BtnSaveSettings_Click(object s, RoutedEventArgs e) => BtnCloseSettings_Click(s, e);
@@ -3731,14 +3670,10 @@ namespace CustomLauncher
         private async void BtnChangelogs_Click(object s, RoutedEventArgs e)
         {
             ChangelogPanel.Visibility = Visibility.Visible;
-            ChangelogScale.ScaleX = 1; ChangelogScale.ScaleY = 1; ChangelogTranslate.Y = 0;
-            ChangelogPanel.Opacity = 0;
-            ChangelogPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
-            var pop = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 1.4 };
-            var slide = new CubicEase { EasingMode = EasingMode.EaseOut };
-            ChangelogScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
-            ChangelogScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.85, 1, TimeSpan.FromMilliseconds(420)) { EasingFunction = pop });
-            ChangelogTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(420)) { EasingFunction = slide });
+            CacheWhileMoving(ChangelogBox, true);
+            TweenOpacity(ChangelogPanel, 0, 1, 180, Linear);
+            TweenScale(ChangelogScale, 0.85, 1, 420, OutBackWide);
+            TweenY(ChangelogTranslate, 30, 0, 420, OutCubic, 0, () => CacheWhileMoving(ChangelogBox, false));
 
             _launcherChangelog = ""; _modpackChangelog = "";
             SetChangelogTab(false);
@@ -3791,25 +3726,17 @@ namespace CustomLauncher
 
         private void BtnCloseChangelog_Click(object s, RoutedEventArgs e)
         {
-            var dur = TimeSpan.FromMilliseconds(200);
-            var collapse = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.6 };
-            var sink = new CubicEase { EasingMode = EasingMode.EaseIn };
-            var sx = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
-            var sy = new DoubleAnimation(1, 0.88, dur) { EasingFunction = collapse };
-            var ty = new DoubleAnimation(0, 18, dur) { EasingFunction = sink };
-            var fade = new DoubleAnimation(1, 0, dur);
-            fade.Completed += (s2, e2) =>
+            CacheWhileMoving(ChangelogBox, true);
+            TweenScale(ChangelogScale, 1, 0.88, 200, InBackSoft);
+            TweenY(ChangelogTranslate, 0, 18, 200, InCubic);
+            TweenOpacity(ChangelogPanel, 1, 0, 200, Linear, 0, () =>
             {
+                CacheWhileMoving(ChangelogBox, false);
                 ChangelogPanel.Visibility = Visibility.Hidden;
-                ChangelogPanel.BeginAnimation(OpacityProperty, null); ChangelogPanel.Opacity = 1;
-                ChangelogScale.BeginAnimation(ScaleTransform.ScaleXProperty, null); ChangelogScale.ScaleX = 1;
-                ChangelogScale.BeginAnimation(ScaleTransform.ScaleYProperty, null); ChangelogScale.ScaleY = 1;
-                ChangelogTranslate.BeginAnimation(TranslateTransform.YProperty, null); ChangelogTranslate.Y = 0;
-            };
-            ChangelogScale.BeginAnimation(ScaleTransform.ScaleXProperty, sx);
-            ChangelogScale.BeginAnimation(ScaleTransform.ScaleYProperty, sy);
-            ChangelogTranslate.BeginAnimation(TranslateTransform.YProperty, ty);
-            ChangelogPanel.BeginAnimation(OpacityProperty, fade);
+                ChangelogPanel.Opacity = 1;
+                ChangelogScale.ScaleX = 1; ChangelogScale.ScaleY = 1;
+                ChangelogTranslate.Y = 0;
+            });
         }
         private void DebugCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) { _settings.DebugConsole = DebugCheck.IsChecked == true; AppSettings.Save(_settings); } }
         private void BtnSelectFolder_Click(object s, RoutedEventArgs e) { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) PathBox.Text = ResolveGamePath(d.FolderName); }
@@ -3918,7 +3845,7 @@ namespace CustomLauncher
 
         private void ShowSpinnerOverlay(string title, string sub, bool showProgress)
         {
-            UpdateProgressBar.BeginAnimation(ProgressBar.ValueProperty, null);
+            StopTween(UpdateProgressBar, SLOT_VALUE);
             UpdateProgressBar.Value = 0;
             UpdateTitleText.Text = title;
             UpdateSubText.Text = sub;
@@ -3928,20 +3855,15 @@ namespace CustomLauncher
             UpdateSpinnerArc?.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "AccentBrush");
 
             UpdateOverlay.Visibility = Visibility.Visible;
-            UpdateOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
-
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            UpdateCardScale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.92, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
-            UpdateCardScale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.92, 1, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
-            UpdateCardTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(24, 0, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease });
-
-            UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty,
-                new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1.1)) { RepeatBehavior = RepeatBehavior.Forever });
+            TweenOpacity(UpdateOverlay, 0, 1, 220, Linear);
+            TweenScale(UpdateCardScale, 0.92, 1, 260, OutCubic);
+            TweenY(UpdateCardTranslate, 24, 0, 260, OutCubic);
+            StartSpin(UpdateSpinnerRotate, 1100);
         }
 
         private async Task AuthOverlayFail(string title, string sub)
         {
-            UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+            StopSpin();
             if (UpdateSpinnerArc != null) UpdateSpinnerArc.Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x6B));
             UpdateTitleText.Text = title;
             UpdateSubText.Text = sub;
@@ -3952,15 +3874,14 @@ namespace CustomLauncher
 
         private void HideUpdateOverlay()
         {
-            UpdateSpinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
-            UpdateOverlay.BeginAnimation(OpacityProperty, null);
+            StopSpin();
+            StopTween(UpdateOverlay, SLOT_OPACITY);
             UpdateOverlay.Visibility = Visibility.Hidden;
         }
 
         private void SetUpdateProgress(double percent)
         {
-            UpdateProgressBar.BeginAnimation(ProgressBar.ValueProperty,
-                new DoubleAnimation { To = percent, Duration = TimeSpan.FromMilliseconds(200), EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+            TweenValue(UpdateProgressBar, percent, 200, OutQuad);
             UpdatePercentText.Text = $"{percent:F0}%";
         }
 
@@ -4061,7 +3982,7 @@ namespace CustomLauncher
             PopElement(tb, 1.025, 150);
         }
 
-        private static void PopElement(FrameworkElement fe, double from, int ms)
+        private void PopElement(FrameworkElement fe, double from, int ms)
         {
             fe.RenderTransformOrigin = new Point(0.5, 0.5);
             if (fe.RenderTransform is not ScaleTransform sc)
@@ -4069,12 +3990,7 @@ namespace CustomLauncher
                 sc = new ScaleTransform(1, 1);
                 fe.RenderTransform = sc;
             }
-            var a = new DoubleAnimation(from, 1, TimeSpan.FromMilliseconds(ms))
-            {
-                EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 1.4 }
-            };
-            sc.BeginAnimation(ScaleTransform.ScaleXProperty, a);
-            sc.BeginAnimation(ScaleTransform.ScaleYProperty, a.Clone());
+            TweenScale(sc, from, 1, ms, OutBackWide);
         }
 
         public void Btn_MouseTrack(object sender, MouseEventArgs e)
@@ -4086,8 +4002,8 @@ namespace CustomLauncher
                 double curX = t.X, curY = t.Y;
                 if (double.IsInfinity(curX) || double.IsNaN(curX)) curX = 0;
                 if (double.IsInfinity(curY) || double.IsNaN(curY)) curY = 0;
-                t.BeginAnimation(TranslateTransform.XProperty, null);
-                t.BeginAnimation(TranslateTransform.YProperty, null);
+                StopTween(t, SLOT_X);
+                StopTween(t, SLOT_Y);
                 t.X = curX;
                 t.Y = curY;
                 var p = e.GetPosition(btn);
@@ -4107,13 +4023,8 @@ namespace CustomLauncher
                 double curX = t.X, curY = t.Y;
                 if (double.IsInfinity(curX) || double.IsNaN(curX)) curX = 0;
                 if (double.IsInfinity(curY) || double.IsNaN(curY)) curY = 0;
-                t.BeginAnimation(TranslateTransform.XProperty, null);
-                t.BeginAnimation(TranslateTransform.YProperty, null);
-                t.X = 0;
-                t.Y = 0;
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                t.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(curX, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
-                t.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(curY, 0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease });
+                TweenX(t, curX, 0, 300, OutCubic);
+                TweenY(t, curY, 0, 300, OutCubic);
             }
         }
 
@@ -4133,74 +4044,379 @@ namespace CustomLauncher
             SpawnBurst(origin);
         }
 
+        private sealed class FxLayer : FrameworkElement
+        {
+            private readonly VisualCollection _visuals;
+
+            public DrawingVisual Surface { get; } = new();
+
+            public FxLayer()
+            {
+                _visuals = new VisualCollection(this) { Surface };
+                IsHitTestVisible = false;
+            }
+
+            protected override int VisualChildrenCount => _visuals?.Count ?? 0;
+
+            protected override Visual GetVisualChild(int index) => _visuals[index];
+        }
+
+        private struct FxDot
+        {
+            public double X, Y, Dx, Dy, Radius, Start, Life;
+            public Color Color;
+        }
+
+        private struct FxRing
+        {
+            public double X, Y, Start;
+            public Color Color;
+        }
+
+        private sealed class Tween
+        {
+            public object Owner = null!;
+            public int Slot;
+            public double Start, Delay, Duration, From, To;
+            public Func<double, double> Ease = null!;
+            public Action<double> Apply = null!;
+            public Action? Done;
+        }
+
+        private const int SLOT_OPACITY = 0;
+        private const int SLOT_SCALE = 1;
+        private const int SLOT_X = 2;
+        private const int SLOT_Y = 3;
+        private const int SLOT_VALUE = 4;
+
+        private const double FX_RING_LIFE = 0.42;
+        private const double FX_RING_RADIUS = 17;
+        private const int FX_DOT_LIMIT = 96;
+
+        private readonly List<FxDot> _fxDots = new();
+        private readonly List<FxRing> _fxRings = new();
+        private readonly List<Tween> _tweens = new();
+        private readonly List<Tween> _finished = new();
+        private RotateTransform? _spinTarget;
+        private double _spinPeriod = 1.1;
+        private DropShadowEffect? _pulseTarget;
+        private double _pulseLo, _pulseHi, _pulsePeriod = 1, _pulseStart;
+        private FxLayer? _fxLayer;
+        private bool _fxRunning;
+        private double _refreshHz = 60;
+        private double _frameBudget = 1.0 / 60;
+        private double _lastAnimFrame;
+        private IntPtr _refreshMonitor;
+
+        private void Animate(object owner, int slot, double from, double to, double ms, Func<double, double> ease, Action<double> apply, double delayMs = 0, Action? done = null)
+        {
+            StopTween(owner, slot);
+            apply(from);
+            if (ms <= 0)
+            {
+                apply(to);
+                done?.Invoke();
+                return;
+            }
+            _tweens.Add(new Tween
+            {
+                Owner = owner,
+                Slot = slot,
+                Start = _fxClock.Elapsed.TotalSeconds,
+                Delay = delayMs / 1000.0,
+                Duration = ms / 1000.0,
+                From = from,
+                To = to,
+                Ease = ease,
+                Apply = apply,
+                Done = done
+            });
+            StartAnimLoop();
+        }
+
+        private void StopTween(object owner, int slot)
+        {
+            for (int i = _tweens.Count - 1; i >= 0; i--)
+                if (ReferenceEquals(_tweens[i].Owner, owner) && _tweens[i].Slot == slot) _tweens.RemoveAt(i);
+        }
+
+        private void TweenOpacity(UIElement el, double from, double to, double ms, Func<double, double> ease, double delay = 0, Action? done = null)
+            => Animate(el, SLOT_OPACITY, from, to, ms, ease, v => el.Opacity = v, delay, done);
+
+        private void TweenEffectOpacity(DropShadowEffect fx, double from, double to, double ms, Func<double, double> ease, double delay = 0, Action? done = null)
+            => Animate(fx, SLOT_OPACITY, from, to, ms, ease, v => fx.Opacity = v, delay, done);
+
+        private void TweenScale(ScaleTransform st, double from, double to, double ms, Func<double, double> ease, double delay = 0, Action? done = null)
+            => Animate(st, SLOT_SCALE, from, to, ms, ease, v => { st.ScaleX = v; st.ScaleY = v; }, delay, done);
+
+        private void TweenX(TranslateTransform tr, double from, double to, double ms, Func<double, double> ease, double delay = 0, Action? done = null)
+            => Animate(tr, SLOT_X, from, to, ms, ease, v => tr.X = v, delay, done);
+
+        private void TweenY(TranslateTransform tr, double from, double to, double ms, Func<double, double> ease, double delay = 0, Action? done = null)
+            => Animate(tr, SLOT_Y, from, to, ms, ease, v => tr.Y = v, delay, done);
+
+        private void TweenValue(System.Windows.Controls.Primitives.RangeBase bar, double to, double ms, Func<double, double> ease)
+            => Animate(bar, SLOT_VALUE, bar.Value, to, ms, ease, v => bar.Value = v);
+
+        private void StartSpin(RotateTransform rt, double periodMs)
+        {
+            _spinPeriod = periodMs / 1000.0;
+            _spinTarget = rt;
+            StartAnimLoop();
+        }
+
+        private void StopSpin()
+        {
+            _spinTarget = null;
+        }
+
+        private void StartPulse(DropShadowEffect fx, double lo, double hi, double periodMs)
+        {
+            _pulseLo = lo;
+            _pulseHi = hi;
+            _pulsePeriod = periodMs / 1000.0;
+            _pulseStart = _fxClock.Elapsed.TotalSeconds;
+            _pulseTarget = fx;
+            StartAnimLoop();
+        }
+
+        private void StopPulse()
+        {
+            _pulseTarget = null;
+        }
+
+        private static void CacheWhileMoving(UIElement el, bool on)
+        {
+            if (on) el.CacheMode ??= new BitmapCache();
+            else if (el.CacheMode is BitmapCache) el.CacheMode = null;
+        }
+
+        private void StartAnimLoop()
+        {
+            if (_fxRunning) return;
+            _fxRunning = true;
+            CompositionTarget.Rendering += AnimTick;
+        }
+
+        private void AnimTick(object? sender, EventArgs e)
+        {
+            double now = _fxClock.Elapsed.TotalSeconds;
+            if (now - _lastAnimFrame < _frameBudget) return;
+            _lastAnimFrame = now;
+
+            for (int i = _tweens.Count - 1; i >= 0; i--)
+            {
+                var tw = _tweens[i];
+                double t = (now - tw.Start - tw.Delay) / tw.Duration;
+                if (t < 0) continue;
+                if (t >= 1)
+                {
+                    tw.Apply(tw.To);
+                    _tweens.RemoveAt(i);
+                    if (tw.Done != null) _finished.Add(tw);
+                    continue;
+                }
+                tw.Apply(tw.From + (tw.To - tw.From) * tw.Ease(t));
+            }
+
+            if (_spinTarget != null) _spinTarget.Angle = now / _spinPeriod % 1 * 360;
+
+            if (_pulseTarget != null)
+                _pulseTarget.Opacity = _pulseLo + (_pulseHi - _pulseLo) * (0.5 - 0.5 * Math.Cos((now - _pulseStart) / _pulsePeriod * 2 * Math.PI));
+
+            if (_fxDots.Count > 0 || _fxRings.Count > 0)
+            {
+                for (int i = _fxDots.Count - 1; i >= 0; i--)
+                    if (now - _fxDots[i].Start >= _fxDots[i].Life) _fxDots.RemoveAt(i);
+                for (int i = _fxRings.Count - 1; i >= 0; i--)
+                    if (now - _fxRings[i].Start >= FX_RING_LIFE) _fxRings.RemoveAt(i);
+                PaintFx(now);
+            }
+
+            if (_finished.Count > 0)
+            {
+                int n = _finished.Count;
+                for (int i = 0; i < n; i++) _finished[i].Done?.Invoke();
+                _finished.RemoveRange(0, n);
+            }
+
+            if (_tweens.Count == 0 && _fxDots.Count == 0 && _fxRings.Count == 0 && _spinTarget == null && _pulseTarget == null)
+            {
+                _fxRunning = false;
+                CompositionTarget.Rendering -= AnimTick;
+            }
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern bool GetMonitorInfoW(IntPtr monitor, ref MONITORINFOEX info);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern bool EnumDisplaySettingsW(string? deviceName, int modeNum, ref DEVMODE mode);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct MONITORINFOEX
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string szDevice;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int left, top, right, bottom; }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct DEVMODE
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string dmDeviceName;
+            public ushort dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra;
+            public uint dmFields;
+            public int dmPositionX, dmPositionY;
+            public uint dmDisplayOrientation, dmDisplayFixedOutput;
+            public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string dmFormName;
+            public ushort dmLogPixels;
+            public uint dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
+            public uint dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
+        }
+
+        private const int ENUM_CURRENT_SETTINGS = -1;
+        private const uint MONITOR_DEFAULTTONEAREST = 2;
+        private const int WM_DISPLAYCHANGE = 0x007E;
+        private const int WM_SETTINGCHANGE = 0x001A;
+
+        private void RefreshDisplayRate(bool force = false)
+        {
+            IntPtr hwnd = IntPtr.Zero;
+            try { hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle; }
+            catch { }
+
+            var monitor = hwnd != IntPtr.Zero ? MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) : IntPtr.Zero;
+            if (!force && monitor == _refreshMonitor) return;
+            _refreshMonitor = monitor;
+
+            double hz = 60;
+            try
+            {
+                string? device = null;
+                if (monitor != IntPtr.Zero)
+                {
+                    var info = new MONITORINFOEX { cbSize = Marshal.SizeOf<MONITORINFOEX>(), szDevice = "" };
+                    if (GetMonitorInfoW(monitor, ref info)) device = info.szDevice;
+                }
+                var mode = new DEVMODE { dmDeviceName = "", dmFormName = "", dmSize = (ushort)Marshal.SizeOf<DEVMODE>() };
+                if (EnumDisplaySettingsW(device, ENUM_CURRENT_SETTINGS, ref mode) && mode.dmDisplayFrequency > 1)
+                    hz = mode.dmDisplayFrequency;
+            }
+            catch { }
+
+            _refreshHz = Math.Clamp(hz, 24, 480);
+            _frameBudget = 1.0 / _refreshHz * 0.85;
+        }
+
+        private static double Linear(double t) => t;
+
+        private static double OutQuad(double t) { double u = 1 - t; return 1 - u * u; }
+
+        private static double OutCubic(double t) { double u = 1 - t; return 1 - u * u * u; }
+
+        private static double InCubic(double t) => t * t * t;
+
+        private static double OutQuart(double t) { double u = 1 - t; return 1 - u * u * u * u; }
+
+        private static double BackIn(double t, double amplitude) => t * t * t - t * amplitude * Math.Sin(Math.PI * t);
+
+        private static double OutBackSoft(double t) => 1 - BackIn(1 - t, 0.6);
+
+        private static double OutBackWide(double t) => 1 - BackIn(1 - t, 1.4);
+
+        private static double InBackSoft(double t) => BackIn(t, 0.6);
+
         private void SpawnBurst(Point center)
         {
-            var accent = (Color)FindResource("AccentColor");
-
-            double ringSize = 34;
-            var ring = new System.Windows.Shapes.Ellipse
+            if (_fxLayer == null)
             {
-                Width = ringSize,
-                Height = ringSize,
-                Stroke = new SolidColorBrush(accent),
-                StrokeThickness = 2,
-                Fill = Brushes.Transparent,
-                IsHitTestVisible = false,
-                RenderTransformOrigin = new Point(0.5, 0.5),
-                Opacity = 0.85
-            };
-            var rsc = new ScaleTransform(0.2, 0.2);
-            ring.RenderTransform = rsc;
-            Canvas.SetLeft(ring, center.X - ringSize / 2);
-            Canvas.SetTop(ring, center.Y - ringSize / 2);
-            FxCanvas.Children.Add(ring);
+                _fxLayer = new FxLayer();
+                FxCanvas.Children.Add(_fxLayer);
+            }
 
-            var rEase = new CubicEase { EasingMode = EasingMode.EaseOut };
-            var rDur = TimeSpan.FromMilliseconds(420);
-            rsc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.2, 1.9, rDur) { EasingFunction = rEase });
-            rsc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.2, 1.9, rDur) { EasingFunction = rEase });
-            var rFade = new DoubleAnimation(0.85, 0, rDur) { EasingFunction = rEase };
-            rFade.Completed += (s, e) => FxCanvas.Children.Remove(ring);
-            ring.BeginAnimation(UIElement.OpacityProperty, rFade);
+            var accent = (Color)FindResource("AccentColor");
+            double now = _fxClock.Elapsed.TotalSeconds;
+
+            if (_fxRings.Count >= 4) _fxRings.RemoveAt(0);
+            _fxRings.Add(new FxRing
+            {
+                X = center.X,
+                Y = center.Y,
+                Start = now,
+                Color = accent
+            });
 
             int count = 11 + _rnd.Next(5);
+            if (_fxDots.Count + count > FX_DOT_LIMIT)
+                _fxDots.RemoveRange(0, Math.Min(_fxDots.Count, _fxDots.Count + count - FX_DOT_LIMIT));
+
             for (int i = 0; i < count; i++)
             {
-                double size = 3 + _rnd.NextDouble() * 4;
-                var dot = new System.Windows.Shapes.Ellipse
-                {
-                    Width = size,
-                    Height = size,
-                    Fill = new SolidColorBrush(JitterColor(accent)),
-                    IsHitTestVisible = false,
-                    RenderTransformOrigin = new Point(0.5, 0.5)
-                };
-                var sc = new ScaleTransform(1, 1);
-                var tt = new TranslateTransform();
-                var grp = new TransformGroup();
-                grp.Children.Add(sc);
-                grp.Children.Add(tt);
-                dot.RenderTransform = grp;
-                Canvas.SetLeft(dot, center.X - size / 2);
-                Canvas.SetTop(dot, center.Y - size / 2);
-                FxCanvas.Children.Add(dot);
-
                 double ang = _rnd.NextDouble() * Math.PI * 2;
                 double dist = 26 + _rnd.NextDouble() * 38;
-                double dx = Math.Cos(ang) * dist;
-                double dy = Math.Sin(ang) * dist - 12;
-                var dur = TimeSpan.FromMilliseconds(380 + _rnd.Next(280));
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-
-                tt.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, dx, dur) { EasingFunction = ease });
-                tt.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, dy, dur) { EasingFunction = ease });
-                sc.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 0, dur) { EasingFunction = ease });
-                sc.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 0, dur) { EasingFunction = ease });
-                var fade = new DoubleAnimation(1, 0, dur) { EasingFunction = ease };
-                var captured = dot;
-                fade.Completed += (s, e) => FxCanvas.Children.Remove(captured);
-                dot.BeginAnimation(UIElement.OpacityProperty, fade);
+                _fxDots.Add(new FxDot
+                {
+                    X = center.X,
+                    Y = center.Y,
+                    Dx = Math.Cos(ang) * dist,
+                    Dy = Math.Sin(ang) * dist - 12,
+                    Radius = (3 + _rnd.NextDouble() * 4) / 2,
+                    Start = now,
+                    Life = (380 + _rnd.Next(280)) / 1000.0,
+                    Color = JitterColor(accent)
+                });
             }
+
+            StartAnimLoop();
+            PaintFx(now);
+        }
+
+        private void PaintFx(double now)
+        {
+            if (_fxLayer == null) return;
+            using var dc = _fxLayer.Surface.RenderOpen();
+
+            for (int i = 0; i < _fxRings.Count; i++)
+            {
+                var ring = _fxRings[i];
+                double p = OutCubic(Math.Clamp((now - ring.Start) / FX_RING_LIFE, 0, 1));
+                double scale = 0.2 + 1.7 * p;
+                double r = FX_RING_RADIUS * scale;
+                dc.DrawEllipse(null, FrozenPen(ring.Color, 217 * (1 - p), 2 * scale), new Point(ring.X, ring.Y), r, r);
+            }
+
+            for (int i = 0; i < _fxDots.Count; i++)
+            {
+                var dot = _fxDots[i];
+                double p = OutCubic(Math.Clamp((now - dot.Start) / dot.Life, 0, 1));
+                double r = dot.Radius * (1 - p);
+                if (r <= 0.05) continue;
+                dc.DrawEllipse(FrozenFill(dot.Color, 255 * (1 - p)), null, new Point(dot.X + dot.Dx * p, dot.Y + dot.Dy * p), r, r);
+            }
+        }
+
+        private static SolidColorBrush FrozenFill(Color c, double alpha)
+        {
+            var b = new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(alpha, 0, 255), c.R, c.G, c.B));
+            b.Freeze();
+            return b;
+        }
+
+        private static Pen FrozenPen(Color c, double alpha, double thickness)
+        {
+            var p = new Pen(FrozenFill(c, alpha), thickness);
+            p.Freeze();
+            return p;
         }
 
         private Color JitterColor(Color c)
@@ -4236,34 +4452,22 @@ namespace CustomLauncher
         private void AnimateTabSwitch(FrameworkElement show, FrameworkElement hide)
         {
             double tgt = _settings?.ConsoleOpacity ?? 1.0;
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
             var hideTr = EnsureTabTransform(hide);
-            var outFade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(130)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn } };
-            outFade.Completed += (s2, e2) =>
+            CacheWhileMoving(hide, true);
+            TweenOpacity(hide, hide.Opacity, 0, 130, InCubic, 0, () =>
             {
+                CacheWhileMoving(hide, false);
                 hide.Visibility = Visibility.Collapsed;
-                hide.BeginAnimation(OpacityProperty, null);
                 hide.Opacity = tgt;
-                hideTr.BeginAnimation(TranslateTransform.YProperty, null);
                 hideTr.Y = 0;
-            };
-            hide.BeginAnimation(OpacityProperty, outFade);
+            });
 
             show.Visibility = Visibility.Visible;
             var showTr = EnsureTabTransform(show);
-            showTr.Y = 16;
-            show.Opacity = 0;
-            var inFade = new DoubleAnimation(0, tgt, TimeSpan.FromMilliseconds(260)) { BeginTime = TimeSpan.FromMilliseconds(110), EasingFunction = ease };
-            inFade.Completed += (s2, e2) =>
-            {
-                show.BeginAnimation(OpacityProperty, null);
-                show.Opacity = tgt;
-                showTr.BeginAnimation(TranslateTransform.YProperty, null);
-                showTr.Y = 0;
-            };
-            show.BeginAnimation(OpacityProperty, inFade);
-            showTr.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(16, 0, TimeSpan.FromMilliseconds(320)) { BeginTime = TimeSpan.FromMilliseconds(110), EasingFunction = ease });
+            CacheWhileMoving(show, true);
+            TweenOpacity(show, 0, tgt, 260, OutCubic, 110);
+            TweenY(showTr, 16, 0, 320, OutCubic, 110, () => CacheWhileMoving(show, false));
         }
 
         private static TranslateTransform EnsureTabTransform(FrameworkElement fe)

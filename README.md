@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.20 |
-| Launcher | 8.6.4 |
+| Launcher | 8.6.5 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Client Features
@@ -19,6 +19,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 - Microsoft authentication without WebView2, plus offline accounts.
 - Customizable interface: 18 color theme presets (Sakura by default) plus manual HEX colors, custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
 - Bilingual interface (Russian and English): the language is chosen during first-run setup and can be switched at any time in the settings.
+- Every animation runs on a purpose-built engine instead of WPF storyboards: a single render tick drives all motion from closed-form easing math, click particles are drawn as one visual layer, and the launcher detects the current refresh rate of the display it sits on — re-checking when the window moves to another monitor or the display mode changes — so motion is paced to the monitor and never renders frames it cannot show.
 - Tactile, animated UI: buttons burst into particles on click, the sidebar reacts with glow and motion, and tabs, settings, and login transitions are fully animated. Theme presets cross-fade smoothly instead of switching instantly, dropdowns slide open with sprung easing and their items glide on hover, slider thumbs grow and emit a pulsing halo while dragged, text fields swell on focus and gently bounce with every keystroke.
 - Cohesive squircle design language: dropdown menus, tooltips, and context menus are rounded, soft-shadowed, and themed to the active colors — no stock-gray Windows chrome leaks anywhere; combo arrows flip over with a spring, checkboxes spring on hover.
 - In-app ChangeLogs viewer with separate launcher and modpack/server-map tabs, fetched live from the remote config in the interface language (Russian or English).

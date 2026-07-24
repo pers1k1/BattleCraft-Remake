@@ -121,6 +121,7 @@ namespace CustomLauncher.Core
             ["Сбросить все?"] = "Reset everything?",
             ["Сброс"] = "Reset",
             ["Платформа: {0} ({1})"] = "Platform: {0} ({1})",
+            ["Дисплей: {0} Гц — анимации идут в такт монитору"] = "Display: {0} Hz — animations follow the monitor",
             ["Файл: {0} ({1}/{2})"] = "File: {0} ({1}/{2})",
             ["Загрузка {0:F0}% · {1} / {2}"] = "Downloading {0:F0}% · {1} / {2}",
             ["Готов"] = "Ready",
