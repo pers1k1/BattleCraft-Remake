@@ -2288,6 +2288,7 @@ namespace CustomLauncher
         {
             string nick = SetupUsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog(Lang.T("Авторизуйтесь через Microsoft или введите никнейм!")); return; }
+            if (_settings.UserType != "msa" && !IsValidNickname(nick)) { await ShowCustomDialog(Lang.T(NicknameRuleMessage)); return; }
             string path = ResolveGamePath(SetupPathBox.Text);
             if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog(Lang.T("Выберите папку для игры!")); return; }
 
@@ -2426,7 +2427,7 @@ namespace CustomLauncher
             LogTerminalText.Text = Lang.Tr(LogTerminalText.Text);
             if (BtnPlay.Content is string pc) BtnPlay.Content = Lang.Tr(pc);
 
-            BtnAddServer.Content = Lang.T("+ Создать");
+            BtnAddServer.Content = Lang.T("Создать");
             BtnRemoveServer.Content = Lang.T("Удалить");
             ServerConfigTitle.Text = Lang.T("КОНФИГУРАЦИЯ");
             TabGeneralBtn.Content = Lang.T("Основные");
@@ -2658,6 +2659,7 @@ namespace CustomLauncher
             _settings = new AppSettings(); AppSettings.Save(_settings);
             try { string d = GetThemeDir(); if (Directory.Exists(d)) Directory.Delete(d, true); } catch { }
             MainWnd.Background = null; MainWnd.SetResourceReference(Control.BackgroundProperty, "PrimaryBrush"); Icon = null;
+            CloseSettingsPanel();
             InitializeLauncherCore();
         }
 
@@ -2859,8 +2861,23 @@ namespace CustomLauncher
 
         private void SetPlayState(string st)
         {
-            if (st == "running") { BtnPlay.Content = Lang.T("ОТМЕНА"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60)); }
-            else { BtnPlay.Content = Lang.T("\u25B6  ИГРАТЬ"); BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush"); }
+            if (st == "running")
+            {
+                BtnPlay.Content = Lang.T("ОТМЕНА");
+                SetButtonIcon(BtnPlay, "IconStop");
+                BtnPlay.Background = new SolidColorBrush(Color.FromRgb(180, 60, 60));
+            }
+            else
+            {
+                BtnPlay.Content = Lang.T("ИГРАТЬ");
+                SetButtonIcon(BtnPlay, "IconPlay");
+                BtnPlay.SetResourceReference(Control.BackgroundProperty, "AccentBrush");
+            }
+        }
+
+        private void SetButtonIcon(Button btn, string geometryKey)
+        {
+            if (TryFindResource(geometryKey) is Geometry icon) btn.Tag = icon;
         }
 
         private void InjectJvmArgs(Process p)
@@ -3560,11 +3577,17 @@ namespace CustomLauncher
         {
             var n = UsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog(Lang.T("Введите никнейм!")); return; }
+            if (!IsValidNickname(n)) { await ShowCustomDialog(Lang.T(NicknameRuleMessage)); return; }
             _settings.Username = n;
             _settings.UserType = "offline";
             AppSettings.Save(_settings);
             SwitchToMain();
         }
+
+        private const string NicknameRuleMessage = "Никнейм: от 3 до 16 символов, только латиница, цифры и _";
+
+        private static bool IsValidNickname(string nick) =>
+            nick.Length >= 3 && nick.Length <= 16 && nick.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
 
         private void BtnGitHub_Click(object s, RoutedEventArgs e)
         {
@@ -3648,6 +3671,12 @@ namespace CustomLauncher
                 PathBox.Text = np;
             }
             AppSettings.Save(_settings); if (_settings.HasGamePath) InitializeLauncher();
+            CloseSettingsPanel();
+        }
+
+        private void CloseSettingsPanel()
+        {
+            if (SettingsPanel.Visibility != Visibility.Visible) return;
             CacheWhileMoving(SettingsBox, true);
             TweenScale(SettingsScale, 1, 0.88, 200, InBackSoft);
             TweenY(SettingsTranslate, 0, 18, 200, InCubic);
@@ -3775,8 +3804,8 @@ namespace CustomLauncher
                 if (Version.TryParse(modpackVerStr, out var onV) && Version.TryParse(_settings.ModpackVersion, out var loV))
                 {
                     _onlineModpackVer = modpackVerStr;
-                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = Lang.T("УСТАНОВИТЬ"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
-                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = Lang.T("ОБНОВИТЬ"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = Lang.T("УСТАНОВИТЬ"); SetButtonIcon(BtnPlay, "IconDownload"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    else if (onV > loV) { _needsModpackUpdate = true; BtnPlay.Content = Lang.T("ОБНОВИТЬ"); SetButtonIcon(BtnPlay, "IconDownload"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
                 }
 
@@ -3797,6 +3826,7 @@ namespace CustomLauncher
                         if (_settings.IsModpackInstalled && _needsBattleCraftModUpdate && !_needsModpackUpdate)
                         {
                             BtnPlay.Content = Lang.T("ОБНОВИТЬ");
+                            SetButtonIcon(BtnPlay, "IconDownload");
                             BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30));
                         }
                     }
@@ -3974,12 +4004,6 @@ namespace CustomLauncher
         public void Combo_Pop(object sender, SelectionChangedEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.IsLoaded && fe.IsVisible) PopElement(fe, 0.95, 320);
-        }
-
-        public void TextBox_TypePulse(object sender, TextChangedEventArgs e)
-        {
-            if (sender is not TextBox tb || tb.IsReadOnly || !tb.IsKeyboardFocused) return;
-            PopElement(tb, 1.025, 150);
         }
 
         private void PopElement(FrameworkElement fe, double from, int ms)

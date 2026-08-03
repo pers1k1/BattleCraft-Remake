@@ -35,6 +35,23 @@
         <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}"/>
         <SolidColorBrush x:Key="OnAccentBrush" Color="#100C18"/>
 
+        <Geometry x:Key="IconPlay">F1 M3,1.5 L13.5,8 L3,14.5 Z</Geometry>
+        <Geometry x:Key="IconServer">F0 M1,2 H15 V6.6 H1 Z M2.4,3.3 H13.6 V5.3 H2.4 Z M11.4,3.9 H12.8 V4.7 H11.4 Z M1,8.4 H15 V13 H1 Z M2.4,9.7 H13.6 V11.7 H2.4 Z M11.4,10.3 H12.8 V11.1 H11.4 Z</Geometry>
+        <Geometry x:Key="IconDownload">F1 M7,1 H9 V7.6 H11.8 L8,12 L4.2,7.6 H7 Z M2,13 H14 V15 H2 Z</Geometry>
+        <Geometry x:Key="IconDoc">F0 M2.5,1 H10 L13.5,4.4 V15 H2.5 Z M4.4,6.2 H11.6 V7.4 H4.4 Z M4.4,8.9 H11.6 V10.1 H4.4 Z M4.4,11.6 H9.2 V12.8 H4.4 Z</Geometry>
+        <Geometry x:Key="IconSliders">F1 M1,4 H15 V5.5 H1 Z M1,10.5 H15 V12 H1 Z M5.2,2.05 A2.7,2.7 0 1 0 5.2,7.45 A2.7,2.7 0 1 0 5.2,2.05 Z M10.8,8.55 A2.7,2.7 0 1 0 10.8,13.95 A2.7,2.7 0 1 0 10.8,8.55 Z</Geometry>
+        <Geometry x:Key="IconFork">F1 M3.2,1.4 A2.2,2.2 0 1 0 3.2,5.8 A2.2,2.2 0 1 0 3.2,1.4 Z M12.8,1.4 A2.2,2.2 0 1 0 12.8,5.8 A2.2,2.2 0 1 0 12.8,1.4 Z M8,10.2 A2.2,2.2 0 1 0 8,14.6 A2.2,2.2 0 1 0 8,10.2 Z M2.5,5 H3.9 V7.2 H12.1 V5 H13.5 V8.6 H8.7 V10.6 H7.3 V8.6 H2.5 Z</Geometry>
+        <Geometry x:Key="IconSend">F1 M1.5,7.1 H10.2 L7,3.9 L8.4,2.5 L13.8,8 L8.4,13.5 L7,12.1 L10.2,8.9 H1.5 Z</Geometry>
+        <Geometry x:Key="IconPlus">F1 M7.1,2 H8.9 V7.1 H14 V8.9 H8.9 V14 H7.1 V8.9 H2 V7.1 H7.1 Z</Geometry>
+        <Geometry x:Key="IconTrash">F1 M6,1 H10 V2.4 H14 V4 H2 V2.4 H6 Z M3.2,5.2 H12.8 L12,15 H4 Z</Geometry>
+        <Geometry x:Key="IconFolder">F1 M1.4,2.6 H6.4 L7.8,4.4 H14.6 V13.4 H1.4 Z</Geometry>
+        <Geometry x:Key="IconStop">F1 M3.4,3.4 H12.6 V12.6 H3.4 Z</Geometry>
+        <Geometry x:Key="IconRestart">F0 M8,1.6 A6.4,6.4 0 1 0 8,14.4 A6.4,6.4 0 1 0 8,1.6 Z M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 Z M10.9,0.2 L15.4,3.6 L10.7,6.2 Z</Geometry>
+        <Geometry x:Key="IconGlobe">F0 M8,1 A7,7 0 1 0 8,15 A7,7 0 1 0 8,1 Z M8,2.6 A5.4,5.4 0 1 0 8,13.4 A5.4,5.4 0 1 0 8,2.6 Z M1.6,7.3 H14.4 V8.7 H1.6 Z M8,2.6 A3.1,5.4 0 1 0 8,13.4 A3.1,5.4 0 1 0 8,2.6 Z</Geometry>
+        <Geometry x:Key="IconGear">F0 M6.6,1 H9.4 L9.8,3.2 L12,2 L14,4 L12.8,6.2 L15,6.6 V9.4 L12.8,9.8 L14,12 L12,14 L9.8,12.8 L9.4,15 H6.6 L6.2,12.8 L4,14 L2,12 L3.2,9.8 L1,9.4 V6.6 L3.2,6.2 L2,4 L4,2 L6.2,3.2 Z M8,5.4 A2.6,2.6 0 1 0 8,10.6 A2.6,2.6 0 1 0 8,5.4 Z</Geometry>
+        <Geometry x:Key="IconCheck">F1 M6.2,12.6 L1.8,8.2 L3.4,6.6 L6.2,9.4 L12.6,3 L14.2,4.6 Z</Geometry>
+        <Geometry x:Key="IconList">F1 M1.2,2.4 H3.6 V4.8 H1.2 Z M5.4,2.9 H14.8 V4.3 H5.4 Z M1.2,6.8 H3.6 V9.2 H1.2 Z M5.4,7.3 H14.8 V8.7 H5.4 Z M1.2,11.2 H3.6 V13.6 H1.2 Z M5.4,11.7 H14.8 V13.1 H5.4 Z</Geometry>
+
         <sys:Double x:Key="BloomBlurRadius">15</sys:Double>
         <sys:Double x:Key="BloomOpacity">0.6</sys:Double>
         <sys:Double x:Key="SettingsBloomOpacity">0.36</sys:Double>
@@ -42,6 +59,8 @@
         <sys:Double x:Key="TitleBloomOpacity">0.4</sys:Double>
 
         <Style x:Key="SystemButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -144,6 +163,8 @@
         </Style>
 
         <Style x:Key="GlowButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Background" Value="#10FFFFFF"/>
             <Setter Property="Foreground" Value="#CCFFFFFF"/>
             <Setter Property="FontSize" Value="13"/>
@@ -161,7 +182,10 @@
                     <ControlTemplate TargetType="Button">
                         <Grid RenderTransformOrigin="0.5,0.5">
                             <Grid.RenderTransform>
-                                <ScaleTransform x:Name="ButtonScale" ScaleX="1" ScaleY="1"/>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="HoverScale" ScaleX="1" ScaleY="1"/>
+                                    <ScaleTransform x:Name="PressScale" ScaleX="1" ScaleY="1"/>
+                                </TransformGroup>
                             </Grid.RenderTransform>
                             <Border x:Name="GlowBorder"
                                     Background="{TemplateBinding Background}"
@@ -170,7 +194,7 @@
                                 <Border.Effect>
                                     <DropShadowEffect x:Name="GlowEffect"
                                                       Color="{DynamicResource AccentColor}"
-                                                      BlurRadius="30"
+                                                      BlurRadius="18"
                                                       ShadowDepth="0"
                                                       Opacity="0"/>
                                 </Border.Effect>
@@ -181,21 +205,30 @@
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="10"
                                     Padding="{TemplateBinding Padding}">
-                                <ContentPresenter x:Name="GlowContent" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" RenderTransformOrigin="0.5,0.5">
-                                    <ContentPresenter.RenderTransform>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                    <StackPanel.RenderTransform>
                                         <TranslateTransform x:Name="BtnTr" X="0" Y="0"/>
-                                    </ContentPresenter.RenderTransform>
-                                </ContentPresenter>
+                                    </StackPanel.RenderTransform>
+                                    <Path x:Name="GlowIcon" Data="{TemplateBinding Tag}" Fill="{TemplateBinding Foreground}"
+                                          Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ContentPresenter x:Name="GlowContent" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                                </StackPanel>
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="{x:Null}">
+                                <Setter TargetName="GlowIcon" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="Content" Value="{x:Null}">
+                                <Setter TargetName="GlowIcon" Property="Margin" Value="0"/>
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="GlowEffect" Storyboard.TargetProperty="Opacity" To="0.9" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.2"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -203,8 +236,8 @@
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="GlowEffect" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -213,10 +246,10 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08">
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX" To="0.93" Duration="0:0:0.08">
                                                 <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08">
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY" To="0.93" Duration="0:0:0.08">
                                                 <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                         </Storyboard>
@@ -225,11 +258,11 @@
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.45">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1.4"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.45">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1.4"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
@@ -242,6 +275,8 @@
         </Style>
 
         <Style TargetType="CheckBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Foreground" Value="#CCFFFFFF"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -432,6 +467,8 @@
         </Style>
 
         <Style TargetType="Slider">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Slider">
@@ -443,7 +480,7 @@
                             <Border Grid.Row="0" Height="4" CornerRadius="2" Background="#44FFFFFF" Margin="0,8,0,0"/>
                             <Track x:Name="PART_Track" Grid.Row="0" Margin="0,8,0,0">
                                 <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="Slider.DecreaseLarge">
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False" IsTabStop="False">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
                                                 <Border Height="4" CornerRadius="2" Background="{DynamicResource AccentBrush}"/>
@@ -452,7 +489,7 @@
                                     </RepeatButton>
                                 </Track.DecreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb>
+                                    <Thumb Focusable="False" IsTabStop="False" FocusVisualStyle="{x:Null}">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid RenderTransformOrigin="0.5,0.5">
@@ -585,6 +622,8 @@
         </ControlTemplate>
 
         <Style TargetType="ComboBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Height" Value="40"/>
@@ -668,6 +707,7 @@
         </Style>
 
         <Style TargetType="ComboBoxItem">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -712,22 +752,20 @@
         </Style>
 
         <Style TargetType="TextBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Padding" Value="10,0,10,0"/>
             <Setter Property="Height" Value="35"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <EventSetter Event="TextChanged" Handler="TextBox_TypePulse"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="TbRoot" Background="{DynamicResource PrimaryBrush}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform x:Name="TbScale" ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
+                        <Border x:Name="TbRoot" Background="{DynamicResource PrimaryBrush}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10">
                             <Grid>
                                 <Border x:Name="TbSheen" Background="White" Opacity="0.05" CornerRadius="10"/>
+                                <Border x:Name="TbFocusRing" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="10" Opacity="0"/>
                                 <ScrollViewer x:Name="PART_ContentHost"/>
                             </Grid>
                         </Border>
@@ -736,22 +774,16 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="TbScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="TbScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="TbSheen" Storyboard.TargetProperty="Opacity" To="0.1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="TbSheen" Storyboard.TargetProperty="Opacity" To="0.11" Duration="0:0:0.18"/>
+                                            <DoubleAnimation Storyboard.TargetName="TbFocusRing" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="TbScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.25"/>
-                                            <DoubleAnimation Storyboard.TargetName="TbScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.25"/>
-                                            <DoubleAnimation Storyboard.TargetName="TbSheen" Storyboard.TargetProperty="Opacity" To="0.05" Duration="0:0:0.25"/>
+                                            <DoubleAnimation Storyboard.TargetName="TbSheen" Storyboard.TargetProperty="Opacity" To="0.05" Duration="0:0:0.22"/>
+                                            <DoubleAnimation Storyboard.TargetName="TbFocusRing" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -763,6 +795,8 @@
         </Style>
 
         <Style x:Key="PlayButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
             <Setter Property="FontSize" Value="16"/>
@@ -778,7 +812,10 @@
                     <ControlTemplate TargetType="Button">
                         <Grid RenderTransformOrigin="0.5,0.5">
                             <Grid.RenderTransform>
-                                <ScaleTransform x:Name="ButtonScale" ScaleX="1" ScaleY="1"/>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="HoverScale" ScaleX="1" ScaleY="1"/>
+                                    <ScaleTransform x:Name="PressScale" ScaleX="1" ScaleY="1"/>
+                                </TransformGroup>
                             </Grid.RenderTransform>
                             <Border x:Name="GlowBorder"
                                     Background="{TemplateBinding Background}"
@@ -796,22 +833,28 @@
                                     Background="Transparent"
                                     CornerRadius="10"
                                     Padding="{TemplateBinding Padding}">
-                                <ContentPresenter x:Name="PlayContent" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                                    <ContentPresenter.RenderTransform>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                    <StackPanel.RenderTransform>
                                         <TranslateTransform x:Name="BtnTr" X="0" Y="0"/>
-                                    </ContentPresenter.RenderTransform>
-                                </ContentPresenter>
+                                    </StackPanel.RenderTransform>
+                                    <Path x:Name="PlayIcon" Data="{TemplateBinding Tag}" Fill="{TemplateBinding Foreground}"
+                                          Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <ContentPresenter x:Name="PlayContent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="{x:Null}">
+                                <Setter TargetName="PlayIcon" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="PlayGlow" Storyboard.TargetProperty="BlurRadius" To="45" Duration="0:0:0.3"/>
                                             <DoubleAnimation Storyboard.TargetName="PlayGlow" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.3"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.3"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.3"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.3"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -820,8 +863,8 @@
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetName="PlayGlow" Storyboard.TargetProperty="BlurRadius" Duration="0:0:0.3"/>
                                             <DoubleAnimation Storyboard.TargetName="PlayGlow" Storyboard.TargetProperty="Opacity" Duration="0:0:0.3"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.3"/>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.3"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.3"/>
+                                            <DoubleAnimation Storyboard.TargetName="HoverScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.3"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
@@ -830,10 +873,10 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08">
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX" To="0.93" Duration="0:0:0.08">
                                                 <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08">
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY" To="0.93" Duration="0:0:0.08">
                                                 <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                         </Storyboard>
@@ -842,11 +885,11 @@
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleX" To="1.02" Duration="0:0:0.5">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3.5"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.34">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1.6"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="ButtonScale" Storyboard.TargetProperty="ScaleY" To="1.02" Duration="0:0:0.5">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3.5"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="PressScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.34">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1.6"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
@@ -859,6 +902,8 @@
         </Style>
 
         <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#88FFFFFF"/>
             <Setter Property="FontSize" Value="14"/>
@@ -884,7 +929,10 @@
                                 </Rectangle>
                                 <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0,0.5">
                                     <ContentPresenter.RenderTransform>
-                                        <TranslateTransform x:Name="NavTr" X="0"/>
+                                        <TransformGroup>
+                                            <TranslateTransform x:Name="NavTr" X="0"/>
+                                            <TranslateTransform x:Name="NavPressTr" X="0"/>
+                                        </TransformGroup>
                                     </ContentPresenter.RenderTransform>
                                 </ContentPresenter>
                             </Grid>
@@ -919,7 +967,7 @@
                                 <Trigger.EnterActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="NavTr" Storyboard.TargetProperty="X" To="11" Duration="0:0:0.07">
+                                            <DoubleAnimation Storyboard.TargetName="NavPressTr" Storyboard.TargetProperty="X" To="5" Duration="0:0:0.07">
                                                 <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                         </Storyboard>
@@ -928,8 +976,8 @@
                                 <Trigger.ExitActions>
                                     <BeginStoryboard>
                                         <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="NavTr" Storyboard.TargetProperty="X" To="6" Duration="0:0:0.4">
-                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="3"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation Storyboard.TargetName="NavPressTr" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1.4"/></DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
@@ -1165,7 +1213,7 @@
             <Button x:Name="LoginMsBtn" Content="Войти через Microsoft" Height="45" Click="BtnLoginMicrosoft_Click" Style="{StaticResource GlowButton}"/>
 
             <TextBlock x:Name="LoginNickLabel" Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,25,0,5"/>
-            <TextBox x:Name="UsernameBox"/>
+            <TextBox x:Name="UsernameBox" MaxLength="16"/>
             <Button x:Name="LoginOfflineBtn" Content="Войти оффлайн" Margin="0,15,0,0" Height="45" Click="BtnLoginOffline_Click" Style="{StaticResource GlowButton}"/>
         </StackPanel>
 
@@ -1196,7 +1244,7 @@
                         <TextBlock Text="PLAY" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,0,0,10"/>
                         <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x25B6;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock x:Name="NavPlayText" Text="Играть" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -1204,7 +1252,7 @@
                         <TextBlock Text="SERVER" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,25,0,10"/>
                         <Button x:Name="NavServerBtn" Click="NavServer_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <Path Data="{StaticResource IconServer}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock x:Name="NavServerText" Text="Серверы" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -1214,25 +1262,25 @@
                         <Rectangle Height="1" Fill="#15FFFFFF" Margin="14,0,14,10"/>
                         <Button x:Name="BtnReinstall" Click="BtnReinstall_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x21BB;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <Path Data="{StaticResource IconDownload}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock x:Name="BtnReinstallText" Text="Перекачать моды" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnChangelogs" Click="BtnChangelogs_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x1F5CE;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <Path Data="{StaticResource IconDoc}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock Text="ChangeLogs" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnSettingsOpen" Click="BtnSettings_Click" Style="{StaticResource NavButton}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x2699;" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <Path Data="{StaticResource IconGear}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock x:Name="BtnSettingsText" Text="Настройки" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnGitHub" Click="BtnGitHub_Click" Style="{StaticResource NavButton}" ToolTip="github.com/pers1k1">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x2B22;" FontSize="14" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <Path Data="{StaticResource IconFork}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock Text="GitHub" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -1359,7 +1407,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="bcr" FontFamily="Consolas, Courier New" FontSize="14" FontWeight="Bold" Foreground="#7CDB6A" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         <TextBlock Text="&#x03BB;" FontFamily="Consolas, Courier New" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                        <Button x:Name="BtnPlay" Content="&#x25B6;  play" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
+                                        <Button x:Name="BtnPlay" Content="ИГРАТЬ" Tag="{StaticResource IconPlay}" Click="BtnPlay_Click" Style="{StaticResource PlayButton}"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
@@ -1404,26 +1452,27 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,2,0,15">
                     <ComboBox x:Name="ServerSelector" Width="220" SelectionChanged="ServerSelector_Changed"/>
-                    <Button x:Name="BtnAddServer" Content="+ Создать" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
-                    <Button x:Name="BtnRemoveServer" Content="Удалить" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
+                    <Button x:Name="BtnAddServer" Content="Создать" Tag="{StaticResource IconPlus}" Click="BtnCreateServer_Click" Margin="15,0,0,0" Style="{StaticResource ServerActionButton}"/>
+                    <Button x:Name="BtnRemoveServer" Content="Удалить" Tag="{StaticResource IconTrash}" Click="BtnDeleteServer_Click" Margin="10,0,0,0" Style="{StaticResource ServerActionButton}" Foreground="#FF6B6B"/>
                 </StackPanel>
 
                 <Grid x:Name="ServerConfigConsoleGrid" Grid.Row="1" Visibility="Collapsed">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" MaxHeight="220"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" MaxHeight="200"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+                    <StackPanel Grid.Row="0">
+                        <TextBlock x:Name="ServerConfigTitle" Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <Button x:Name="TabGeneralBtn" Content="Основные" Tag="{StaticResource IconSliders}" Style="{StaticResource ServerActionButton}" Click="TabGeneralBtn_Click"/>
+                            <Button x:Name="TabWhitelistBtn" Content="Вайтлист" Tag="{StaticResource IconList}" Style="{StaticResource ServerActionButton}" Click="TabWhitelistBtn_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10" Padding="0,8,0,8">
                         <StackPanel x:Name="ServerConfigForm">
-                            <TextBlock x:Name="ServerConfigTitle" Text="КОНФИГУРАЦИЯ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Button x:Name="TabGeneralBtn" Content="Основные" Style="{StaticResource ServerActionButton}" Click="TabGeneralBtn_Click"/>
-                                    <Button x:Name="TabWhitelistBtn" Content="Вайтлист" Style="{StaticResource ServerActionButton}" Click="TabWhitelistBtn_Click"/>
-                                </StackPanel>
-
                                 <StackPanel x:Name="TabGeneralContent">
                                     <WrapPanel Orientation="Horizontal">
                                         <StackPanel Margin="0,0,25,8">
@@ -1484,8 +1533,8 @@
                                                 <ColumnDefinition Width="250"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBox x:Name="WhitelistPlayerNameBox" Grid.Column="0"/>
-                                            <Button Content="+" Click="BtnAddWhitelistPlayer_Click" Grid.Column="1" Width="35" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
+                                            <TextBox x:Name="WhitelistPlayerNameBox" Grid.Column="0" MaxLength="16"/>
+                                            <Button Tag="{StaticResource IconPlus}" Click="BtnAddWhitelistPlayer_Click" Grid.Column="1" Width="35" Margin="5,0,0,0" Padding="0" Style="{StaticResource GlowButton}"/>
                                         </Grid>
                                         <Border Background="#10FFFFFF" CornerRadius="4" Margin="0,5,0,0" MinHeight="30" MaxHeight="120">
                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -1497,7 +1546,7 @@
                             </StackPanel>
                     </ScrollViewer>
 
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="2">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -1529,19 +1578,19 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="ServerConsoleInput" Grid.Column="0" KeyDown="ServerConsoleInput_KeyDown"/>
-                            <Button Content="&#x27A4;" Grid.Column="1" Click="BtnSendCommand_Click" Width="35" Margin="5,0,0,0" Style="{StaticResource GlowButton}" FontSize="16"/>
+                            <Button Tag="{StaticResource IconSend}" Grid.Column="1" Click="BtnSendCommand_Click" Width="35" Margin="5,0,0,0" Padding="0" Style="{StaticResource GlowButton}"/>
                         </Grid>
                     </Grid>
                 </Grid>
 
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
-                    <Button x:Name="BtnInstallServer" Content="Создать сервер" Click="BtnInstallServer_Click" Style="{StaticResource ServerActionButton}" IsEnabled="False"/>
-                    <Button x:Name="BtnUpdateServerMods" Content="Обновить моды" Click="BtnUpdateServerMods_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnStartServer" Content="Запустить" Click="BtnStartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnStopServer" Content="Остановить" Click="BtnStopServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed" Foreground="#FF6B6B"/>
-                    <Button x:Name="BtnRestartServer" Content="Перезапустить" Click="BtnRestartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnRestoreBackup" Content="Восстановить мир" Click="BtnRestoreBackup_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
-                    <Button x:Name="BtnOpenServerFolder" Content="Открыть папку" Click="BtnOpenServerFolder_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,2">
+                    <Button x:Name="BtnInstallServer" Content="Создать сервер" Tag="{StaticResource IconServer}" Click="BtnInstallServer_Click" Style="{StaticResource ServerActionButton}" IsEnabled="False"/>
+                    <Button x:Name="BtnUpdateServerMods" Content="Обновить моды" Tag="{StaticResource IconDownload}" Click="BtnUpdateServerMods_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnStartServer" Content="Запустить" Tag="{StaticResource IconPlay}" Click="BtnStartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnStopServer" Content="Остановить" Tag="{StaticResource IconStop}" Click="BtnStopServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed" Foreground="#FF6B6B"/>
+                    <Button x:Name="BtnRestartServer" Content="Перезапустить" Tag="{StaticResource IconRestart}" Click="BtnRestartServer_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnRestoreBackup" Content="Восстановить мир" Tag="{StaticResource IconGlobe}" Click="BtnRestoreBackup_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
+                    <Button x:Name="BtnOpenServerFolder" Content="Открыть папку" Tag="{StaticResource IconFolder}" Click="BtnOpenServerFolder_Click" Style="{StaticResource ServerActionButton}" Visibility="Collapsed"/>
                     <TextBlock x:Name="ServerStatusText" Foreground="{DynamicResource AccentBrush}" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     <ProgressBar x:Name="ServerProgressBar" Width="200" Height="4" Background="#15FFFFFF" BorderThickness="0" Foreground="{DynamicResource AccentBrush}" Value="0" Style="{StaticResource GlowProgressBar}" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="Collapsed"/>
                 </StackPanel>
@@ -1562,7 +1611,7 @@
             <Button x:Name="SetupMsBtn" Content="Войти через Microsoft" Height="40" Click="BtnSetupMicrosoft_Click" Style="{StaticResource GlowButton}"/>
 
             <TextBlock x:Name="SetupNickLabel" Text="ИЛИ Пиратка (Никнейм):" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
-            <TextBox x:Name="SetupUsernameBox"/>
+            <TextBox x:Name="SetupUsernameBox" MaxLength="16"/>
             <TextBlock x:Name="SetupFolderLabel" Text="Папка для Minecraft:" Foreground="#CCFFFFFF" Margin="0,15,0,5"/>
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -1570,7 +1619,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="SetupPathBox" Grid.Column="0" IsReadOnly="True"/>
-                <Button Content="..." Click="BtnSetupSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
+                <Button Tag="{StaticResource IconFolder}" Click="BtnSetupSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Padding="0" Style="{StaticResource GlowButton}"/>
             </Grid>
             <Button x:Name="SetupStartBtn" Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
         </StackPanel>
@@ -1719,12 +1768,12 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox x:Name="PathBox" Grid.Column="0" IsReadOnly="True"/>
-                                <Button Content="..." Click="BtnSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
+                                <Button Tag="{StaticResource IconFolder}" Click="BtnSelectFolder_Click" Grid.Column="1" Width="40" Margin="5,0,0,0" Padding="0" Style="{StaticResource GlowButton}"/>
                             </Grid>
 
-                            <Button x:Name="BtnResetAll" Content="СБРОСИТЬ ВСЕ НАСТРОЙКИ" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
+                            <Button x:Name="BtnResetAll" Content="СБРОСИТЬ ВСЕ НАСТРОЙКИ" Tag="{StaticResource IconRestart}" Click="BtnResetAllSettings_Click" Margin="0,20,0,0" Background="#33FF0000" BorderBrush="Red" Foreground="Red" Style="{StaticResource GlowButton}"/>
 
-                            <Button x:Name="BtnSaveClose" Content="Сохранить и Закрыть" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
+                            <Button x:Name="BtnSaveClose" Content="Сохранить и Закрыть" Tag="{StaticResource IconCheck}" Click="BtnSaveSettings_Click" Margin="0,15,0,0" Height="40" Style="{StaticResource GlowButton}" BorderBrush="Lime" Foreground="Lime"/>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
@@ -1765,8 +1814,8 @@
                     </Border>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,16,22,8">
-                        <Button x:Name="ChangelogTabLauncher" Content="Launcher Changelog" Click="ChangelogTab_Launcher" Style="{StaticResource GlowButton}" Margin="0,0,8,0"/>
-                        <Button x:Name="ChangelogTabModpack" Content="ModPack &amp; ServerMap Changelog" Click="ChangelogTab_Modpack" Style="{StaticResource GlowButton}"/>
+                        <Button x:Name="ChangelogTabLauncher" Content="Launcher Changelog" Tag="{StaticResource IconDoc}" Click="ChangelogTab_Launcher" Style="{StaticResource GlowButton}" Margin="0,0,8,0"/>
+                        <Button x:Name="ChangelogTabModpack" Content="ModPack &amp; ServerMap Changelog" Tag="{StaticResource IconList}" Click="ChangelogTab_Modpack" Style="{StaticResource GlowButton}"/>
                     </StackPanel>
 
                     <ScrollViewer x:Name="ChangelogScrollViewer" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="6,0,6,14">
