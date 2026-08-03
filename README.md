@@ -8,8 +8,21 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 8.6.6 |
+| Launcher | 03.08.26 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
+
+## Versioning
+
+Releases are dated, not numbered. A version is the release date in `dd.MM.yy`
+form - `03.08.26` is the build published on 3 August 2026. When a day needs a
+second release, the date carries a revision suffix: `03.08.26hotfix` for a fix
+shipped the same day, or `03.08.26v2`, `03.08.26v3` for further rebuilds
+(`hotfix` and `v2` rank the same, so use one or the other per day).
+
+The remote config files store the same version in sortable `yyyy.MM.dd` form
+(`2026.08.03`, `2026.08.03hotfix`), which is what the launcher compares; the
+interface always shows the `dd.MM.yy` form. Versions from before this scheme
+(`8.6.6` and earlier) are still understood and always rank below a dated one.
 
 ## Client Features
 
@@ -59,6 +72,12 @@ dotnet publish -c Release -p:PublishSingleFile=true -o publish
 - DiscordRichPresence — Rich Presence integration
 - Newtonsoft.Json
 
-## License
+## License and attribution
 
-Released under the [MIT License](LICENSE).
+Released under the [GNU Affero General Public License v3.0](LICENSE) with the
+attribution terms in [NOTICE](NOTICE).
+
+In practice this means any fork, redistribution, or hosted service built on this
+code must publish its complete source under the same license and must keep a
+visible credit to the author - pers1k1, https://github.com/pers1k1. Closed-source
+derivatives and builds with the attribution stripped out are not permitted.

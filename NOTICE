@@ -1,0 +1,29 @@
+BattleCraft Launcher (BCR)
+Copyright (C) 2026 pers1k1 <https://github.com/pers1k1>
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. The full text is in the LICENSE file.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+Additional terms under section 7(b) of the GNU AGPL-3.0
+-------------------------------------------------------
+
+Anyone who conveys this program, a modified version of it, or a work based on
+it must:
+
+1. Keep this NOTICE file and the copyright line above intact in every copy.
+2. Preserve a visible credit to the original author in the user-facing parts of
+   the work - its README, its about screen, or an equivalent place - naming
+   pers1k1 as the author of BattleCraft Launcher and linking to
+   https://github.com/pers1k1.
+3. Release the complete corresponding source code of the modified version under
+   this same license, including when the work is offered to users only over a
+   network (see section 13 of the license).
+
+Closed-source forks, redistributions with the attribution removed, and hosted
+services built on this code without published sources are not permitted.
