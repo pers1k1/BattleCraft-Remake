@@ -9,7 +9,7 @@ namespace CustomLauncher.Core
     public class ServerInstaller
     {
         private const string FORGE_INSTALLER_URL =
-            "https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.4.20/forge-1.20.1-47.4.20-installer.jar";
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.4.22/forge-1.20.1-47.4.22-installer.jar";
 
         private const string SERVER_DATA_ARCHIVE_URL =
             "https://github.com/pers1k1/server/releases/download/main/server.zip";
