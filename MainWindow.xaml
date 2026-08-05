@@ -283,13 +283,15 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border x:Name="Bd" Width="20" Height="20" CornerRadius="5" BorderBrush="#44FFFFFF" BorderThickness="1.5" Background="#10FFFFFF" RenderTransformOrigin="0.5,0.5">
-                                <Border.RenderTransform><ScaleTransform x:Name="BdScale" ScaleX="1" ScaleY="1"/></Border.RenderTransform>
-                                <Border x:Name="Ck" CornerRadius="3" Margin="3" Background="{DynamicResource AccentBrush}" Opacity="0" RenderTransformOrigin="0.5,0.5">
-                                    <Border.RenderTransform><ScaleTransform x:Name="CkScale" ScaleX="0" ScaleY="0"/></Border.RenderTransform>
+                            <Grid Width="26" Height="26">
+                                <Border x:Name="Bd" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="5" BorderBrush="#44FFFFFF" BorderThickness="1.5" Background="#10FFFFFF" RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform><ScaleTransform x:Name="BdScale" ScaleX="1" ScaleY="1"/></Border.RenderTransform>
+                                    <Border x:Name="Ck" CornerRadius="3" Margin="3" Background="{DynamicResource AccentBrush}" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform><ScaleTransform x:Name="CkScale" ScaleX="0" ScaleY="0"/></Border.RenderTransform>
+                                    </Border>
                                 </Border>
-                            </Border>
-                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            </Grid>
+                            <ContentPresenter Margin="5,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
