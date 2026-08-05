@@ -1376,7 +1376,7 @@
                                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="LAUNCHER" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock x:Name="VersionText" Grid.Row="1" Grid.Column="1" Text="v7.7" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="MINECRAFT" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="1.20.1 · Forge 47.4.20" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock x:Name="GameVersionText" Grid.Row="2" Grid.Column="1" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="MODPACK" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                                 <TextBlock x:Name="ModpackVerText" Grid.Row="3" Grid.Column="1" Text="—" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#CCFFFFFF"/>
                                                 <TextBlock Grid.Row="4" Grid.Column="0" Text="MEMORY" FontFamily="Consolas, Courier New" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>

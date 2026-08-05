@@ -65,9 +65,9 @@ namespace CustomLauncher
 
         private const string VER = "2026.08.03";
         private static string VerDisplay => ReleaseVersion.Display(VER);
-        private const string MC = "1.20.1";
-        private const string FORGE = "47.4.22";
-        private const string FULL_ID = MC + "-forge-" + FORGE;
+        private const string MC = GameVersions.Minecraft;
+        private const string FORGE = GameVersions.Forge;
+        private const string FULL_ID = GameVersions.ForgeProfileId;
         private const string DefPrimary = "#14101A";
         private const string DefAccent = "#F7CAD0";
         private const string MODPACK_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/modpack_version.txt";
@@ -84,7 +84,7 @@ namespace CustomLauncher
 
         private static string BattleCraftJarUrl(string ver) =>
             $"https://github.com/pers1k1/BattleCraft-mod/releases/download/v{ver}/battlecraft-{ver}-all.jar";
-        private static readonly string FORGE_JAR_URL = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{MC}-{FORGE}/forge-{MC}-{FORGE}-installer.jar";
+        private const string FORGE_JAR_URL = GameVersions.ForgeInstallerUrl;
         private string _onlineModpackVer = "0.0";
         private string _onlineBattleCraftModVer = "0.0";
         private string _onlineServerModpackVer = "0.0";
@@ -3533,6 +3533,7 @@ namespace CustomLauncher
             if (TopLeftTitleText.Text != "BattleCraft Remake Launcher")
                 _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
             _ = AnimateTerminalText(VersionText, VerDisplay);
+            if (GameVersionText != null) GameVersionText.Text = GameVersions.Display;
             if (ModpackVerText != null) ModpackVerText.Text = $"v{_settings.ModpackVersion}";
             StartWelcomeTextLoop();
         }
