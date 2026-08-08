@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 05.08.26 |
+| Launcher | 08.08.26 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
