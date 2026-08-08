@@ -2190,13 +2190,6 @@ namespace CustomLauncher
 
         private void InitializeLauncherCore()
         {
-            try
-            {
-                string oldFile = Process.GetCurrentProcess().MainModule!.FileName + ".old";
-                if (File.Exists(oldFile)) File.Delete(oldFile);
-            }
-            catch { }
-
             _settings = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(_settings.Language))
                 _settings.Language = _settings.IsFirstRun && System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "ru" ? "en" : "ru";
@@ -3849,9 +3842,9 @@ namespace CustomLauncher
             ShowUpdateOverlay();
             try
             {
-                string dir = AppDomain.CurrentDomain.BaseDirectory, cur = Process.GetCurrentProcess().MainModule!.FileName;
-                string tmp = Path.Combine(dir, "upd.exe");
-                string old = cur + ".old";
+                string cur = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule!.FileName;
+                string dir = Path.GetDirectoryName(cur) ?? AppDomain.CurrentDomain.BaseDirectory;
+                string tmp = Path.Combine(dir, UpdateResidue.StagedUpdateName);
 
                 var dl = new FileDownloader();
                 dl.LogMessage += LogNet;
@@ -3862,11 +3855,15 @@ namespace CustomLauncher
                 UpdateSubText.Text = Lang.T("Перезапуск…");
                 await Task.Delay(400);
 
-                try { if (File.Exists(old)) File.Delete(old); } catch { }
+                string old = UpdateResidue.ReserveBackupPath(cur);
                 File.Move(cur, old);
                 File.Move(tmp, cur);
 
-                Process.Start(new ProcessStartInfo(cur) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(cur)
+                {
+                    UseShellExecute = true,
+                    Arguments = UpdateResidue.RelaunchArguments(Environment.ProcessId)
+                });
                 Application.Current.Shutdown();
             }
             catch { HideUpdateOverlay(); LogError(Lang.T("Ошибка обновления")); }

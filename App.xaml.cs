@@ -11,6 +11,7 @@ namespace CustomLauncher
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            _ = UpdateResidue.PurgeAsync(e.Args);
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
