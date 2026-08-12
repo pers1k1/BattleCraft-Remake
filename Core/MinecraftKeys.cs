@@ -34,7 +34,15 @@ namespace CustomLauncher.Core
             [Key.OemMinus] = "minus",
             [Key.OemPlus] = "equal",
             [Key.OemComma] = "comma",
-            [Key.OemPeriod] = "period"
+            [Key.OemPeriod] = "period",
+            [Key.OemOpenBrackets] = "left.bracket",
+            [Key.OemCloseBrackets] = "right.bracket",
+            [Key.OemSemicolon] = "semicolon",
+            [Key.OemQuotes] = "apostrophe",
+            [Key.OemQuestion] = "slash",
+            [Key.OemBackslash] = "backslash",
+            [Key.OemPipe] = "backslash",
+            [Key.OemTilde] = "grave.accent"
         };
 
         private static readonly Dictionary<string, string> DisplayNames = new()
@@ -52,6 +60,15 @@ namespace CustomLauncher.Core
             ["key.mouse.left"] = "ЛКМ",
             ["key.mouse.right"] = "ПКМ",
             ["key.mouse.middle"] = "СКМ",
+            ["key.keyboard.left.bracket"] = "[",
+            ["key.keyboard.right.bracket"] = "]",
+            ["key.keyboard.period"] = ".",
+            ["key.keyboard.comma"] = ",",
+            ["key.keyboard.semicolon"] = ";",
+            ["key.keyboard.apostrophe"] = "'",
+            ["key.keyboard.slash"] = "/",
+            ["key.keyboard.backslash"] = "\\",
+            ["key.keyboard.grave.accent"] = "~",
             ["key.mouse.4"] = "Мышь 4",
             ["key.mouse.5"] = "Мышь 5",
             [Unbound] = "нет"

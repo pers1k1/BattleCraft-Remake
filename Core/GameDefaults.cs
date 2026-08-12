@@ -23,6 +23,7 @@ namespace CustomLauncher.Core
             ["ao"] = "true",
             ["gamma"] = "0.5",
             ["fov"] = "0.55",
+            ["entityDistanceScaling"] = "5.0",
             ["bobView"] = "true",
             ["autoJump"] = "false"
         };
@@ -61,6 +62,9 @@ namespace CustomLauncher.Core
             ["key_key.superbwarfare.interact"] = "key.keyboard.l",
             ["key_key.swapOffhand"] = "key.keyboard.unknown",
             ["key_key.superbwarfare.vehicle_seek"] = "key.keyboard.u",
+            ["key_key.curios.open.desc"] = "key.keyboard.left.bracket",
+            ["key_key.voice_chat"] = "key.keyboard.period",
+            ["key_key.voice_chat_group"] = "key.keyboard.unknown",
             ["key_key.superbwarfare.free_camera"] = "key.keyboard.unknown",
             ["key_key.survival_instinct.exo_suit_dash"] = "key.keyboard.unknown",
             ["key_key.saveToolbarActivator"] = "key.keyboard.unknown",

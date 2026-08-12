@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v7";
+        private const string VER = "2026.08.12v8";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2469,12 +2469,8 @@ namespace CustomLauncher
             GameplayHeaderRun.Text = Lang.T("ИГРОВОЙ ПРОЦЕСС");
             SensitivityLabel.Text = Lang.T("Чувствительность мыши:");
             EntityDistanceLabel.Text = Lang.T("Дальность существ:");
-            BiomeBlendLabel.Text = Lang.T("Смешивание биомов:");
-            MipmapLabel.Text = Lang.T("Уровень мип-карт:");
-            MainHandLabel.Text = Lang.T("Основная рука:");
             AttackIndicatorLabel.Text = Lang.T("Индикатор атаки:");
             InvertMouseCheck.Content = Lang.T("Инверсия мыши");
-            SubtitlesCheck.Content = Lang.T("Субтитры");
             PauseOnLostFocusCheck.Content = Lang.T("Пауза при сворачивании");
             ToggleCrouchCheck.Content = Lang.T("Приседание переключением");
             ToggleSprintCheck.Content = Lang.T("Бег переключением");
@@ -3796,7 +3792,6 @@ namespace CustomLauncher
             foreach (string item in new[] { "Авто", "1", "2", "3" }) GuiScaleCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Быстрая", "Детальная", "Максимальная" }) GraphicsModeCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Все", "Уменьшено", "Минимум" }) ParticlesCombo.Items.Add(Lang.T(item));
-            foreach (string item in new[] { "Левая", "Правая" }) MainHandCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Отключён", "Перекрестие", "Полоска" }) AttackIndicatorCombo.Items.Add(Lang.T(item));
 
             var grouped = new System.Windows.Data.CollectionViewSource { Source = _bindings };
@@ -3824,12 +3819,8 @@ namespace CustomLauncher
             GammaSlider.Value = ReadFraction(options, "gamma", 0.5) * 100;
             SensitivitySlider.Value = ReadFraction(options, "mouseSensitivity", 0.5) * 200;
             EntityDistanceSlider.Value = ReadFraction(options, "entityDistanceScaling", 1.0) * 100;
-            BiomeBlendSlider.Value = ReadNumber(options, "biomeBlendRadius", 2);
-            MipmapSlider.Value = ReadNumber(options, "mipmapLevels", 4);
-            MainHandCombo.SelectedIndex = options.TryGetValue("mainHand", out string? hand) && hand.Contains("left") ? 0 : 1;
             AttackIndicatorCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "attackIndicator", 1), 0, 2);
             InvertMouseCheck.IsChecked = ReadFlag(options, "invertYMouse") == true;
-            SubtitlesCheck.IsChecked = ReadFlag(options, "showSubtitles") == true;
             PauseOnLostFocusCheck.IsChecked = ReadFlag(options, "pauseOnLostFocus") != false;
             ToggleCrouchCheck.IsChecked = ReadFlag(options, "toggleCrouch") == true;
             ToggleSprintCheck.IsChecked = ReadFlag(options, "toggleSprint") == true;
@@ -3892,12 +3883,8 @@ namespace CustomLauncher
                 ["gamma"] = Fraction(GammaSlider.Value),
                 ["mouseSensitivity"] = Fraction(SensitivitySlider.Value / 2d),
                 ["entityDistanceScaling"] = Fraction(EntityDistanceSlider.Value),
-                ["biomeBlendRadius"] = ((int)BiomeBlendSlider.Value).ToString(),
-                ["mipmapLevels"] = ((int)MipmapSlider.Value).ToString(),
-                ["mainHand"] = MainHandCombo.SelectedIndex == 0 ? "\"left\"" : "\"right\"",
                 ["attackIndicator"] = Math.Max(0, AttackIndicatorCombo.SelectedIndex).ToString(),
                 ["invertYMouse"] = InvertMouseCheck.IsChecked == true ? "true" : "false",
-                ["showSubtitles"] = SubtitlesCheck.IsChecked == true ? "true" : "false",
                 ["pauseOnLostFocus"] = PauseOnLostFocusCheck.IsChecked == true ? "true" : "false",
                 ["toggleCrouch"] = ToggleCrouchCheck.IsChecked == true ? "true" : "false",
                 ["toggleSprint"] = ToggleSprintCheck.IsChecked == true ? "true" : "false",

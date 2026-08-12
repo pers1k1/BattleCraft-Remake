@@ -65,6 +65,7 @@ namespace CustomLauncher.Core
 
     public static class GameControls
     {
+        private const string Basics = "ОСНОВНОЕ";
         private const string Parkour = "ПАРКУР";
         private const string Weapons = "ОРУЖИЕ";
         private const string Vehicles = "ТЕХНИКА";
@@ -74,6 +75,27 @@ namespace CustomLauncher.Core
 
         public static readonly GameAction[] Actions =
         {
+            new(Basics, "Вперёд", "key_key.forward", "key_key.superbwarfare.move_forward"),
+            new(Basics, "Назад", "key_key.back", "key_key.superbwarfare.move_backward"),
+            new(Basics, "Влево", "key_key.left", "key_key.superbwarfare.move_left"),
+            new(Basics, "Вправо", "key_key.right", "key_key.superbwarfare.move_right"),
+            new(Basics, "Прыжок", "key_key.jump", "key_key.superbwarfare.move_space"),
+            new(Basics, "Присесть", "key_key.sneak", "key_key.superbwarfare.move_shift"),
+            new(Basics, "Бежать", "key_key.sprint"),
+            new(Basics, "Атака", "key_key.attack"),
+            new(Basics, "Использовать", "key_key.use"),
+            new(Basics, "Инвентарь", "key_key.inventory"),
+            new(Basics, "Выбросить предмет", "key_key.drop"),
+            new(Basics, "Выбрать блок", "key_key.pickItem"),
+            new(Basics, "Сменить руку", "key_key.swapOffhand"),
+            new(Basics, "Чат", "key_key.chat"),
+            new(Basics, "Команда", "key_key.command"),
+            new(Basics, "Список игроков", "key_key.playerlist"),
+            new(Basics, "Вид от третьего лица", "key_key.togglePerspective"),
+            new(Basics, "Скриншот", "key_key.screenshot"),
+            new(Basics, "Полный экран", "key_key.fullscreen"),
+            new(Basics, "Достижения", "key_key.advancements"),
+
             new(Parkour, "Лечь", "key_key.parcool.Crawl", "key_key.tacz.crawl.desc"),
             new(Parkour, "Перекат", "key_key.parcool.Dodge"),
             new(Parkour, "Скольжение по стене", "key_key.parcool.WallSlide"),
@@ -101,7 +123,10 @@ namespace CustomLauncher.Core
             new(Communication, "Голосовой чат", "key_key.push_to_talk"),
             new(Communication, "Метка на местности", "key_key.pingwheel.ping_location"),
             new(Communication, "Рация", "key_key.walkietalkie.activate"),
+            new(Communication, "Меню голосового чата", "key_key.voice_chat"),
+            new(Communication, "Выключить микрофон", "key_key.mute_microphone"),
 
+            new(Misc, "Аксессуары", "key_key.curios.open.desc"),
             new(Misc, "Приближение", "key_justzoom.keybinds.keybind.zoom"),
             new(Misc, "Прибор ночного видения", "key_key.nvg.toggle_nvg")
         };
