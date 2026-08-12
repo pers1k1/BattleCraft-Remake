@@ -44,7 +44,7 @@ namespace CustomLauncher.Core
         public bool Conflicted
         {
             get => _conflicted;
-            set { _conflicted = value; Notify(nameof(Conflicted)); }
+            set { _conflicted = value; Notify(nameof(Conflicted)); Notify(nameof(Display)); }
         }
 
         public bool Listening
@@ -53,7 +53,9 @@ namespace CustomLauncher.Core
             set { _listening = value; Notify(nameof(Listening)); Notify(nameof(Display)); }
         }
 
-        public string Display => Listening ? "..." : MinecraftKeys.Describe(Value);
+        public string Display => Listening
+            ? "..."
+            : Conflicted ? $"[ {MinecraftKeys.Describe(Value)} ]" : MinecraftKeys.Describe(Value);
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

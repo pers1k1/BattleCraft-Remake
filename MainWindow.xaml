@@ -1761,6 +1761,79 @@
                             </WrapPanel>
 
                             <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,18,0,10">
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="GameplayHeaderRun" Text="ИГРОВОЙ ПРОЦЕСС"/>
+                            </TextBlock>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="SensitivityLabel" Text="Чувствительность мыши:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="SensitivitySlider" Minimum="0" Maximum="200" Value="100" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=SensitivitySlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="EntityDistanceLabel" Text="Дальность существ:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="EntityDistanceSlider" Minimum="50" Maximum="500" Value="100" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="10"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=EntityDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="BiomeBlendLabel" Text="Смешивание биомов:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="BiomeBlendSlider" Minimum="0" Maximum="7" Value="2" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=BiomeBlendSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="MipmapLabel" Text="Уровень мип-карт:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="MipmapSlider" Minimum="0" Maximum="4" Value="4" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=MipmapSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="MainHandLabel" Text="Основная рука:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <ComboBox x:Name="MainHandCombo"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="AttackIndicatorLabel" Text="Индикатор атаки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <ComboBox x:Name="AttackIndicatorCombo"/>
+                                </StackPanel>
+                            </WrapPanel>
+
+                            <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <CheckBox x:Name="InvertMouseCheck" Content="Инверсия мыши" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="SubtitlesCheck" Content="Субтитры" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="PauseOnLostFocusCheck" Content="Пауза при сворачивании" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="ToggleCrouchCheck" Content="Приседание переключением" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="ToggleSprintCheck" Content="Бег переключением" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="SmoothLightingCheck" Content="Плавное освещение" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                            </WrapPanel>
+
+                            <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,18,0,10">
                                 <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="SoundHeaderRun" Text="ЗВУК"/>
                             </TextBlock>
 
@@ -1839,8 +1912,17 @@
                                                 <ColumnDefinition Width="130"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Title}" Foreground="#CCFFFFFF" FontSize="12" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="1" Content="{Binding Display}" Click="BindingButton_Click" Style="{StaticResource GlowButton}" HorizontalAlignment="Stretch"/>
+                                            <Grid Grid.Column="1">
+                                                <Button x:Name="BindingButton" Content="{Binding Display}" Click="BindingButton_Click" Style="{StaticResource GlowButton}" HorizontalAlignment="Stretch"/>
+                                                <Rectangle x:Name="ConflictMark" Width="4" RadiusX="2" RadiusY="2" Fill="#FF5555" HorizontalAlignment="Left" Margin="-8,3,0,3" Visibility="Collapsed" IsHitTestVisible="False"/>
+                                            </Grid>
                                         </Grid>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Conflicted}" Value="True">
+                                                <Setter TargetName="ConflictMark" Property="Visibility" Value="Visible"/>
+                                                <Setter TargetName="BindingButton" Property="Foreground" Value="#FF5555"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

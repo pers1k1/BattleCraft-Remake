@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v6";
+        private const string VER = "2026.08.12v7";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2466,6 +2466,19 @@ namespace CustomLauncher
             EntityShadowsCheck.Content = Lang.T("Тени существ");
             AutoJumpCheck.Content = Lang.T("Автопрыжок");
             SoundHeaderRun.Text = Lang.T("ЗВУК");
+            GameplayHeaderRun.Text = Lang.T("ИГРОВОЙ ПРОЦЕСС");
+            SensitivityLabel.Text = Lang.T("Чувствительность мыши:");
+            EntityDistanceLabel.Text = Lang.T("Дальность существ:");
+            BiomeBlendLabel.Text = Lang.T("Смешивание биомов:");
+            MipmapLabel.Text = Lang.T("Уровень мип-карт:");
+            MainHandLabel.Text = Lang.T("Основная рука:");
+            AttackIndicatorLabel.Text = Lang.T("Индикатор атаки:");
+            InvertMouseCheck.Content = Lang.T("Инверсия мыши");
+            SubtitlesCheck.Content = Lang.T("Субтитры");
+            PauseOnLostFocusCheck.Content = Lang.T("Пауза при сворачивании");
+            ToggleCrouchCheck.Content = Lang.T("Приседание переключением");
+            ToggleSprintCheck.Content = Lang.T("Бег переключением");
+            SmoothLightingCheck.Content = Lang.T("Плавное освещение");
             FovLabel.Text = Lang.T("Поле обзора:");
             GammaLabel.Text = Lang.T("Яркость:");
             MasterVolumeLabel.Text = Lang.T("Общая громкость:");
@@ -3783,6 +3796,8 @@ namespace CustomLauncher
             foreach (string item in new[] { "Авто", "1", "2", "3" }) GuiScaleCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Быстрая", "Детальная", "Максимальная" }) GraphicsModeCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Все", "Уменьшено", "Минимум" }) ParticlesCombo.Items.Add(Lang.T(item));
+            foreach (string item in new[] { "Левая", "Правая" }) MainHandCombo.Items.Add(Lang.T(item));
+            foreach (string item in new[] { "Отключён", "Перекрестие", "Полоска" }) AttackIndicatorCombo.Items.Add(Lang.T(item));
 
             var grouped = new System.Windows.Data.CollectionViewSource { Source = _bindings };
             grouped.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(GameBinding.Group)));
@@ -3807,6 +3822,19 @@ namespace CustomLauncher
 
             FovSlider.Value = Math.Clamp(30 + ReadFraction(options, "fov", 0.55) * 80, 30, 110);
             GammaSlider.Value = ReadFraction(options, "gamma", 0.5) * 100;
+            SensitivitySlider.Value = ReadFraction(options, "mouseSensitivity", 0.5) * 200;
+            EntityDistanceSlider.Value = ReadFraction(options, "entityDistanceScaling", 1.0) * 100;
+            BiomeBlendSlider.Value = ReadNumber(options, "biomeBlendRadius", 2);
+            MipmapSlider.Value = ReadNumber(options, "mipmapLevels", 4);
+            MainHandCombo.SelectedIndex = options.TryGetValue("mainHand", out string? hand) && hand.Contains("left") ? 0 : 1;
+            AttackIndicatorCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "attackIndicator", 1), 0, 2);
+            InvertMouseCheck.IsChecked = ReadFlag(options, "invertYMouse") == true;
+            SubtitlesCheck.IsChecked = ReadFlag(options, "showSubtitles") == true;
+            PauseOnLostFocusCheck.IsChecked = ReadFlag(options, "pauseOnLostFocus") != false;
+            ToggleCrouchCheck.IsChecked = ReadFlag(options, "toggleCrouch") == true;
+            ToggleSprintCheck.IsChecked = ReadFlag(options, "toggleSprint") == true;
+            SmoothLightingCheck.IsChecked = ReadFlag(options, "ao") != false;
+
             MasterVolumeSlider.Value = ReadFraction(options, "soundCategory_master", 1.0) * 100;
             MusicVolumeSlider.Value = ReadFraction(options, "soundCategory_music", 0.3) * 100;
             AmbientVolumeSlider.Value = ReadFraction(options, "soundCategory_ambient", 0.6) * 100;
@@ -3862,6 +3890,18 @@ namespace CustomLauncher
                 ["autoJump"] = AutoJumpCheck.IsChecked == true ? "true" : "false",
                 ["fov"] = Fraction((FovSlider.Value - 30) / 80d * 100d),
                 ["gamma"] = Fraction(GammaSlider.Value),
+                ["mouseSensitivity"] = Fraction(SensitivitySlider.Value / 2d),
+                ["entityDistanceScaling"] = Fraction(EntityDistanceSlider.Value),
+                ["biomeBlendRadius"] = ((int)BiomeBlendSlider.Value).ToString(),
+                ["mipmapLevels"] = ((int)MipmapSlider.Value).ToString(),
+                ["mainHand"] = MainHandCombo.SelectedIndex == 0 ? "\"left\"" : "\"right\"",
+                ["attackIndicator"] = Math.Max(0, AttackIndicatorCombo.SelectedIndex).ToString(),
+                ["invertYMouse"] = InvertMouseCheck.IsChecked == true ? "true" : "false",
+                ["showSubtitles"] = SubtitlesCheck.IsChecked == true ? "true" : "false",
+                ["pauseOnLostFocus"] = PauseOnLostFocusCheck.IsChecked == true ? "true" : "false",
+                ["toggleCrouch"] = ToggleCrouchCheck.IsChecked == true ? "true" : "false",
+                ["toggleSprint"] = ToggleSprintCheck.IsChecked == true ? "true" : "false",
+                ["ao"] = SmoothLightingCheck.IsChecked == true ? "true" : "false",
                 ["soundCategory_master"] = Fraction(MasterVolumeSlider.Value),
                 ["soundCategory_music"] = Fraction(MusicVolumeSlider.Value),
                 ["soundCategory_ambient"] = Fraction(AmbientVolumeSlider.Value),
