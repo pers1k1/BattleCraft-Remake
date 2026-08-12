@@ -98,10 +98,17 @@ namespace CustomLauncher
         private bool _welcomeLoopStarted = false;
         private static readonly Random _rnd = new();
 
+        private const int ShenandoahHeapThresholdMb = 8192;
+
         private readonly string[] _jvmArgs = {
-            "-XX:+UseShenandoahGC","-XX:ShenandoahGCHeuristics=adaptive",
             "-XX:+ParallelRefProcEnabled","-XX:+ExplicitGCInvokesConcurrent",
             "-XX:+PerfDisableSharedMem"};
+
+        private readonly string[] _shenandoahArgs = {
+            "-XX:+UseShenandoahGC","-XX:ShenandoahGCHeuristics=adaptive"};
+
+        private static readonly System.Text.RegularExpressions.Regex _defaultCollectorArgs =
+            new(@"\s-XX:\+UseG1GC(?=\s|$)|\s-XX:G1\w+=\S+|\s-XX:MaxGCPauseMillis=\S+");
 
         private TaskCompletionSource<bool>? _dialogTcs;
         private readonly System.Threading.SemaphoreSlim _dialogGate = new(1, 1);
@@ -2918,10 +2925,15 @@ namespace CustomLauncher
         private void InjectJvmArgs(Process p)
         {
             if (string.IsNullOrEmpty(p.StartInfo.Arguments)) return;
-            string jvm = string.Join(" ", _jvmArgs); string a = p.StartInfo.Arguments;
+            bool preferShenandoah = _settings.RamMb >= ShenandoahHeapThresholdMb;
+            string a = preferShenandoah ? StripDefaultCollectorArgs(p.StartInfo.Arguments) : p.StartInfo.Arguments;
+            string jvm = string.Join(" ", preferShenandoah ? _shenandoahArgs.Concat(_jvmArgs) : _jvmArgs);
+            Log(Lang.T(preferShenandoah ? "Сборщик мусора: Shenandoah" : "Сборщик мусора: G1"));
             int i = a.IndexOf(" -cp "); if (i < 0) i = a.IndexOf(" -classpath ");
             p.StartInfo.Arguments = i > 0 ? a.Insert(i, " " + jvm) : jvm + " " + a;
         }
+
+        private static string StripDefaultCollectorArgs(string arguments) => _defaultCollectorArgs.Replace(arguments, "");
 
         private async Task<bool> EnsureFreeSpace(string path, long requiredBytes)
         {

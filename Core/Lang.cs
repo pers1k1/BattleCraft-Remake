@@ -92,6 +92,8 @@ namespace CustomLauncher.Core
             ["Инверсия мыши"] = "Invert mouse",
             ["ОСНОВНОЕ"] = "BASICS",
             ["Ресурспак сборки включён"] = "Modpack resource pack enabled",
+            ["Сборщик мусора: Shenandoah"] = "Garbage collector: Shenandoah",
+            ["Сборщик мусора: G1"] = "Garbage collector: G1",
             ["Настройки модов приведены к общим значениям:"] = "Mod settings aligned to shared values:",
             ["Аксессуары"] = "Curios slots",
             ["Меню голосового чата"] = "Voice chat menu",
