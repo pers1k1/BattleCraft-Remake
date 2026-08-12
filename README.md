@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 08.08.26 |
+| Launcher | 12.08.26hotfix |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -63,7 +63,7 @@ Defaults tuned for running the server and the client on the same machine (6 core
 | `simulation-distance` | 6 | Entity and block ticking is the most expensive part of a tick and needs a far smaller radius than rendering. |
 | `sync-chunk-writes` | false | Synchronous chunk writes stall the main thread on every save. |
 | `max-tick-time` | 60000 | Prevents the watchdog from killing the server during a long chunk load. |
-| Server heap | 3072 MB | `-Xms` equals `-Xmx` so the heap never resizes mid-game; leaves room for a 4 GB client. |
+| Server heap | 4096 MB | `-Xms` equals `-Xmx` so the heap never resizes mid-game. |
 | GC | G1 with tuned pause and region flags | Default G1 on a small heap produces multi-second pauses under chunk load. |
 
 Distant Horizons must have `enableDistantGeneration` and `enableServerGeneration` set to `false` on both sides. With generation on, DH runs its own world generator threads on the server and the client at once, which saturates every core and writes generated chunks back into the region files.

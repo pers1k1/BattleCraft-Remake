@@ -11,7 +11,7 @@ namespace CustomLauncher.Core
         public int ServerPort { get; set; } = 25565;
         public int ViewDistance { get; set; } = 8;
         public int SimulationDistance { get; set; } = 6;
-        public int ServerRamMb { get; set; } = 3072;
+        public int ServerRamMb { get; set; } = 4096;
         public bool WhitelistEnabled { get; set; } = false;
         public bool EulaAccepted { get; set; } = false;
         public bool IsInstalled { get; set; } = false;
