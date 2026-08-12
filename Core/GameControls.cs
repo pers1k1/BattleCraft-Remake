@@ -113,7 +113,7 @@ namespace CustomLauncher.Core
 
             new(Vehicles, "Взаимодействие с техникой", "key_key.superbwarfare.interact"),
             new(Vehicles, "Выйти из техники", "key_key.superbwarfare.dismount"),
-            new(Vehicles, "Наведение", "key_key.superbwarfare.vehicle_seek"),
+            new(Vehicles, "Захват цели", "key_key.superbwarfare.vehicle_seek"),
             new(Vehicles, "Тепловизор", "key_key.superbwarfare.active_thermal_imaging"),
 
             new(Battle, "Действия BattleCraft", "key_key.capturepoints.capture", "key_key.knockdown.revive"),

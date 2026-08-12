@@ -148,7 +148,7 @@ namespace CustomLauncher.Core
             ["Быстрый бег"] = "Fast run",
             ["Модификация оружия"] = "Weapon refit",
             ["Ближний бой"] = "Melee",
-            ["Наведение"] = "Vehicle lock-on",
+            ["Захват цели"] = "Missile lock-on",
             ["Тепловизор"] = "Thermal vision",
             ["Сдаться"] = "Surrender",
             ["Животные"] = "Animals",

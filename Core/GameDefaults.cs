@@ -61,7 +61,7 @@ namespace CustomLauncher.Core
             ["key_key.superbwarfare.dismount"] = "key.keyboard.f",
             ["key_key.superbwarfare.interact"] = "key.keyboard.l",
             ["key_key.swapOffhand"] = "key.keyboard.unknown",
-            ["key_key.superbwarfare.vehicle_seek"] = "key.keyboard.u",
+            ["key_key.superbwarfare.vehicle_seek"] = "key.keyboard.x",
             ["key_key.curios.open.desc"] = "key.keyboard.left.bracket",
             ["key_key.voice_chat"] = "key.keyboard.period",
             ["key_key.voice_chat_group"] = "key.keyboard.unknown",
