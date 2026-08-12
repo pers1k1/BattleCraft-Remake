@@ -65,6 +65,8 @@ namespace CustomLauncher.Core
             ["key_key.curios.open.desc"] = "key.keyboard.left.bracket",
             ["key_key.voice_chat"] = "key.keyboard.period",
             ["key_key.voice_chat_group"] = "key.keyboard.unknown",
+            ["key_key.hide_icons"] = "key.keyboard.unknown",
+            ["key_key.superbwarfare.edit_mode"] = "key.keyboard.unknown",
             ["key_key.superbwarfare.free_camera"] = "key.keyboard.unknown",
             ["key_key.survival_instinct.exo_suit_dash"] = "key.keyboard.unknown",
             ["key_key.saveToolbarActivator"] = "key.keyboard.unknown",
