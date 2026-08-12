@@ -1726,9 +1726,93 @@
                                 </StackPanel>
                             </WrapPanel>
 
+                            <WrapPanel Orientation="Horizontal">
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="FovLabel" Text="Поле обзора:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="FovSlider" Minimum="30" Maximum="110" Value="74" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=FovSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="GammaLabel" Text="Яркость:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="GammaSlider" Minimum="0" Maximum="100" Value="50" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="5"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=GammaSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </WrapPanel>
+
                             <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <CheckBox x:Name="WindowedCheck" Content="Оконный режим" Margin="0,0,25,0" VerticalAlignment="Center"/>
-                                <CheckBox x:Name="VsyncCheck" Content="Вертикальная синхронизация" Margin="0,0,25,0" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WindowedCheck" Content="Оконный режим" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="VsyncCheck" Content="Вертикальная синхронизация" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="CloudsCheck" Content="Облака" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="EntityShadowsCheck" Content="Тени существ" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="BobViewCheck" Content="Покачивание камеры" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="AutoJumpCheck" Content="Автопрыжок" Margin="0,0,25,8" VerticalAlignment="Center"/>
+                            </WrapPanel>
+
+                            <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,18,0,10">
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="SoundHeaderRun" Text="ЗВУК"/>
+                            </TextBlock>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="MasterVolumeLabel" Text="Общая громкость:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="MasterVolumeSlider" Minimum="0" Maximum="100" Value="100" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="5"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=MasterVolumeSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="MusicVolumeLabel" Text="Музыка:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="MusicVolumeSlider" Minimum="0" Maximum="100" Value="30" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="5"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=MusicVolumeSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="AmbientVolumeLabel" Text="Окружение:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="AmbientVolumeSlider" Minimum="0" Maximum="100" Value="60" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="5"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=AmbientVolumeSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="WeatherVolumeLabel" Text="Погода:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="WeatherVolumeSlider" Minimum="0" Maximum="100" Value="60" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="5"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=WeatherVolumeSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
                             </WrapPanel>
 
                             <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,22,0,4">
@@ -1737,6 +1821,17 @@
                             <TextBlock x:Name="ControlsHintText" Text="Нажмите на клавишу справа, затем нажмите новую клавишу или кнопку мыши" Foreground="#77FFFFFF" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <ItemsControl x:Name="BindingsList">
+                                <ItemsControl.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Foreground="#99FFFFFF" FontSize="12" FontWeight="Bold" Margin="0,12,0,6">
+                                                    <Run Text="&#x2022; " Foreground="{DynamicResource AccentBrush}"/><Run Text="{Binding Name, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ItemsControl.GroupStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,0,0,6">
@@ -1745,11 +1840,7 @@
                                                 <ColumnDefinition Width="130"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Title}" Foreground="#CCFFFFFF" FontSize="12" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="1" Content="{Binding Display}" Tag="{Binding}" Click="BindingButton_Click" Style="{StaticResource GlowButton}" HorizontalAlignment="Stretch">
-                                                <Button.Resources>
-                                                    <Style TargetType="Border"/>
-                                                </Button.Resources>
-                                            </Button>
+                                            <Button Grid.Column="1" Content="{Binding Display}" Click="BindingButton_Click" Style="{StaticResource GlowButton}" HorizontalAlignment="Stretch"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

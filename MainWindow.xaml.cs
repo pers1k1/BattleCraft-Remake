@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v3";
+        private const string VER = "2026.08.12v4";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2462,6 +2462,17 @@ namespace CustomLauncher
             ParticlesLabel.Text = Lang.T("Частицы:");
             WindowedCheck.Content = Lang.T("Оконный режим");
             VsyncCheck.Content = Lang.T("Вертикальная синхронизация");
+            CloudsCheck.Content = Lang.T("Облака");
+            EntityShadowsCheck.Content = Lang.T("Тени существ");
+            BobViewCheck.Content = Lang.T("Покачивание камеры");
+            AutoJumpCheck.Content = Lang.T("Автопрыжок");
+            SoundHeaderRun.Text = Lang.T("ЗВУК");
+            FovLabel.Text = Lang.T("Поле обзора:");
+            GammaLabel.Text = Lang.T("Яркость:");
+            MasterVolumeLabel.Text = Lang.T("Общая громкость:");
+            MusicVolumeLabel.Text = Lang.T("Музыка:");
+            AmbientVolumeLabel.Text = Lang.T("Окружение:");
+            WeatherVolumeLabel.Text = Lang.T("Погода:");
             BtnRecommendedText.Text = Lang.T("Рекомендованные");
             BtnSaveGameText.Text = Lang.T("Сохранить");
 
@@ -3774,7 +3785,9 @@ namespace CustomLauncher
             foreach (string item in new[] { "Быстрая", "Детальная", "Максимальная" }) GraphicsModeCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Все", "Уменьшено", "Минимум" }) ParticlesCombo.Items.Add(Lang.T(item));
 
-            BindingsList.ItemsSource = _bindings;
+            var grouped = new System.Windows.Data.CollectionViewSource { Source = _bindings };
+            grouped.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(GameBinding.Group)));
+            BindingsList.ItemsSource = grouped.View;
         }
 
         private void LoadGameSettings()
@@ -3789,6 +3802,17 @@ namespace CustomLauncher
             ParticlesCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "particles", 1), 0, 2);
             WindowedCheck.IsChecked = ReadFlag(options, "fullscreen") == false;
             VsyncCheck.IsChecked = ReadFlag(options, "enableVsync") != false;
+            CloudsCheck.IsChecked = ReadCloudFlag(options);
+            EntityShadowsCheck.IsChecked = ReadFlag(options, "entityShadows") != false;
+            BobViewCheck.IsChecked = ReadFlag(options, "bobView") != false;
+            AutoJumpCheck.IsChecked = ReadFlag(options, "autoJump") == true;
+
+            FovSlider.Value = Math.Clamp(30 + ReadFraction(options, "fov", 0.55) * 80, 30, 110);
+            GammaSlider.Value = ReadFraction(options, "gamma", 0.5) * 100;
+            MasterVolumeSlider.Value = ReadFraction(options, "soundCategory_master", 1.0) * 100;
+            MusicVolumeSlider.Value = ReadFraction(options, "soundCategory_music", 0.3) * 100;
+            AmbientVolumeSlider.Value = ReadFraction(options, "soundCategory_ambient", 0.6) * 100;
+            WeatherVolumeSlider.Value = ReadFraction(options, "soundCategory_weather", 0.6) * 100;
 
             _bindings.Clear();
             foreach (var action in GameControls.Actions)
@@ -3808,6 +3832,19 @@ namespace CustomLauncher
         private static bool? ReadFlag(Dictionary<string, string> options, string key) =>
             options.TryGetValue(key, out string? raw) ? raw.Trim() == "true" : null;
 
+        private static bool ReadCloudFlag(Dictionary<string, string> options) =>
+            options.TryGetValue("renderClouds", out string? raw) && raw.Trim('"', ' ') != "false";
+
+        private static double ReadFraction(Dictionary<string, string> options, string key, double fallback) =>
+            options.TryGetValue(key, out string? raw)
+            && double.TryParse(raw.Trim(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double value)
+                ? value
+                : fallback;
+
+        private static string Fraction(double percent) =>
+            (percent / 100d).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
+
         private void SaveGameSettings()
         {
             if (string.IsNullOrWhiteSpace(_settings.GamePath) || !Directory.Exists(_settings.GamePath)) return;
@@ -3821,7 +3858,17 @@ namespace CustomLauncher
                 ["graphicsMode"] = Math.Max(0, GraphicsModeCombo.SelectedIndex).ToString(),
                 ["particles"] = Math.Max(0, ParticlesCombo.SelectedIndex).ToString(),
                 ["fullscreen"] = WindowedCheck.IsChecked == true ? "false" : "true",
-                ["enableVsync"] = VsyncCheck.IsChecked == true ? "true" : "false"
+                ["enableVsync"] = VsyncCheck.IsChecked == true ? "true" : "false",
+                ["renderClouds"] = CloudsCheck.IsChecked == true ? "\"fast\"" : "\"false\"",
+                ["entityShadows"] = EntityShadowsCheck.IsChecked == true ? "true" : "false",
+                ["bobView"] = BobViewCheck.IsChecked == true ? "true" : "false",
+                ["autoJump"] = AutoJumpCheck.IsChecked == true ? "true" : "false",
+                ["fov"] = Fraction((FovSlider.Value - 30) / 80d * 100d),
+                ["gamma"] = Fraction(GammaSlider.Value),
+                ["soundCategory_master"] = Fraction(MasterVolumeSlider.Value),
+                ["soundCategory_music"] = Fraction(MusicVolumeSlider.Value),
+                ["soundCategory_ambient"] = Fraction(AmbientVolumeSlider.Value),
+                ["soundCategory_weather"] = Fraction(WeatherVolumeSlider.Value)
             };
 
             foreach (var binding in _bindings)
@@ -3843,7 +3890,7 @@ namespace CustomLauncher
 
         private void BindingButton_Click(object s, RoutedEventArgs e)
         {
-            if (s is not Button { Tag: GameBinding binding }) return;
+            if (s is not FrameworkElement { DataContext: GameBinding binding }) return;
 
             StopListening();
             _listeningBinding = binding;

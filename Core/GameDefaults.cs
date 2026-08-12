@@ -21,7 +21,18 @@ namespace CustomLauncher.Core
             ["biomeBlendRadius"] = "2",
             ["entityShadows"] = "true",
             ["ao"] = "true",
-            ["gamma"] = "0.5"
+            ["gamma"] = "0.5",
+            ["fov"] = "0.55",
+            ["bobView"] = "true",
+            ["autoJump"] = "false"
+        };
+
+        public static readonly Dictionary<string, string> RecommendedSound = new()
+        {
+            ["soundCategory_master"] = "1.0",
+            ["soundCategory_music"] = "0.3",
+            ["soundCategory_ambient"] = "0.6",
+            ["soundCategory_weather"] = "0.6"
         };
 
         public static readonly Dictionary<string, string> RecommendedControls = new()
@@ -34,9 +45,9 @@ namespace CustomLauncher.Core
             ["key_key.push_to_talk"] = "key.mouse.5",
             ["key_key.capturepoints.capture"] = "key.keyboard.left.alt",
             ["key_key.knockdown.revive"] = "key.keyboard.left.alt",
-            ["key_key.parcool.ClingToCliff"] = "key.keyboard.space",
-            ["key_key.parcool.HangDown"] = "key.keyboard.space",
-            ["key_key.parcool.WallSlide"] = "key.keyboard.space",
+            ["key_key.parcool.ClingToCliff"] = "key.mouse.right",
+            ["key_key.parcool.HangDown"] = "key.mouse.right",
+            ["key_key.parcool.WallSlide"] = "key.keyboard.x",
             ["key_key.parcool.RideZipline"] = "key.keyboard.space",
             ["key_key.parcool.HorizontalWallRun"] = "key.keyboard.space",
             ["key_key.parcool.WallJump"] = "key.keyboard.space",
@@ -61,10 +72,11 @@ namespace CustomLauncher.Core
             if (File.Exists(optionsPath))
                 return;
 
-            Apply(gamePath, RecommendedGraphics.Concat(RecommendedControls));
+            Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound).Concat(RecommendedControls));
         }
 
-        public static void ApplyGraphics(string gamePath) => Apply(gamePath, RecommendedGraphics);
+        public static void ApplyGraphics(string gamePath) =>
+            Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound));
 
         public static void ApplyControls(string gamePath) => Apply(gamePath, RecommendedControls);
 
