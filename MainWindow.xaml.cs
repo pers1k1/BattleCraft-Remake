@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.08";
+        private const string VER = "2026.08.12";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -100,7 +100,7 @@ namespace CustomLauncher
 
         private readonly string[] _jvmArgs = {
             "-XX:+UseG1GC","-XX:+ParallelRefProcEnabled","-XX:MaxGCPauseMillis=200",
-            "-XX:+UnlockExperimentalVMOptions","-XX:+DisableExplicitGC","-XX:+AlwaysPreTouch",
+            "-XX:+UnlockExperimentalVMOptions","-XX:+ExplicitGCInvokesConcurrent",
             "-XX:G1NewSizePercent=30","-XX:G1MaxNewSizePercent=40","-XX:G1HeapRegionSize=8M",
             "-XX:G1ReservePercent=20","-XX:G1HeapWastePercent=5","-XX:G1MixedGCCountTarget=4",
             "-XX:InitiatingHeapOccupancyPercent=15","-XX:G1MixedGCLiveThresholdPercent=90",
@@ -2822,6 +2822,8 @@ namespace CustomLauncher
                 {
                     mSession = MSession.CreateOfflineSession(_settings.Username);
                 }
+
+                PerformanceConfig.Apply(_settings.GamePath);
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = FindJava() };
                 _gameProcess = await _launcher.CreateProcessAsync(ver.Name, opt);

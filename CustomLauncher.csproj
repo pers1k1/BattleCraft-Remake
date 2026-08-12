@@ -12,7 +12,7 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <ApplicationIcon>app_icon.ico</ApplicationIcon>
     <AssemblyName>BCR</AssemblyName>
-    <Version>2026.8.8</Version>
+    <Version>2026.8.12</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 

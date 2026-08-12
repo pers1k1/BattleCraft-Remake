@@ -9,8 +9,9 @@ namespace CustomLauncher.Core
         public string Motd { get; set; } = "BattleCraft Server";
         public int MaxPlayers { get; set; } = 20;
         public int ServerPort { get; set; } = 25565;
-        public int ViewDistance { get; set; } = 10;
-        public int ServerRamMb { get; set; } = 4096;
+        public int ViewDistance { get; set; } = 8;
+        public int SimulationDistance { get; set; } = 6;
+        public int ServerRamMb { get; set; } = 3072;
         public bool WhitelistEnabled { get; set; } = false;
         public bool EulaAccepted { get; set; } = false;
         public bool IsInstalled { get; set; } = false;

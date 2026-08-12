@@ -47,11 +47,28 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 
 - Create and manage multiple Forge servers from a single interface.
 - Staged installation that preserves progress and resumes after a dropped connection.
-- GUI configuration of `server.properties` (MOTD, port, view distance, RAM).
+- GUI configuration of `server.properties` (MOTD, port, view distance, RAM). Managed keys are merged into the existing file, so manual edits to any other key survive a restart.
 - Whitelist management with offline UUID generation.
 - Built-in console with command input.
 - World restore from a local backup.
 - Automatic updates for server mods and the world map, tracked per server so updating one server never hides updates for another.
+
+## Recommended Server Settings
+
+Defaults tuned for running the server and the client on the same machine (6 cores, 16 GB RAM, two players). They are applied by `ServerConfig` and written by `ServerManager` on every start.
+
+| Setting | Value | Reason |
+| --- | --- | --- |
+| `view-distance` | 8 | Distant Horizons already covers the far view; 12 only inflates the chunk working set. |
+| `simulation-distance` | 6 | Entity and block ticking is the most expensive part of a tick and needs a far smaller radius than rendering. |
+| `sync-chunk-writes` | false | Synchronous chunk writes stall the main thread on every save. |
+| `max-tick-time` | 60000 | Prevents the watchdog from killing the server during a long chunk load. |
+| Server heap | 3072 MB | `-Xms` equals `-Xmx` so the heap never resizes mid-game; leaves room for a 4 GB client. |
+| GC | G1 with tuned pause and region flags | Default G1 on a small heap produces multi-second pauses under chunk load. |
+
+Distant Horizons must have `enableDistantGeneration` and `enableServerGeneration` set to `false` on both sides. With generation on, DH runs its own world generator threads on the server and the client at once, which saturates every core and writes generated chunks back into the region files.
+
+The modpack ships Canary, Saturn, spark, ModernFix, FerriteCore and Memory Leak Fix. Canary and Radium are both Lithium ports and must never be installed together.
 
 ## Building
 

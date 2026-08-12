@@ -41,6 +41,7 @@ namespace CustomLauncher.Core
             GenerateEula(config);
             GenerateUserJvmArgs(config, serverDir);
             GenerateServerProperties(config);
+            PerformanceConfig.Apply(serverDir);
 
             if (config.WhitelistEnabled)
                 GenerateWhitelistJson(config);
@@ -236,11 +237,40 @@ namespace CustomLauncher.Core
             }
         }
 
+        private static readonly string[] RecommendedGarbageCollectorArgs =
+        {
+            "-XX:+UseG1GC",
+            "-XX:+ParallelRefProcEnabled",
+            "-XX:MaxGCPauseMillis=200",
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:+ExplicitGCInvokesConcurrent",
+            "-XX:G1NewSizePercent=30",
+            "-XX:G1MaxNewSizePercent=40",
+            "-XX:G1HeapRegionSize=8M",
+            "-XX:G1ReservePercent=20",
+            "-XX:G1HeapWastePercent=5",
+            "-XX:G1MixedGCCountTarget=4",
+            "-XX:InitiatingHeapOccupancyPercent=15",
+            "-XX:G1MixedGCLiveThresholdPercent=90",
+            "-XX:G1RSetUpdatingPauseTimePercent=5",
+            "-XX:SurvivorRatio=32",
+            "-XX:+PerfDisableSharedMem",
+            "-XX:MaxTenuringThreshold=1"
+        };
+
         private static void GenerateUserJvmArgs(ServerConfig config, string serverDir)
         {
             string userJvmArgsPath = Path.Combine(serverDir, "user_jvm_args.txt");
-            int minHeapMb = Math.Min(config.ServerRamMb, 1024);
-            File.WriteAllText(userJvmArgsPath, $"-Xmx{config.ServerRamMb}M\n-Xms{minHeapMb}M\n-Dfml.queryResult=confirm\n");
+
+            var jvmArgs = new List<string>
+            {
+                $"-Xmx{config.ServerRamMb}M",
+                $"-Xms{config.ServerRamMb}M",
+                "-Dfml.queryResult=confirm"
+            };
+            jvmArgs.AddRange(RecommendedGarbageCollectorArgs);
+
+            File.WriteAllLines(userJvmArgsPath, jvmArgs);
         }
 
         public static void GenerateServerProperties(ServerConfig config)
@@ -250,36 +280,79 @@ namespace CustomLauncher.Core
 
             string propertiesPath = Path.Combine(serverDir, "server.properties");
 
-            var propertyLines = new List<string>
+            var managedProperties = BuildManagedProperties(config);
+            var mergedProperties = MergeWithExistingProperties(propertiesPath, managedProperties);
+
+            File.WriteAllLines(propertiesPath, mergedProperties.Select(entry => $"{entry.Key}={entry.Value}"));
+        }
+
+        private static Dictionary<string, string> BuildManagedProperties(ServerConfig config)
+        {
+            var managedProperties = new Dictionary<string, string>
             {
-                "level-name=sigma",
-                $"motd={config.Motd}",
-                $"max-players={config.MaxPlayers}",
-                $"server-port={config.ServerPort}",
-                $"view-distance={config.ViewDistance}",
-                $"simulation-distance={config.ViewDistance}",
-                "gamemode=survival",
-                "difficulty=normal",
-                "pvp=true",
-                $"online-mode={BoolToString(config.OnlineMode)}",
-                "allow-nether=false",
-                "allow-flight=true",
-                "spawn-protection=0",
-                $"spawn-animals={BoolToString(config.SpawnAnimals)}",
-                $"spawn-monsters={BoolToString(config.SpawnMonsters)}",
-                "spawn-npcs=true",
-                $"white-list={BoolToString(config.WhitelistEnabled)}",
-                $"enforce-whitelist={BoolToString(config.WhitelistEnabled)}",
-                "enable-command-block=true",
-                "enforce-secure-profile=false"
+                ["level-name"] = "sigma",
+                ["motd"] = config.Motd,
+                ["max-players"] = config.MaxPlayers.ToString(),
+                ["server-port"] = config.ServerPort.ToString(),
+                ["view-distance"] = config.ViewDistance.ToString(),
+                ["simulation-distance"] = config.SimulationDistance.ToString(),
+                ["gamemode"] = "survival",
+                ["difficulty"] = "normal",
+                ["pvp"] = "true",
+                ["online-mode"] = BoolToString(config.OnlineMode),
+                ["allow-nether"] = "false",
+                ["allow-flight"] = "true",
+                ["spawn-protection"] = "0",
+                ["spawn-animals"] = BoolToString(config.SpawnAnimals),
+                ["spawn-monsters"] = BoolToString(config.SpawnMonsters),
+                ["spawn-npcs"] = "true",
+                ["white-list"] = BoolToString(config.WhitelistEnabled),
+                ["enforce-whitelist"] = BoolToString(config.WhitelistEnabled),
+                ["enable-command-block"] = "true",
+                ["enforce-secure-profile"] = "false",
+                ["sync-chunk-writes"] = "false",
+                ["max-tick-time"] = "60000"
             };
 
             if (!string.IsNullOrWhiteSpace(config.ServerIp))
             {
-                propertyLines.Add($"server-ip={config.ServerIp}");
+                managedProperties["server-ip"] = config.ServerIp;
             }
 
-            File.WriteAllLines(propertiesPath, propertyLines);
+            return managedProperties;
+        }
+
+        private static List<KeyValuePair<string, string>> MergeWithExistingProperties(
+            string propertiesPath,
+            Dictionary<string, string> managedProperties)
+        {
+            var merged = new List<KeyValuePair<string, string>>();
+            var written = new HashSet<string>();
+
+            if (File.Exists(propertiesPath))
+            {
+                foreach (string line in File.ReadAllLines(propertiesPath))
+                {
+                    int separatorIndex = line.IndexOf('=');
+                    if (line.StartsWith('#') || separatorIndex <= 0)
+                        continue;
+
+                    string key = line[..separatorIndex];
+                    string value = managedProperties.TryGetValue(key, out string? managedValue)
+                        ? managedValue
+                        : line[(separatorIndex + 1)..];
+
+                    merged.Add(new KeyValuePair<string, string>(key, value));
+                    written.Add(key);
+                }
+            }
+
+            foreach (var entry in managedProperties.Where(entry => !written.Contains(entry.Key)))
+            {
+                merged.Add(entry);
+            }
+
+            return merged;
         }
 
         public static void GenerateEula(ServerConfig config)
