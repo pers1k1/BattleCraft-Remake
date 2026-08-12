@@ -60,7 +60,9 @@ namespace CustomLauncher.Core
             ["key_key.superbwarfare.dismount"] = "key.keyboard.l",
             ["key_key.superbwarfare.vehicle_seek"] = "key.keyboard.u",
             ["key_key.superbwarfare.free_camera"] = "key.keyboard.unknown",
-            ["key_key.survival_instinct.exo_suit_dash"] = "key.keyboard.unknown"
+            ["key_key.survival_instinct.exo_suit_dash"] = "key.keyboard.unknown",
+            ["key_key.saveToolbarActivator"] = "key.keyboard.unknown",
+            ["key_key.loadToolbarActivator"] = "key.keyboard.unknown"
         };
 
         public static void EnsureDefaults(string gamePath)
