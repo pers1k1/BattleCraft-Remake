@@ -99,6 +99,7 @@ namespace CustomLauncher.Core
             ["Полоска"] = "Hotbar",
             ["Инверсия мыши"] = "Invert mouse",
             ["ОСНОВНОЕ"] = "BASICS",
+            ["Настройки модов приведены к общим значениям:"] = "Mod settings aligned to shared values:",
             ["Аксессуары"] = "Curios slots",
             ["Меню голосового чата"] = "Voice chat menu",
             ["Выключить микрофон"] = "Mute microphone",

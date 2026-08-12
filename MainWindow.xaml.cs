@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v8";
+        private const string VER = "2026.08.12v9";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2861,6 +2861,10 @@ namespace CustomLauncher
 
                 PerformanceConfig.Apply(_settings.GamePath);
                 GameDefaults.EnsureDefaults(_settings.GamePath);
+
+                int managed = await ManagedConfig.ApplyAsync(_settings.GamePath, _httpClient);
+                if (managed > 0)
+                    Log(Lang.T("Настройки модов приведены к общим значениям:") + " " + managed);
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = FindJava() };
                 _gameProcess = await _launcher.CreateProcessAsync(ver.Name, opt);
