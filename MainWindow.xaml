@@ -1788,11 +1788,6 @@
                                         <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=EntityDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                 </StackPanel>
-
-                                <StackPanel Margin="0,0,18,10" Width="255">
-                                    <TextBlock x:Name="AttackIndicatorLabel" Text="Индикатор атаки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
-                                    <ComboBox x:Name="AttackIndicatorCombo"/>
-                                </StackPanel>
                             </WrapPanel>
 
                             <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
