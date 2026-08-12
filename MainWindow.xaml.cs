@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v4";
+        private const string VER = "2026.08.12v5";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -3883,6 +3883,7 @@ namespace CustomLauncher
             StopListening();
             GameDefaults.ApplyGraphics(_settings.GamePath);
             GameDefaults.ApplyControls(_settings.GamePath);
+            GameDefaults.ApplyParkour(_settings.GamePath);
             LoadGameSettings();
         }
 

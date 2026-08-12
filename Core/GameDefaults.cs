@@ -52,7 +52,9 @@ namespace CustomLauncher.Core
             ["key_key.parcool.HorizontalWallRun"] = "key.keyboard.space",
             ["key_key.parcool.WallJump"] = "key.keyboard.space",
             ["key_key.parcool.Vault"] = "key.keyboard.space",
-            ["key_key.parcool.Breakfall"] = "key.keyboard.space",
+            ["key_key.parcool.Breakfall"] = MinecraftKeys.Unbound,
+            ["key_key.saveToolbarActivator"] = MinecraftKeys.Unbound,
+            ["key_key.loadToolbarActivator"] = MinecraftKeys.Unbound,
             ["key_key.parcool.HideInBlock"] = "key.keyboard.unknown",
             ["key_key.tacz.refit.desc"] = "key.keyboard.i",
             ["key_key.superbwarfare.interact"] = "key.keyboard.f",
@@ -65,6 +67,15 @@ namespace CustomLauncher.Core
             ["key_key.loadToolbarActivator"] = "key.keyboard.unknown"
         };
 
+        public static readonly Dictionary<string, bool> DisabledParkourActions = new()
+        {
+            ["can_CatLeap"] = false,
+            ["can_Vault"] = false,
+            ["can_Roll"] = false,
+            ["can_BreakfallReady"] = false,
+            ["can_Flipping"] = false
+        };
+
         public static void EnsureDefaults(string gamePath)
         {
             if (string.IsNullOrWhiteSpace(gamePath) || !Directory.Exists(gamePath))
@@ -75,6 +86,32 @@ namespace CustomLauncher.Core
                 return;
 
             Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound).Concat(RecommendedControls));
+            ApplyParkour(gamePath);
+        }
+
+        public static void ApplyParkour(string gamePath)
+        {
+            string path = Path.Combine(gamePath, "config", "parcool-client.toml");
+            if (!File.Exists(path))
+                return;
+
+            string[] lines = File.ReadAllLines(path);
+
+            for (int index = 0; index < lines.Length; index++)
+            {
+                string trimmed = lines[index].TrimStart();
+                int separator = trimmed.IndexOf('=');
+                if (separator <= 0)
+                    continue;
+
+                string key = trimmed[..separator].Trim();
+                if (!DisabledParkourActions.ContainsKey(key))
+                    continue;
+
+                lines[index] = $"\t{key} = false";
+            }
+
+            File.WriteAllLines(path, lines);
         }
 
         public static void ApplyGraphics(string gamePath) =>
