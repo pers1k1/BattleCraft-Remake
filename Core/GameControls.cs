@@ -104,7 +104,7 @@ namespace CustomLauncher.Core
             new(Weapons, "Перезарядка", "key_key.tacz.reload.desc", "key_key.superbwarfare.reload"),
             new(Weapons, "Режим огня", "key_key.tacz.fire_select.desc", "key_key.superbwarfare.fire_mode"),
             new(Weapons, "Осмотр оружия", "key_key.tacz.inspect.desc"),
-            new(Weapons, "Модификация оружия", "key_key.tacz.refit.desc"),
+            new(Weapons, "Модификация оружия", "key_key.tacz.refit.desc", "key_key.superbwarfare.edit_mode"),
             new(Weapons, "Ближний бой", "key_key.tacz.melee.desc", "key_key.superbwarfare.melee"),
 
             new(Vehicles, "Взаимодействие с техникой", "key_key.superbwarfare.interact"),
