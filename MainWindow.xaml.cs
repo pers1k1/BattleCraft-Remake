@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v12";
+        private const string VER = "2026.08.12v13";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2860,6 +2860,9 @@ namespace CustomLauncher
 
                 PerformanceConfig.Apply(_settings.GamePath);
                 GameDefaults.EnsureDefaults(_settings.GamePath);
+
+                if (GameDefaults.EnsureResourcePack(_settings.GamePath))
+                    Log(Lang.T("Ресурспак сборки включён"));
 
                 int managed = await ManagedConfig.ApplyAsync(_settings.GamePath, _httpClient);
                 if (managed > 0)

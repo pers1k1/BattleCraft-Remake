@@ -91,6 +91,7 @@ namespace CustomLauncher.Core
             ["Бежать и ускорение"] = "Sprint and speed-up",
             ["Инверсия мыши"] = "Invert mouse",
             ["ОСНОВНОЕ"] = "BASICS",
+            ["Ресурспак сборки включён"] = "Modpack resource pack enabled",
             ["Настройки модов приведены к общим значениям:"] = "Mod settings aligned to shared values:",
             ["Аксессуары"] = "Curios slots",
             ["Меню голосового чата"] = "Voice chat menu",

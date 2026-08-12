@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -93,6 +94,52 @@ namespace CustomLauncher.Core
 
             Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound).Concat(RecommendedControls));
             ApplyParkour(gamePath);
+        }
+
+        public const string RequiredResourcePack = "file/noglint.zip";
+
+        public static bool EnsureResourcePack(string gamePath)
+        {
+            if (string.IsNullOrWhiteSpace(gamePath) || !Directory.Exists(gamePath))
+                return false;
+
+            string optionsPath = Path.Combine(gamePath, "options.txt");
+            if (!File.Exists(optionsPath))
+                return false;
+
+            string[] lines = File.ReadAllLines(optionsPath);
+
+            for (int index = 0; index < lines.Length; index++)
+            {
+                if (!lines[index].StartsWith("resourcePacks:"))
+                    continue;
+
+                var packs = ParsePackList(lines[index]);
+                if (packs.Contains(RequiredResourcePack))
+                    return false;
+
+                packs.Add(RequiredResourcePack);
+                lines[index] = "resourcePacks:[" + string.Join(",", packs.Select(pack => $"\"{pack}\"")) + "]";
+                File.WriteAllLines(optionsPath, lines);
+                return true;
+            }
+
+            File.WriteAllLines(optionsPath, lines.Append($"resourcePacks:[\"{RequiredResourcePack}\"]"));
+            return true;
+        }
+
+        private static List<string> ParsePackList(string line)
+        {
+            string value = line["resourcePacks:".Length..].Trim();
+
+            if (value.Length < 2 || value[0] != '[')
+                return new List<string>();
+
+            return value[1..^1]
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(item => item.Trim().Trim('"'))
+                .Where(item => item.Length > 0)
+                .ToList();
         }
 
         public static void ApplyParkour(string gamePath)
