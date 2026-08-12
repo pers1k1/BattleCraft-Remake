@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v13";
+        private const string VER = "2026.08.12v14";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -99,13 +99,9 @@ namespace CustomLauncher
         private static readonly Random _rnd = new();
 
         private readonly string[] _jvmArgs = {
-            "-XX:+UseG1GC","-XX:+ParallelRefProcEnabled","-XX:MaxGCPauseMillis=200",
-            "-XX:+UnlockExperimentalVMOptions","-XX:+ExplicitGCInvokesConcurrent",
-            "-XX:G1NewSizePercent=30","-XX:G1MaxNewSizePercent=40","-XX:G1HeapRegionSize=8M",
-            "-XX:G1ReservePercent=20","-XX:G1HeapWastePercent=5","-XX:G1MixedGCCountTarget=4",
-            "-XX:InitiatingHeapOccupancyPercent=15","-XX:G1MixedGCLiveThresholdPercent=90",
-            "-XX:G1RSetUpdatingPauseTimePercent=5","-XX:SurvivorRatio=32",
-            "-XX:+PerfDisableSharedMem","-XX:MaxTenuringThreshold=1"};
+            "-XX:+UseShenandoahGC","-XX:ShenandoahGCHeuristics=adaptive",
+            "-XX:+ParallelRefProcEnabled","-XX:+ExplicitGCInvokesConcurrent",
+            "-XX:+PerfDisableSharedMem"};
 
         private TaskCompletionSource<bool>? _dialogTcs;
         private readonly System.Threading.SemaphoreSlim _dialogGate = new(1, 1);
