@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 12.08.26hotfix |
+| Launcher | 12.08.26v3 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -38,6 +38,9 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 - In-app ChangeLogs viewer with separate launcher and modpack/server-map tabs, fetched live from the remote config in the interface language (Russian or English).
 - Living pixel-art background: a hand-rendered seasonal scene with a day/night cycle, parallax mountains and a forest of swaying trees, and dynamic weather — rain with thunderstorms, snow that drifts and piles up, fog, falling autumn leaves and spring cherry-blossom petals. The scene is simulated and rendered on a dedicated background thread, so the UI stays responsive even while it animates; animation pauses while the window is minimized or in the background to keep idle resource usage low.
 - Selectable background — four options to suit any taste, all tinted live by the active theme colors: the animated pixel scene; "Theme flow", an animated soft-gradient backdrop whose color fields slowly drift, rotate and blend into each other; "Night aurora", a static vector night sky with accent-tinted aurora ribbons, a twinkling starfield, a moon and occasional shooting stars over mountain silhouettes; and "Minimal", a completely still theme-matched gradient with a subtle accent glow for those who prefer no motion at all. Switching backgrounds cross-fades smoothly, and the heavy pixel renderer is put to sleep whenever a non-scene background is active.
+- In-launcher game settings (`~/game`): graphics sliders and dropdowns (view and simulation distance, framerate cap, GUI scale, graphics quality, particles, windowed mode, vsync) plus a rebindable list of the modpack's own actions — lie down, dodge roll, parkour climbing, zoom, ping, voice chat, BattleCraft actions, vehicles, weapon handling. Click a binding and press any key or mouse button to capture it; duplicate bindings are flagged. Written straight into `options.txt`, with one button to restore the recommended layout.
+- Recommended client defaults are written on first launch when no `options.txt` exists: windowed mode and automatic GUI scale so the game never opens at a broken size on laptops or high-resolution displays.
+- Free disk space is checked before the game folder is chosen and before the modpack or a server is installed, so an install cannot die halfway through a full disk.
 - Discord Rich Presence integration.
 - Unified install/launch log with rolling crash reports retained in the launcher's configuration directory; the detected OS (e.g. Windows 11) is reported on the boot screen and in the terminal.
 - Forge library installation notice with installer output captured to the log.

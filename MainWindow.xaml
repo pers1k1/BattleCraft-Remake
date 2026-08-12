@@ -355,7 +355,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToolTip">
-                        <Grid Margin="0,4,8,10" RenderTransformOrigin="0.5,0">
+                        <Grid Margin="10,4,10,14" RenderTransformOrigin="0.5,0">
                             <Grid.RenderTransform>
                                 <ScaleTransform x:Name="TipScale" ScaleX="1" ScaleY="1"/>
                             </Grid.RenderTransform>
@@ -372,10 +372,10 @@
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="TipScale" Storyboard.TargetProperty="ScaleX" From="0.9" To="1" Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35"/></DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetName="TipScale" Storyboard.TargetProperty="ScaleY" From="0.9" To="1" Duration="0:0:0.2">
-                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="1"/></DoubleAnimation.EasingFunction>
+                                            <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.35"/></DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -1195,7 +1195,6 @@
 
         <Grid VerticalAlignment="Top" Height="40" Background="Transparent">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False">
-                <Image Source="{Binding Icon, ElementName=MainWnd}" Height="20" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                 <TextBlock x:Name="TopLeftTitleText" Text="BattleCraft Remake Launcher" FontFamily="Consolas, Courier New" Foreground="#88FFFFFF" FontSize="12" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -1237,12 +1236,6 @@
 
                     <StackPanel Grid.Row="0" Margin="0,20,0,0">
 
-                        <Border Width="128" Height="128" CornerRadius="34" Margin="0,0,0,14" HorizontalAlignment="Center">
-                            <Border.Background>
-                                <ImageBrush ImageSource="logo_main.png" Stretch="UniformToFill"/>
-                            </Border.Background>
-                        </Border>
-
                         <TextBlock Text="PLAY" Foreground="#55FFFFFF" FontSize="11" FontWeight="Bold" Margin="20,0,0,10"/>
                         <Button x:Name="NavPlayBtn" Click="NavPlay_Click" Style="{StaticResource NavButton}" BorderBrush="{DynamicResource AccentBrush}" Foreground="White">
                             <StackPanel Orientation="Horizontal">
@@ -1272,6 +1265,12 @@
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource IconDoc}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <TextBlock Text="ChangeLogs" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnGameSettingsOpen" Click="BtnGameSettings_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource IconPlay}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock x:Name="BtnGameSettingsText" Text="Настройки игры" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button x:Name="BtnSettingsOpen" Click="BtnSettings_Click" Style="{StaticResource NavButton}">
@@ -1625,6 +1624,152 @@
             </Grid>
             <Button x:Name="SetupStartBtn" Content="Начать" Margin="0,25,0,0" Height="45" Click="BtnSetupComplete_Click" Style="{StaticResource PlayButton}"/>
         </StackPanel>
+
+        <Grid x:Name="GamePanel" Background="#CC000000" Visibility="Hidden">
+            <Border Background="Transparent" MouseDown="BtnCloseGameSettings_Click"/>
+            <Border x:Name="GameBox" Background="#8E080611"
+                    Width="620" MaxHeight="650" VerticalAlignment="Center" Margin="0,20,0,20"
+                    CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="GameScale" ScaleX="1" ScaleY="1"/>
+                        <TranslateTransform x:Name="GameTranslate" Y="0"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="20" ShadowDepth="0" Opacity="{DynamicResource SettingsBloomOpacity}"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseGameSettings_Click" ToolTip="Закрыть"/>
+                                <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
+                                <Ellipse Width="11" Height="11" Fill="#28C840"/>
+                            </StackPanel>
+                            <TextBlock Text="player@battlecraft: ~/game" FontFamily="Consolas, Courier New" FontSize="12" Foreground="#77FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" x:Name="GameScrollViewer" VerticalScrollBarVisibility="Auto" Margin="0,10,0,10" PreviewMouseWheel="SmoothWheel_Preview">
+                        <StackPanel Margin="25,15,25,25" TextElement.FontFamily="Consolas, Courier New">
+                            <TextBlock x:Name="GameTitle" FontSize="20" FontWeight="Bold" Margin="0,0,0,18" FontFamily="Consolas, Courier New">
+                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run x:Name="GameTitleRun" Text="настройки игры" Foreground="White"/>
+                                <TextBlock.RenderTransform>
+                                    <TranslateTransform x:Name="GameTitleTranslate" Y="0"/>
+                                </TextBlock.RenderTransform>
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="{DynamicResource TitleBloomBlurRadius}" ShadowDepth="0" Opacity="{DynamicResource TitleBloomOpacity}"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+
+                            <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,5,0,10">
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="GraphicsHeaderRun" Text="ГРАФИКА"/>
+                            </TextBlock>
+
+                            <WrapPanel Orientation="Horizontal">
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="RenderDistanceLabel" Text="Дальность прорисовки:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="RenderDistanceSlider" Minimum="4" Maximum="16" Value="8" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=RenderDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="SimulationDistanceLabel" Text="Дальность симуляции:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="35"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="SimulationDistanceSlider" Minimum="4" Maximum="12" Value="6" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=SimulationDistanceSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="MaxFpsLabel" Text="Максимум кадров:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="MaxFpsSlider" Minimum="30" Maximum="260" Value="120" VerticalAlignment="Center" IsSnapToTickEnabled="True" TickFrequency="10"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value, ElementName=MaxFpsSlider, StringFormat={}{0:0}}" Foreground="White" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="GuiScaleLabel" Text="Масштаб интерфейса:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <ComboBox x:Name="GuiScaleCombo"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="GraphicsModeLabel" Text="Качество графики:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <ComboBox x:Name="GraphicsModeCombo"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,18,10" Width="255">
+                                    <TextBlock x:Name="ParticlesLabel" Text="Частицы:" Foreground="#CCFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                                    <ComboBox x:Name="ParticlesCombo"/>
+                                </StackPanel>
+                            </WrapPanel>
+
+                            <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <CheckBox x:Name="WindowedCheck" Content="Оконный режим" Margin="0,0,25,0" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="VsyncCheck" Content="Вертикальная синхронизация" Margin="0,0,25,0" VerticalAlignment="Center"/>
+                            </WrapPanel>
+
+                            <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,22,0,4">
+                                <Run Text="# " Foreground="#55FFFFFF"/><Run x:Name="ControlsHeaderRun" Text="УПРАВЛЕНИЕ"/>
+                            </TextBlock>
+                            <TextBlock x:Name="ControlsHintText" Text="Нажмите на клавишу справа, затем нажмите новую клавишу или кнопку мыши" Foreground="#77FFFFFF" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <ItemsControl x:Name="BindingsList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="130"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Title}" Foreground="#CCFFFFFF" FontSize="12" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="{Binding Display}" Tag="{Binding}" Click="BindingButton_Click" Style="{StaticResource GlowButton}" HorizontalAlignment="Stretch">
+                                                <Button.Resources>
+                                                    <Style TargetType="Border"/>
+                                                </Button.Resources>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock x:Name="ConflictText" Foreground="#FF8A80" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                                <Button x:Name="BtnRecommendedSettings" Click="BtnRecommendedSettings_Click" Style="{StaticResource GlowButton}" Margin="0,0,10,0">
+                                    <TextBlock x:Name="BtnRecommendedText" Text="Рекомендованные" Margin="18,0"/>
+                                </Button>
+                                <Button x:Name="BtnSaveGameSettings" Click="BtnSaveGameSettings_Click" Style="{StaticResource GlowButton}">
+                                    <TextBlock x:Name="BtnSaveGameText" Text="Сохранить" Margin="18,0"/>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
 
         <Grid x:Name="SettingsPanel" Background="#CC000000" Visibility="Hidden">
             <Border Background="Transparent" MouseDown="BtnCloseSettings_Click"/>

@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12hotfix";
+        private const string VER = "2026.08.12v3";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2285,6 +2285,7 @@ namespace CustomLauncher
             if (_settings.UserType != "msa" && !IsValidNickname(nick)) { await ShowCustomDialog(Lang.T(NicknameRuleMessage)); return; }
             string path = ResolveGamePath(SetupPathBox.Text);
             if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog(Lang.T("Выберите папку для игры!")); return; }
+            if (!await EnsureFreeSpace(path, DiskSpace.ClientRequiredBytes)) return;
 
             if (!string.Equals(path, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
             {
@@ -2447,6 +2448,22 @@ namespace CustomLauncher
             BtnRestoreBackup.Content = Lang.T("Восстановить мир");
             BtnOpenServerFolder.Content = Lang.T("Открыть папку");
             ServerStatusText.Text = Lang.Tr(ServerStatusText.Text);
+
+            BtnGameSettingsText.Text = Lang.T("Настройки игры");
+            GameTitleRun.Text = Lang.T("настройки игры");
+            GraphicsHeaderRun.Text = Lang.T("ГРАФИКА");
+            ControlsHeaderRun.Text = Lang.T("УПРАВЛЕНИЕ");
+            ControlsHintText.Text = Lang.T("Нажмите на клавишу справа, затем нажмите новую клавишу или кнопку мыши");
+            RenderDistanceLabel.Text = Lang.T("Дальность прорисовки:");
+            SimulationDistanceLabel.Text = Lang.T("Дальность симуляции:");
+            MaxFpsLabel.Text = Lang.T("Максимум кадров:");
+            GuiScaleLabel.Text = Lang.T("Масштаб интерфейса:");
+            GraphicsModeLabel.Text = Lang.T("Качество графики:");
+            ParticlesLabel.Text = Lang.T("Частицы:");
+            WindowedCheck.Content = Lang.T("Оконный режим");
+            VsyncCheck.Content = Lang.T("Вертикальная синхронизация");
+            BtnRecommendedText.Text = Lang.T("Рекомендованные");
+            BtnSaveGameText.Text = Lang.T("Сохранить");
 
             SettingsTitleRun.Text = Lang.T("настройки");
             AppearanceHeaderRun.Text = Lang.T("ВНЕШНИЙ ВИД");
@@ -2824,6 +2841,7 @@ namespace CustomLauncher
                 }
 
                 PerformanceConfig.Apply(_settings.GamePath);
+                GameDefaults.EnsureDefaults(_settings.GamePath);
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = FindJava() };
                 _gameProcess = await _launcher.CreateProcessAsync(ver.Name, opt);
@@ -2882,6 +2900,18 @@ namespace CustomLauncher
             string jvm = string.Join(" ", _jvmArgs); string a = p.StartInfo.Arguments;
             int i = a.IndexOf(" -cp "); if (i < 0) i = a.IndexOf(" -classpath ");
             p.StartInfo.Arguments = i > 0 ? a.Insert(i, " " + jvm) : jvm + " " + a;
+        }
+
+        private async Task<bool> EnsureFreeSpace(string path, long requiredBytes)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return true;
+
+            if (DiskSpace.HasEnough(path, requiredBytes, out long freeBytes))
+                return true;
+
+            await ShowCustomDialog(DiskSpace.BuildShortageMessage(path, requiredBytes, freeBytes));
+            return false;
         }
 
         private string FindJava()
@@ -3088,6 +3118,9 @@ namespace CustomLauncher
 
         private async Task InstallModpack(bool clean)
         {
+            if (!await EnsureFreeSpace(_settings.GamePath, DiskSpace.ClientRequiredBytes))
+                throw new IOException("Недостаточно места на диске");
+
             if (clean)
             {
                 StatusText.Text = Lang.T("Очистка старых файлов...");
@@ -3688,6 +3721,205 @@ namespace CustomLauncher
         }
 
         private void BtnSaveSettings_Click(object s, RoutedEventArgs e) => BtnCloseSettings_Click(s, e);
+
+        private readonly System.Collections.ObjectModel.ObservableCollection<GameBinding> _bindings = new();
+        private GameBinding? _listeningBinding;
+
+        private void BtnGameSettings_Click(object s, RoutedEventArgs e)
+        {
+            GamePanel.Visibility = Visibility.Visible;
+            GameScrollViewer?.ScrollToVerticalOffset(0);
+
+            FillGameCombos();
+            LoadGameSettings();
+
+            GameTitle.Opacity = 0;
+            GameTitleTranslate.Y = 20;
+            CacheWhileMoving(GameBox, true);
+            TweenOpacity(GamePanel, 0, 1, 180, Linear);
+            TweenScale(GameScale, 0.85, 1, 420, OutBackWide);
+            TweenY(GameTranslate, 30, 0, 420, OutCubic, 0, () =>
+            {
+                CacheWhileMoving(GameBox, false);
+                TweenOpacity(GameTitle, 0, 1, 650, OutQuart);
+                TweenY(GameTitleTranslate, 20, 0, 650, OutQuart);
+            });
+        }
+
+        private void BtnCloseGameSettings_Click(object s, RoutedEventArgs e)
+        {
+            StopListening();
+            SaveGameSettings();
+
+            if (GamePanel.Visibility != Visibility.Visible) return;
+
+            CacheWhileMoving(GameBox, true);
+            TweenScale(GameScale, 1, 0.88, 200, InBackSoft);
+            TweenY(GameTranslate, 0, 18, 200, InCubic);
+            TweenOpacity(GamePanel, 1, 0, 200, Linear, 0, () =>
+            {
+                CacheWhileMoving(GameBox, false);
+                GamePanel.Visibility = Visibility.Hidden;
+                GamePanel.Opacity = 1;
+                GameScale.ScaleX = 1; GameScale.ScaleY = 1;
+                GameTranslate.Y = 0;
+            });
+        }
+
+        private void FillGameCombos()
+        {
+            if (GuiScaleCombo.Items.Count > 0) return;
+
+            foreach (string item in new[] { "Авто", "1", "2", "3" }) GuiScaleCombo.Items.Add(Lang.T(item));
+            foreach (string item in new[] { "Быстрая", "Детальная", "Максимальная" }) GraphicsModeCombo.Items.Add(Lang.T(item));
+            foreach (string item in new[] { "Все", "Уменьшено", "Минимум" }) ParticlesCombo.Items.Add(Lang.T(item));
+
+            BindingsList.ItemsSource = _bindings;
+        }
+
+        private void LoadGameSettings()
+        {
+            var options = GameDefaults.Read(_settings.GamePath);
+
+            RenderDistanceSlider.Value = ReadNumber(options, "renderDistance", 8);
+            SimulationDistanceSlider.Value = ReadNumber(options, "simulationDistance", 6);
+            MaxFpsSlider.Value = ReadNumber(options, "maxFps", 120);
+            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 0), 0, 3);
+            GraphicsModeCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "graphicsMode", 1), 0, 2);
+            ParticlesCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "particles", 1), 0, 2);
+            WindowedCheck.IsChecked = ReadFlag(options, "fullscreen") == false;
+            VsyncCheck.IsChecked = ReadFlag(options, "enableVsync") != false;
+
+            _bindings.Clear();
+            foreach (var action in GameControls.Actions)
+            {
+                var binding = new GameBinding(action);
+                if (options.TryGetValue(action.OptionKeys[0], out string? value))
+                    binding.Value = value;
+                _bindings.Add(binding);
+            }
+
+            UpdateConflicts();
+        }
+
+        private static int ReadNumber(Dictionary<string, string> options, string key, int fallback) =>
+            options.TryGetValue(key, out string? raw) && int.TryParse(raw, out int value) ? value : fallback;
+
+        private static bool? ReadFlag(Dictionary<string, string> options, string key) =>
+            options.TryGetValue(key, out string? raw) ? raw.Trim() == "true" : null;
+
+        private void SaveGameSettings()
+        {
+            if (string.IsNullOrWhiteSpace(_settings.GamePath) || !Directory.Exists(_settings.GamePath)) return;
+
+            var values = new Dictionary<string, string>
+            {
+                ["renderDistance"] = ((int)RenderDistanceSlider.Value).ToString(),
+                ["simulationDistance"] = ((int)SimulationDistanceSlider.Value).ToString(),
+                ["maxFps"] = ((int)MaxFpsSlider.Value).ToString(),
+                ["guiScale"] = Math.Max(0, GuiScaleCombo.SelectedIndex).ToString(),
+                ["graphicsMode"] = Math.Max(0, GraphicsModeCombo.SelectedIndex).ToString(),
+                ["particles"] = Math.Max(0, ParticlesCombo.SelectedIndex).ToString(),
+                ["fullscreen"] = WindowedCheck.IsChecked == true ? "false" : "true",
+                ["enableVsync"] = VsyncCheck.IsChecked == true ? "true" : "false"
+            };
+
+            foreach (var binding in _bindings)
+                foreach (string optionKey in binding.Action.OptionKeys)
+                    values[optionKey] = binding.Value;
+
+            GameDefaults.Write(_settings.GamePath, values);
+        }
+
+        private void BtnRecommendedSettings_Click(object s, RoutedEventArgs e)
+        {
+            StopListening();
+            GameDefaults.ApplyGraphics(_settings.GamePath);
+            GameDefaults.ApplyControls(_settings.GamePath);
+            LoadGameSettings();
+        }
+
+        private void BtnSaveGameSettings_Click(object s, RoutedEventArgs e) => BtnCloseGameSettings_Click(s, e);
+
+        private void BindingButton_Click(object s, RoutedEventArgs e)
+        {
+            if (s is not Button { Tag: GameBinding binding }) return;
+
+            StopListening();
+            _listeningBinding = binding;
+            binding.Listening = true;
+
+            PreviewKeyDown += Binding_PreviewKeyDown;
+            PreviewMouseDown += Binding_PreviewMouseDown;
+        }
+
+        private void StopListening()
+        {
+            if (_listeningBinding == null) return;
+
+            _listeningBinding.Listening = false;
+            _listeningBinding = null;
+            PreviewKeyDown -= Binding_PreviewKeyDown;
+            PreviewMouseDown -= Binding_PreviewMouseDown;
+        }
+
+        private void Binding_PreviewKeyDown(object s, KeyEventArgs e)
+        {
+            if (_listeningBinding == null) return;
+            e.Handled = true;
+
+            if (e.Key == Key.Escape) { StopListening(); return; }
+
+            Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+            string? mapped = MinecraftKeys.FromKey(key);
+            if (mapped == null) return;
+
+            Assign(mapped);
+        }
+
+        private void Binding_PreviewMouseDown(object s, MouseButtonEventArgs e)
+        {
+            if (_listeningBinding == null) return;
+
+            string? mapped = MinecraftKeys.FromMouse(e.ChangedButton);
+            if (mapped == null) return;
+
+            e.Handled = true;
+            Assign(mapped);
+        }
+
+        private void Assign(string value)
+        {
+            if (_listeningBinding == null) return;
+
+            _listeningBinding.Value = value;
+            StopListening();
+            UpdateConflicts();
+        }
+
+        private void UpdateConflicts()
+        {
+            var used = _bindings
+                .Where(binding => binding.Value != MinecraftKeys.Unbound)
+                .GroupBy(binding => binding.Value)
+                .Where(group => group.Count() > 1)
+                .ToDictionary(group => group.Key, group => group.ToList());
+
+            foreach (var binding in _bindings)
+                binding.Conflicted = used.ContainsKey(binding.Value);
+
+            if (used.Count == 0)
+            {
+                ConflictText.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var lines = used.Select(pair =>
+                $"{MinecraftKeys.Describe(pair.Key)}: {string.Join(", ", pair.Value.Select(binding => binding.Title))}");
+
+            ConflictText.Text = Lang.T("Одна клавиша на несколько действий:") + " " + string.Join("; ", lines);
+            ConflictText.Visibility = Visibility.Visible;
+        }
 
         private string _launcherChangelog = "";
         private string _modpackChangelog = "";
@@ -4718,6 +4950,8 @@ namespace CustomLauncher
                 await ShowCustomDialog(Lang.T("Путь к серверу не задан!"));
                 return;
             }
+
+            if (!await EnsureFreeSpace(_activeServerConfig.ServerPath, DiskSpace.ServerRequiredBytes)) return;
 
             SetServerBusy(true, Lang.T("Установка сервера..."));
             string javaPath = FindJava();
