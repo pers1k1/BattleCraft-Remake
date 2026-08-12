@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.12v5";
+        private const string VER = "2026.08.12v6";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2464,7 +2464,6 @@ namespace CustomLauncher
             VsyncCheck.Content = Lang.T("Вертикальная синхронизация");
             CloudsCheck.Content = Lang.T("Облака");
             EntityShadowsCheck.Content = Lang.T("Тени существ");
-            BobViewCheck.Content = Lang.T("Покачивание камеры");
             AutoJumpCheck.Content = Lang.T("Автопрыжок");
             SoundHeaderRun.Text = Lang.T("ЗВУК");
             FovLabel.Text = Lang.T("Поле обзора:");
@@ -3804,7 +3803,6 @@ namespace CustomLauncher
             VsyncCheck.IsChecked = ReadFlag(options, "enableVsync") != false;
             CloudsCheck.IsChecked = ReadCloudFlag(options);
             EntityShadowsCheck.IsChecked = ReadFlag(options, "entityShadows") != false;
-            BobViewCheck.IsChecked = ReadFlag(options, "bobView") != false;
             AutoJumpCheck.IsChecked = ReadFlag(options, "autoJump") == true;
 
             FovSlider.Value = Math.Clamp(30 + ReadFraction(options, "fov", 0.55) * 80, 30, 110);
@@ -3861,7 +3859,6 @@ namespace CustomLauncher
                 ["enableVsync"] = VsyncCheck.IsChecked == true ? "true" : "false",
                 ["renderClouds"] = CloudsCheck.IsChecked == true ? "\"fast\"" : "\"false\"",
                 ["entityShadows"] = EntityShadowsCheck.IsChecked == true ? "true" : "false",
-                ["bobView"] = BobViewCheck.IsChecked == true ? "true" : "false",
                 ["autoJump"] = AutoJumpCheck.IsChecked == true ? "true" : "false",
                 ["fov"] = Fraction((FovSlider.Value - 30) / 80d * 100d),
                 ["gamma"] = Fraction(GammaSlider.Value),
@@ -4989,7 +4986,7 @@ namespace CustomLauncher
 
             if (!_activeServerConfig.EulaAccepted)
             {
-                await ShowCustomDialog(Lang.T("Необходимо принять EULA!"));
+                await ShowCustomDialog(Lang.T("Примите EULA Mojang, чтобы создать сервер"));
                 return;
             }
 
@@ -5461,7 +5458,7 @@ namespace CustomLauncher
             bool isActive = isRunning || isStarting;
 
             BtnInstallServer.Visibility = hasConfig && !isInstalled ? Visibility.Visible : Visibility.Collapsed;
-            BtnInstallServer.IsEnabled = hasConfig && _activeServerConfig!.EulaAccepted && !_isServerBusy;
+            BtnInstallServer.IsEnabled = hasConfig && !_isServerBusy;
 
             BtnUpdateServerMods.Visibility = hasConfig && isInstalled && isStopped && _needsServerModpackUpdate ? Visibility.Visible : Visibility.Collapsed;
             BtnUpdateServerMods.IsEnabled = !_isServerBusy;

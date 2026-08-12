@@ -1757,7 +1757,6 @@
                                 <CheckBox x:Name="VsyncCheck" Content="Вертикальная синхронизация" Margin="0,0,25,8" VerticalAlignment="Center"/>
                                 <CheckBox x:Name="CloudsCheck" Content="Облака" Margin="0,0,25,8" VerticalAlignment="Center"/>
                                 <CheckBox x:Name="EntityShadowsCheck" Content="Тени существ" Margin="0,0,25,8" VerticalAlignment="Center"/>
-                                <CheckBox x:Name="BobViewCheck" Content="Покачивание камеры" Margin="0,0,25,8" VerticalAlignment="Center"/>
                                 <CheckBox x:Name="AutoJumpCheck" Content="Автопрыжок" Margin="0,0,25,8" VerticalAlignment="Center"/>
                             </WrapPanel>
 

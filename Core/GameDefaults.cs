@@ -30,7 +30,7 @@ namespace CustomLauncher.Core
         public static readonly Dictionary<string, string> RecommendedSound = new()
         {
             ["soundCategory_master"] = "1.0",
-            ["soundCategory_music"] = "0.3",
+            ["soundCategory_music"] = "0.0",
             ["soundCategory_ambient"] = "0.6",
             ["soundCategory_weather"] = "0.6"
         };

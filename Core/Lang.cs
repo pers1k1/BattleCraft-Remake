@@ -93,7 +93,7 @@ namespace CustomLauncher.Core
             ["Погода:"] = "Weather:",
             ["Облака"] = "Clouds",
             ["Тени существ"] = "Entity shadows",
-            ["Покачивание камеры"] = "View bobbing",
+            ["Примите EULA Mojang, чтобы создать сервер"] = "Accept the Mojang EULA to create a server",
             ["Автопрыжок"] = "Auto jump",
             ["ПАРКУР"] = "PARKOUR",
             ["ОРУЖИЕ"] = "WEAPONS",
