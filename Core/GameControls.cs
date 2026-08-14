@@ -117,7 +117,7 @@ namespace CustomLauncher.Core
             new(Battle, "Карта", "key_key.minimap.open_map"),
 
             new(Communication, "Голосовой чат", "key_key.push_to_talk"),
-            new(Communication, "Метка на местности", "key_key.pingwheel.ping_location"),
+            new(Communication, "Метка на местности", "key_key.pingwheel.ping_location", "key_key.superbwarfare.mark"),
             new(Communication, "Рация", "key_key.walkietalkie.activate"),
             new(Communication, "Меню голосового чата", "key_key.voice_chat"),
             new(Communication, "Выключить микрофон", "key_key.mute_microphone"),
