@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace CustomLauncher.Core
 {
@@ -93,7 +93,7 @@ namespace CustomLauncher.Core
             new(Basics, "Скриншот", "key_key.screenshot"),
             new(Basics, "Полный экран", "key_key.fullscreen"),
 
-            new(Parkour, "Лечь", "key_key.parcool.Crawl", "key_key.tacz.crawl.desc"),
+            new(Parkour, "Лечь", "key_key.parcool.Crawl"),
             new(Parkour, "Перекат", "key_key.parcool.Dodge"),
             new(Parkour, "Скольжение по стене", "key_key.parcool.WallSlide"),
             new(Parkour, "Свисание с уступа", "key_key.parcool.HangDown", "key_key.parcool.ClingToCliff"),

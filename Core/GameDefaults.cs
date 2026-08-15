@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,7 +40,7 @@ namespace CustomLauncher.Core
         public static readonly Dictionary<string, string> RecommendedControls = new()
         {
             ["key_key.parcool.Crawl"] = "key.keyboard.z",
-            ["key_key.tacz.crawl.desc"] = "key.keyboard.z",
+            ["key_key.tacz.crawl.desc"] = "key.keyboard.unknown",
             ["key_key.parcool.Dodge"] = "key.keyboard.x",
             ["key_justzoom.keybinds.keybind.zoom"] = "key.keyboard.c",
             ["key_key.pingwheel.ping_location"] = "key.mouse.middle",
