@@ -1,4 +1,4 @@
-# BattleCraft Launcher
+﻿# BattleCraft Launcher
 
 A custom Minecraft launcher and server manager for the BattleCraft modpack, built on .NET 8 and WPF. It handles the full client lifecycle — installing Minecraft, Forge, Java, and mods — and provides an integrated tool for provisioning and operating dedicated Forge servers.
 
@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 14.08.26 |
+| Launcher | 15.08.26 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
