@@ -2565,7 +2565,7 @@ namespace CustomLauncher
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 AnimateColorResource("PrimaryColor", c, onStep: cur => { _bgPrimary = cur; UpdateBackdropTheme(); }); AnimateBrushResource("PrimaryBrush", c);
-                if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); }
+                if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); PublishGameTheme(); }
             } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyPrimaryColor: " + ex.Message); }
         }
 
@@ -2638,8 +2638,14 @@ namespace CustomLauncher
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
                 AnimateBrushResource("OnAccentBrush", onAccent);
-                if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); }
+                if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); PublishGameTheme(); }
             } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyAccentColor: " + ex.Message); }
+        }
+
+        private void PublishGameTheme()
+        {
+            if (!_settings.HasGamePath) return;
+            GameTheme.Publish(_settings.GamePath, _settings.PrimaryColor, _settings.AccentColor);
         }
 
         private void ApplyBloom(bool on, double str, bool save = true)
@@ -2862,6 +2868,7 @@ namespace CustomLauncher
                 }
 
                 PerformanceConfig.Apply(_settings.GamePath);
+                PublishGameTheme();
                 GameDefaults.EnsureDefaults(_settings.GamePath);
 
                 if (GameDefaults.EnsureResourcePack(_settings.GamePath))
