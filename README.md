@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 20.08.26 |
+| Launcher | 02.09.26 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -42,6 +42,7 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 - In-launcher game settings (`~/game`): graphics (view and simulation distance, framerate cap, GUI scale, quality, particles, field of view, brightness, windowed mode, vsync, clouds, entity shadows, view bobbing, auto jump), sound levels, and a rebindable list of the modpack's own actions grouped per mod — parkour, weapons, vehicles, BattleCraft, comms. Vanilla options are covered too: mouse sensitivity and inversion, entity render distance, pause on lost focus, toggle sneak and sprint, smooth lighting, and the core game keys — movement, jump, sneak, sprint, attack, use, inventory, chat, player list. Click a binding and press any key or mouse button to capture it; a duplicate turns red and gets bracketed, the way vanilla marks a clash. Written straight into `options.txt`, with one button to restore the recommended layout.
 - Managed mod settings: a manifest in the remote config lists the config keys that must be identical for every player (Distant Horizons generation, ParCool actions, Truly Dark levels, duplicate HUDs, Forge update checks). Before launch the launcher rewrites **only those keys** in the local config files and leaves everything else — microphone choice, graphics tuned to the machine, personal preferences — untouched. A settings fix therefore reaches players immediately, without repacking and redownloading the modpack.
 - Recommended client defaults are written on first launch when no `options.txt` exists: windowed mode and automatic GUI scale so the game never opens at a broken size on laptops or high-resolution displays.
+- The loader's own splash is started dark rather than red. Forge reads `FML_EARLY_WINDOW_DARK` from the game process environment before it looks at `options.txt`, so the launcher sets it on every launch and the mod-loading window matches the pack instead of flashing red first.
 - Free disk space is checked before the game folder is chosen and before the modpack or a server is installed, so an install cannot die halfway through a full disk.
 - The client collector is chosen by heap size. From 8 GB up the launcher switches to Shenandoah, whose pauses stay in single-digit milliseconds and no longer land on Distant Horizons building far terrain; below that it keeps G1, because on a small heap G1 pauses are short anyway and Shenandoah's read barriers would only cost throughput. Switching to Shenandoah also strips the G1 flags CmlLib puts on the command line by default, since a JVM given two collectors at once refuses to start. The server always keeps G1, where pause length does not affect what the player sees.
 - Discord Rich Presence integration.

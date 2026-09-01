@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.08.20";
+        private const string VER = "2026.09.02";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2884,6 +2884,9 @@ namespace CustomLauncher
 
                 _gameProcess.StartInfo.CreateNoWindow = !_settings.DebugConsole;
                 _gameProcess.StartInfo.UseShellExecute = false;
+                // WHY: раннее окно Forge спрашивает эту переменную раньше options.txt и берёт
+                // WHY: чёрную схему вместо красной; на первом запуске options.txt ещё не существует
+                _gameProcess.StartInfo.Environment["FML_EARLY_WINDOW_DARK"] = "1";
 
                 _gameProcess.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";

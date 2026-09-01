@@ -26,7 +26,8 @@ namespace CustomLauncher.Core
             ["fov"] = "0.55",
             ["entityDistanceScaling"] = "5.0",
             ["bobView"] = "true",
-            ["autoJump"] = "false"
+            ["autoJump"] = "false",
+            ["darkMojangStudiosBackground"] = "true"
         };
 
         public static readonly Dictionary<string, string> RecommendedSound = new()
