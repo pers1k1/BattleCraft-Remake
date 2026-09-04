@@ -87,13 +87,16 @@ namespace CustomLauncher.Core
             ["can_Flipping"] = false
         };
 
-        public static void EnsureDefaults(string gamePath)
+        public const int Revision = 1;
+
+        public static bool HasOptions(string gamePath) =>
+            !string.IsNullOrWhiteSpace(gamePath)
+            && Directory.Exists(gamePath)
+            && File.Exists(Path.Combine(gamePath, "options.txt"));
+
+        public static void ApplyAll(string gamePath)
         {
             if (string.IsNullOrWhiteSpace(gamePath) || !Directory.Exists(gamePath))
-                return;
-
-            string optionsPath = Path.Combine(gamePath, "options.txt");
-            if (File.Exists(optionsPath))
                 return;
 
             Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound).Concat(RecommendedControls));
@@ -170,11 +173,6 @@ namespace CustomLauncher.Core
 
             File.WriteAllLines(path, lines);
         }
-
-        public static void ApplyGraphics(string gamePath) =>
-            Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound));
-
-        public static void ApplyControls(string gamePath) => Apply(gamePath, RecommendedControls);
 
         public static void Write(string gamePath, IEnumerable<KeyValuePair<string, string>> values) =>
             Apply(gamePath, values);

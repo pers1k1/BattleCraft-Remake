@@ -95,6 +95,11 @@ namespace CustomLauncher.Core
             ["Сборщик мусора: Shenandoah"] = "Garbage collector: Shenandoah",
             ["Сборщик мусора: G1"] = "Garbage collector: G1",
             ["Настройки модов приведены к общим значениям:"] = "Mod settings aligned to shared values:",
+            ["Настройки игры приведены к рекомендованным сборкой"] = "Game settings set to the modpack recommendations",
+            ["Игра запущена, а Minecraft перезаписывает свои настройки при выходе. Закройте игру и откройте настройки заново."]
+                = "The game is running, and Minecraft rewrites its settings on exit. Close the game and open the settings again.",
+            ["У сборки есть свои настройки игры: раскладка клавиш, графика и звук.\nПрименить их? Текущие настройки будут заменены.\nПозже это делает кнопка «Рекомендованные» в настройках игры."]
+                = "The modpack ships its own game settings: key bindings, graphics and sound.\nApply them? Your current settings will be replaced.\nYou can do this later with the \"Recommended\" button in the game settings.",
             ["Аксессуары"] = "Curios slots",
             ["Меню голосового чата"] = "Voice chat menu",
             ["Выключить микрофон"] = "Mute microphone",

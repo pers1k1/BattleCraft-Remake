@@ -26,6 +26,8 @@ namespace CustomLauncher.Core
 
         public GameAction Action { get; }
 
+        public bool Stored { get; set; }
+
         public string Title => Lang.T(Action.Title);
 
         public string Group => Lang.T(Action.Group);

@@ -2936,7 +2936,7 @@ namespace CustomLauncher
 
                 PerformanceConfig.Apply(_settings.GamePath);
                 PublishGameTheme();
-                GameDefaults.EnsureDefaults(_settings.GamePath);
+                await EnsureGameDefaults();
 
                 if (GameDefaults.EnsureResourcePack(_settings.GamePath))
                     Log(Lang.T("Ресурспак сборки включён"));
@@ -2970,6 +2970,31 @@ namespace CustomLauncher
             catch (Exception ex) { await HandleErrorAsync(ex, Lang.T("Ошибка запуска")); }
             finally { HideUpdateOverlay(); SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
         }
+
+        private async Task EnsureGameDefaults()
+        {
+            if (string.IsNullOrWhiteSpace(_settings.GamePath) || !Directory.Exists(_settings.GamePath))
+                return;
+
+            bool firstRun = !GameDefaults.HasOptions(_settings.GamePath);
+            bool outdated = _settings.GameDefaultsRevision < GameDefaults.Revision;
+
+            if (!firstRun && !outdated)
+                return;
+
+            if (firstRun || await AskToApplyGameDefaults())
+            {
+                GameDefaults.ApplyAll(_settings.GamePath);
+                Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
+            }
+
+            _settings.GameDefaultsRevision = GameDefaults.Revision;
+            AppSettings.Save(_settings);
+        }
+
+        private Task<bool> AskToApplyGameDefaults() => ShowCustomDialog(
+            Lang.T("У сборки есть свои настройки игры: раскладка клавиш, графика и звук.\nПрименить их? Текущие настройки будут заменены.\nПозже это делает кнопка «Рекомендованные» в настройках игры."),
+            "Настройки игры", true);
 
         private void SetBusy(bool busy)
         {
@@ -3226,6 +3251,35 @@ namespace CustomLauncher
 
         private static readonly string[] ModpackDirs = { "mods", "config", "scripts", "kubejs", "resourcepacks", "shaderpacks", "defaultconfigs", "tacz", "tacz_backup" };
 
+        private static readonly string[] PlayerOptionFiles = { "options.txt", "optionsof.txt", "optionsshaders.txt" };
+
+        private Dictionary<string, byte[]> TakePlayerOptions()
+        {
+            var saved = new Dictionary<string, byte[]>();
+
+            foreach (string name in PlayerOptionFiles)
+            {
+                string path = Path.Combine(_settings.GamePath, name);
+                try { if (File.Exists(path)) saved[name] = File.ReadAllBytes(path); } catch { }
+            }
+
+            return saved;
+        }
+
+        private void RestorePlayerOptions(Dictionary<string, byte[]> saved)
+        {
+            foreach (string name in PlayerOptionFiles)
+            {
+                string path = Path.Combine(_settings.GamePath, name);
+                try
+                {
+                    if (saved.TryGetValue(name, out byte[]? data)) File.WriteAllBytes(path, data);
+                    else if (File.Exists(path)) File.Delete(path);
+                }
+                catch { }
+            }
+        }
+
         private async Task InstallModpack(bool clean)
         {
             if (!await EnsureFreeSpace(_settings.GamePath, DiskSpace.ClientRequiredBytes))
@@ -3239,14 +3293,9 @@ namespace CustomLauncher
                     string p = Path.Combine(_settings.GamePath, dir);
                     try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
                 }
-                string[] optFiles = { "options.txt", "optionsof.txt", "optionsshaders.txt" };
-                foreach (var f in optFiles)
-                {
-                    string p = Path.Combine(_settings.GamePath, f);
-                    try { if (File.Exists(p)) File.Delete(p); } catch { }
-                }
             }
 
+            var playerOptions = TakePlayerOptions();
             bool success = false;
             while (!success)
             {
@@ -3259,6 +3308,7 @@ namespace CustomLauncher
                     await dl.DownloadFileAsync(MODPACK_URL, zip);
                     StatusText.Text = Lang.T("Распаковка...");
                     await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
+                    RestorePlayerOptions(playerOptions);
                     Log(Lang.T("Распаковка завершена!"));
                     _settings.IsModpackInstalled = true;
                     _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
@@ -3835,12 +3885,21 @@ namespace CustomLauncher
         private readonly System.Collections.ObjectModel.ObservableCollection<GameBinding> _bindings = new();
         private GameBinding? _listeningBinding;
 
-        private void BtnGameSettings_Click(object s, RoutedEventArgs e)
+        private async void BtnGameSettings_Click(object s, RoutedEventArgs e)
         {
+            if (_gameProcess != null)
+            {
+                await ShowCustomDialog(
+                    Lang.T("Игра запущена, а Minecraft перезаписывает свои настройки при выходе. Закройте игру и откройте настройки заново."),
+                    "Настройки игры");
+                return;
+            }
+
             GamePanel.Visibility = Visibility.Visible;
             GameScrollViewer?.ScrollToVerticalOffset(0);
 
             FillGameCombos();
+            MaterializeGameDefaults();
             LoadGameSettings();
 
             GameTitle.Opacity = 0;
@@ -3889,6 +3948,19 @@ namespace CustomLauncher
             BindingsList.ItemsSource = grouped.View;
         }
 
+        private void MaterializeGameDefaults()
+        {
+            if (string.IsNullOrWhiteSpace(_settings.GamePath) || !Directory.Exists(_settings.GamePath))
+                return;
+
+            if (GameDefaults.HasOptions(_settings.GamePath))
+                return;
+
+            GameDefaults.ApplyAll(_settings.GamePath);
+            _settings.GameDefaultsRevision = GameDefaults.Revision;
+            AppSettings.Save(_settings);
+        }
+
         private void LoadGameSettings()
         {
             var options = GameDefaults.Read(_settings.GamePath);
@@ -3925,7 +3997,10 @@ namespace CustomLauncher
             {
                 var binding = new GameBinding(action);
                 if (options.TryGetValue(action.OptionKeys[0], out string? value))
+                {
                     binding.Value = value;
+                    binding.Stored = true;
+                }
                 _bindings.Add(binding);
             }
 
@@ -3984,8 +4059,12 @@ namespace CustomLauncher
             };
 
             foreach (var binding in _bindings)
+            {
+                if (!binding.Stored) continue;
+
                 foreach (string optionKey in binding.Action.OptionKeys)
                     values[optionKey] = binding.Value;
+            }
 
             GameDefaults.Write(_settings.GamePath, values);
         }
@@ -3993,9 +4072,9 @@ namespace CustomLauncher
         private void BtnRecommendedSettings_Click(object s, RoutedEventArgs e)
         {
             StopListening();
-            GameDefaults.ApplyGraphics(_settings.GamePath);
-            GameDefaults.ApplyControls(_settings.GamePath);
-            GameDefaults.ApplyParkour(_settings.GamePath);
+            GameDefaults.ApplyAll(_settings.GamePath);
+            _settings.GameDefaultsRevision = GameDefaults.Revision;
+            AppSettings.Save(_settings);
             LoadGameSettings();
         }
 
@@ -4053,6 +4132,7 @@ namespace CustomLauncher
             if (_listeningBinding == null) return;
 
             _listeningBinding.Value = value;
+            _listeningBinding.Stored = true;
             StopListening();
             UpdateConflicts();
         }
