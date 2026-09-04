@@ -1980,6 +1980,18 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
 
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="PresetNameBox" Grid.Column="0" MaxLength="24"/>
+                                <Button x:Name="BtnSavePreset" Grid.Column="1" Content="Сохранить" Tag="{StaticResource IconPlus}" Click="BtnSavePreset_Click" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
+                                <Button x:Name="BtnDeletePreset" Grid.Column="2" Content="Удалить" Tag="{StaticResource IconTrash}" Click="BtnDeletePreset_Click" Margin="5,0,0,0" Style="{StaticResource GlowButton}"/>
+                            </Grid>
+                            <TextBlock x:Name="PresetHintLabel" Text="Свой пресет запоминает текущие цвета под именем." Foreground="#88FFFFFF" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+
                             <Separator Background="{DynamicResource AccentBrush}" Margin="0,15" Opacity="0.3"/>
 
                             <TextBlock x:Name="ManualColorsLabel" Text="Ручная настройка цветов:" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>

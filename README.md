@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 02.09.26 |
+| Launcher | 04.09.26 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -30,7 +30,8 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 - Automatic Java detection and provisioning (Adoptium Temurin 17) when no suitable runtime is present.
 - Self-updating launcher and modpack with resilient downloads: automatic retries with exponential backoff, a stall guard that fails hung connections fast, and HTTP range resume that continues interrupted files instead of restarting them.
 - Microsoft authentication without WebView2, plus offline accounts.
-- Customizable interface: 18 color theme presets (Sakura by default) plus manual HEX colors, custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
+- Customizable interface: 25 color theme presets (Sakura by default) plus manual HEX colors, custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
+- Custom presets: name the colors you tuned by hand and they join the preset list, saved with the rest of the configuration and removable from the same row.
 - Theme handoff to the game: the chosen primary and accent colors are written to `launcher_theme/theme.json` in the game folder whenever they change and again before every launch, so the BattleCraft mod dresses its own interface in the palette picked here instead of a fixed one.
 - Bilingual interface (Russian and English): the language is chosen during first-run setup and can be switched at any time in the settings.
 - Every animation runs on a purpose-built engine instead of WPF storyboards: a single render tick drives all motion from closed-form easing math, click particles are drawn as one visual layer, and the launcher detects the current refresh rate of the display it sits on — re-checking when the window moves to another monitor or the display mode changes — so motion is paced to the monitor and never renders frames it cannot show.

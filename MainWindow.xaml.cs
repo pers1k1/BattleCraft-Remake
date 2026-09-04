@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.02";
+        private const string VER = "2026.09.04";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2326,6 +2326,7 @@ namespace CustomLauncher
             public string Accent { get; init; } = "";
             public Brush PrimarySwatch { get; init; } = Brushes.Transparent;
             public Brush AccentSwatch { get; init; } = Brushes.Transparent;
+            public bool IsCustom { get; init; }
         }
 
         private static Brush SwatchBrush(string hex)
@@ -2364,6 +2365,13 @@ namespace CustomLauncher
                 ("Чернила",      "#1E2530|#F2D06B"),
                 ("Олива",        "#4C511F|#FFA9D6"),
                 ("Ультрафиолет", "#5B3FA8|#FFC49B"),
+                ("Бордо",        "#0E0A0B|#A32833"),
+                ("Полночь",      "#0B1020|#4C7BC4"),
+                ("Хвоя",         "#14241E|#A9C9B4"),
+                ("Вереск",       "#221A2E|#C3B2D9"),
+                ("Табак",        "#1C1310|#D7B58C"),
+                ("Лён",          "#8C8172|#F2E3CC"),
+                ("Иней",         "#78848F|#DCE9F2"),
             };
             var list = new List<ColorPreset>();
             foreach (var (name, tag) in presets)
@@ -2378,7 +2386,75 @@ namespace CustomLauncher
                     AccentSwatch = SwatchBrush(p[1])
                 });
             }
+            foreach (var custom in _settings.CustomPresets)
+            {
+                list.Add(new ColorPreset
+                {
+                    Name = custom.Name,
+                    Primary = custom.Primary,
+                    Accent = custom.Accent,
+                    PrimarySwatch = SwatchBrush(custom.Primary),
+                    AccentSwatch = SwatchBrush(custom.Accent),
+                    IsCustom = true
+                });
+            }
             ColorPresetCombo.ItemsSource = list;
+        }
+
+        private void BtnSavePreset_Click(object s, RoutedEventArgs e)
+        {
+            string name = (PresetNameBox.Text ?? "").Trim();
+            if (name.Length == 0) { Log(Lang.T("Введите имя пресета.")); return; }
+
+            string primary = NormalizeHex(PrimaryColorBox.Text, _settings.PrimaryColor ?? DefPrimary);
+            string accent = NormalizeHex(AccentColorBox.Text, _settings.AccentColor ?? DefAccent);
+
+            var existing = _settings.CustomPresets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null) { existing.Primary = primary; existing.Accent = accent; }
+            else _settings.CustomPresets.Add(new CustomPreset { Name = name, Primary = primary, Accent = accent });
+
+            AppSettings.Save(_settings);
+            FillColorPresets();
+            SelectPresetByColors(primary, accent);
+            Log(Lang.F("Пресет «{0}» сохранён.", name));
+        }
+
+        private void BtnDeletePreset_Click(object s, RoutedEventArgs e)
+        {
+            if (ColorPresetCombo.SelectedItem is not ColorPreset cp || !cp.IsCustom)
+            { Log(Lang.T("Удалить можно только свой пресет.")); return; }
+
+            _settings.CustomPresets.RemoveAll(p => string.Equals(p.Name, cp.Name, StringComparison.OrdinalIgnoreCase));
+            AppSettings.Save(_settings);
+            FillColorPresets();
+            SelectPresetByColors(_settings.PrimaryColor ?? DefPrimary, _settings.AccentColor ?? DefAccent);
+            PresetNameBox.Text = "";
+            Log(Lang.F("Пресет «{0}» удалён.", cp.Name));
+        }
+
+        private static string NormalizeHex(string? value, string fallback)
+        {
+            try { var c = (Color)ColorConverter.ConvertFromString(value); return $"#{c.R:X2}{c.G:X2}{c.B:X2}"; }
+            catch { return fallback; }
+        }
+
+        private void SelectPresetByColors(string primary, string accent)
+        {
+            if (ColorPresetCombo == null) return;
+            ColorPresetCombo.SelectionChanged -= ColorPreset_Changed;
+            ColorPresetCombo.SelectedItem = null;
+            foreach (var item in ColorPresetCombo.Items)
+            {
+                if (item is ColorPreset cp
+                    && string.Equals(cp.Primary, primary, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(cp.Accent, accent, StringComparison.OrdinalIgnoreCase))
+                {
+                    ColorPresetCombo.SelectedItem = item;
+                    break;
+                }
+            }
+            ColorPresetCombo.SelectionChanged += ColorPreset_Changed;
+            if (ColorPresetCombo.SelectedItem is ColorPreset sel && sel.IsCustom) PresetNameBox.Text = sel.Name;
         }
 
         private static void SelectLangCombo(ComboBox combo, string code)
@@ -2492,6 +2568,10 @@ namespace CustomLauncher
             BtnChangeIconBtn.ToolTip = Lang.T("Изменить иконку в панели задач и шапке");
             BtnChangeIconText.Text = Lang.T("Сменить иконку лаунчера (ICO)");
             PresetsLabel.Text = Lang.T("Готовые пресеты:");
+            PresetNameBox.ToolTip = Lang.T("Имя своего пресета");
+            BtnSavePreset.Content = Lang.T("Сохранить");
+            BtnDeletePreset.Content = Lang.T("Удалить");
+            PresetHintLabel.Text = Lang.T("Свой пресет запоминает текущие цвета под именем.");
             ManualColorsLabel.Text = Lang.T("Ручная настройка цветов:");
             PrimaryHexLabel.Text = Lang.T("Основной (HEX):");
             AccentHexLabel.Text = Lang.T("Акцент (HEX):");
@@ -2544,21 +2624,7 @@ namespace CustomLauncher
                 BackgroundCombo.SelectionChanged += BackgroundCombo_Changed;
             }
 
-            if (ColorPresetCombo != null)
-            {
-                ColorPresetCombo.SelectionChanged -= ColorPreset_Changed;
-                foreach (var item in ColorPresetCombo.Items)
-                {
-                    if (item is ColorPreset cp
-                        && string.Equals(cp.Primary, p, StringComparison.OrdinalIgnoreCase)
-                        && string.Equals(cp.Accent, a, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ColorPresetCombo.SelectedItem = item;
-                        break;
-                    }
-                }
-                ColorPresetCombo.SelectionChanged += ColorPreset_Changed;
-            }
+            SelectPresetByColors(p, a);
         }
 
         private void ApplyPrimaryColor(string hex, bool save = true)
@@ -2688,6 +2754,7 @@ namespace CustomLauncher
                 ApplyAccentColor(cp.Accent);
                 PrimaryColorBox.Text = cp.Primary.ToUpper();
                 AccentColorBox.Text = cp.Accent.ToUpper();
+                PresetNameBox.Text = cp.IsCustom ? cp.Name : "";
             }
         }
 
