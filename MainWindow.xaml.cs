@@ -280,6 +280,8 @@ namespace CustomLauncher
         private bool[] _canSak = Array.Empty<bool>();
         private double[] _fallX = Array.Empty<double>(), _fallY = Array.Empty<double>(), _fallP = Array.Empty<double>();
         private int[] _fallK = Array.Empty<int>();
+        private const int FallAmbient = 56;
+        private const int FallGust = 58;
 
         private double _snowCover, _leafCover, _rainWet;
         private readonly double[] _snowPile = new double[SCN_W];
@@ -357,14 +359,15 @@ namespace CustomLauncher
                 }
                 _sakIdx = sakIdx.ToArray();
 
-                int fallN = 56;
+                int im = DateTime.Now.Month;
+
+                int fallN = FallAmbient + FallGust;
                 _fallX = new double[fallN]; _fallY = new double[fallN]; _fallP = new double[fallN]; _fallK = new int[fallN];
-                for (int i = 0; i < fallN; i++) RespawnFall(i, _sakIdx.Length > 0);
+                for (int i = 0; i < fallN; i++) RespawnFall(i, im >= 3 && im <= 5);
 
                 int pc = 6; _puddleX = new int[pc]; _puddleR = new double[pc];
                 for (int i = 0; i < pc; i++) { _puddleX[i] = 14 + _sceneRng.Next(SCN_W - 28); _puddleR[i] = 3 + _sceneRng.NextDouble() * 4; }
 
-                int im = DateTime.Now.Month;
                 if (im == 12 || im <= 2) _snowCover = 0.55;
                 else if (im >= 9 && im <= 11) _leafCover = 0.3;
 
@@ -821,7 +824,7 @@ namespace CustomLauncher
 
         private void SetupParticles()
         {
-            int n = _weather switch { Weather.Rain => 120, Weather.Snow => 90, Weather.Sakura => 60, Weather.Leaves => 55, _ => 0 };
+            int n = _weather switch { Weather.Rain => 120, Weather.Snow => 90, _ => 0 };
             _pX = new double[n]; _pY = new double[n]; _pP = new double[n]; _pV = new double[n]; _pZ = new double[n];
             for (int i = 0; i < n; i++)
             {
@@ -1003,8 +1006,6 @@ namespace CustomLauncher
                     case Weather.Wind: UpdateWind(); break;
                     case Weather.Fog: DrawFog(0.34 * _wxIntensity); break;
                     case Weather.Comets: if (night) UpdateComets(); break;
-                    case Weather.Sakura: UpdateSakura(); break;
-                    case Weather.Leaves: UpdateLeaves(); break;
                 }
 
                 if (badWeather) DrawUmbrellaPerson(night);
@@ -1325,51 +1326,6 @@ namespace CustomLauncher
             }
         }
 
-        private void UpdateSakura()
-        {
-            double afade = Math.Min(1, _wxIntensity * 1.4);
-            int count = (int)Math.Ceiling(_pX.Length * _wxIntensity);
-            for (int i = 0; i < count; i++)
-            {
-                double z = _pZ[i];
-                double dep = 0.5 + 0.5 * (1 - z);
-                _pY[i] += 0.9 * dep; _pX[i] += Math.Sin(_pY[i] * 0.10 + _pP[i]) * 1.1 * dep;
-                int col = (((int)_pX[i]) % SCN_W + SCN_W) % SCN_W;
-                double land = _ground[col] + (1 - z) * (SCN_H - _ground[col]);
-                if (_pY[i] >= land) { _pY[i] = -1; _pX[i] = _sceneRng.NextDouble() * SCN_W; _pZ[i] = _sceneRng.NextDouble(); continue; }
-                int x = col, y = (int)_pY[i];
-                double da = afade * (0.45 + 0.55 * (1 - z));
-                bool flip = ((int)(_pY[i] * 0.3 + _pP[i] * 3) & 1) == 0;
-                BP(x, y, 248, 196, 222, 0.92 * da);
-                BP(flip ? x + 1 : x - 1, y, 240, 170, 205, 0.7 * da);
-            }
-        }
-
-        private void UpdateLeaves()
-        {
-            double afade = Math.Min(1, _wxIntensity * 1.4);
-            int count = (int)Math.Ceiling(_pX.Length * _wxIntensity);
-            for (int i = 0; i < count; i++)
-            {
-                double z = _pZ[i];
-                double dep = 0.5 + 0.5 * (1 - z);
-                _pY[i] += 1.1 * dep; _pX[i] += Math.Sin(_pY[i] * 0.08 + _pP[i]) * 1.6 * dep;
-                int col = (((int)_pX[i]) % SCN_W + SCN_W) % SCN_W;
-                double land = _ground[col] + (1 - z) * (SCN_H - _ground[col]);
-                if (_pY[i] >= land) { _pY[i] = -2; _pX[i] = _sceneRng.NextDouble() * SCN_W; _pZ[i] = _sceneRng.NextDouble(); continue; }
-                int x = col, y = (int)_pY[i];
-
-                int kind = (int)(_pP[i] * 3) % 3;
-                (byte r, byte g, byte b) c = kind == 0 ? ((byte)214, (byte)120, (byte)42)
-                                          : kind == 1 ? ((byte)190, (byte)70, (byte)48)
-                                          :             ((byte)206, (byte)160, (byte)60);
-                double da = afade * (0.45 + 0.55 * (1 - z));
-                bool flip = ((int)(_pY[i] * 0.25 + _pP[i] * 4) & 1) == 0;
-                BP(x, y, c.r, c.g, c.b, 0.95 * da);
-                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.8 * da);
-            }
-        }
-
         private void DrawFog(double strength)
         {
             if (strength <= 0) return;
@@ -1577,7 +1533,8 @@ namespace CustomLauncher
 
         private void UpdateFalling(bool spring)
         {
-            double wind = Math.Sin(_frame * 0.03) * (spring ? 0.6 : 0.9);
+            double gust = _weather == (spring ? Weather.Sakura : Weather.Leaves) ? _wxIntensity : 0;
+            double wind = Math.Sin(_frame * 0.03) * (spring ? 0.6 : 0.9) * (1 + gust);
             for (int i = 0; i < _fallX.Length; i++)
             {
                 _fallY[i] += (spring ? 0.45 : 0.6) + 0.25 * (0.5 + 0.5 * Math.Sin(_fallP[i] + _frame * 0.1));
@@ -1592,9 +1549,10 @@ namespace CustomLauncher
                 (byte r, byte g, byte b) c = spring
                     ? (_fallK[i] == 0 ? ((byte)248, (byte)188, (byte)216) : _fallK[i] == 1 ? ((byte)252, (byte)222, (byte)236) : ((byte)242, (byte)166, (byte)204))
                     : (_fallK[i] == 0 ? ((byte)214, (byte)120, (byte)42) : _fallK[i] == 1 ? ((byte)190, (byte)70, (byte)48) : ((byte)206, (byte)160, (byte)60));
+                double fade = i < FallAmbient ? 1 : gust;
                 bool flip = ((int)(_fallY[i] * 0.3 + _fallP[i] * 3) & 1) == 0;
-                BP(x, y, c.r, c.g, c.b, 0.92);
-                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.6);
+                BP(x, y, c.r, c.g, c.b, 0.92 * fade);
+                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.6 * fade);
             }
         }
 
