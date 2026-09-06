@@ -1180,19 +1180,6 @@
             </Grid>
         </Grid>
 
-        <Rectangle IsHitTestVisible="False" Opacity="0.04" Panel.ZIndex="-1" CacheMode="BitmapCache">
-            <Rectangle.Fill>
-                <VisualBrush TileMode="Tile" Viewport="0,0,4,4" ViewportUnits="Absolute">
-                    <VisualBrush.Visual>
-                        <Grid Width="4" Height="4">
-                            <Line X1="0" Y1="0" X2="4" Y2="0" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1"/>
-                            <Line X1="0" Y1="0" X2="0" Y2="4" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1"/>
-                        </Grid>
-                    </VisualBrush.Visual>
-                </VisualBrush>
-            </Rectangle.Fill>
-        </Rectangle>
-
         <Grid VerticalAlignment="Top" Height="40" Background="Transparent">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False">
                 <TextBlock x:Name="TopLeftTitleText" Text="BattleCraft Remake Launcher" FontFamily="Consolas, Courier New" Foreground="#88FFFFFF" FontSize="12" VerticalAlignment="Center"/>
