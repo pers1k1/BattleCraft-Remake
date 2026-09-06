@@ -3246,7 +3246,7 @@ namespace CustomLauncher
             }
         }
 
-        private static readonly string[] ModpackDirs = { "mods", "config", "scripts", "kubejs", "resourcepacks", "shaderpacks", "defaultconfigs", "tacz", "tacz_backup" };
+        private static readonly string[] ModpackDirs = { "mods", "config", "scripts", "kubejs", "defaultconfigs", "tacz", "tacz_backup" };
 
         private static readonly string[] PlayerOptionFiles = { "options.txt", "optionsof.txt", "optionsshaders.txt" };
 
