@@ -2943,21 +2943,27 @@ namespace CustomLauncher
                     Log(Lang.T("Настройки модов приведены к общим значениям:") + " " + managed);
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = FindJava() };
-                _gameProcess = await _launcher.CreateProcessAsync(ver.Name, opt);
-                InjectJvmArgs(_gameProcess);
+                Process game = await _launcher.CreateProcessAsync(ver.Name, opt);
+                _gameProcess = game;
+                InjectJvmArgs(game);
 
-                _gameProcess.StartInfo.CreateNoWindow = !_settings.DebugConsole;
-                _gameProcess.StartInfo.UseShellExecute = false;
+                game.StartInfo.CreateNoWindow = !_settings.DebugConsole;
+                game.StartInfo.UseShellExecute = false;
                 // WHY: раннее окно Forge спрашивает эту переменную раньше options.txt и берёт
                 // WHY: чёрную схему вместо красной; на первом запуске options.txt ещё не существует
-                _gameProcess.StartInfo.Environment["FML_EARLY_WINDOW_DARK"] = "1";
+                game.StartInfo.Environment["FML_EARLY_WINDOW_DARK"] = "1";
 
-                _gameProcess.Start();
+                game.Start();
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
                 _discordManager.ReleaseForGame();
 
-                await _gameProcess.WaitForExitAsync();
+                // WHY: отмена обнуляла поле, и продолжение уже убитого запуска гасило состояние
+                // WHY: следующего: кнопка звала «Играть» под работающей игрой, а окно настроек
+                // WHY: открывалось поверх неё и теряло правки на выходе Minecraft
+                await game.WaitForExitAsync();
+                if (_gameProcess != game) return;
+
                 _gameProcess = null;
                 SetPlayState("idle");
                 StatusText.Text = Lang.T("Готов");
