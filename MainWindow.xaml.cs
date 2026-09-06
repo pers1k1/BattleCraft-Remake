@@ -5249,7 +5249,8 @@ namespace CustomLauncher
                     if (!retry)
                     {
                         AppendConsoleOutput(Lang.T("[SYS] Установка отменена. Удаление файлов..."));
-                        try { Directory.Delete(_activeServerConfig.ServerPath, true); } catch { }
+                        try { Directory.Delete(serverDir, true); } catch { }
+                        try { Directory.Delete(backupDir, true); } catch { }
                         SetServerBusy(false);
                         return;
                     }
