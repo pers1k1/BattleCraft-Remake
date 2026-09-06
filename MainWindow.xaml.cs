@@ -4328,7 +4328,15 @@ namespace CustomLauncher
 
                 string old = UpdateResidue.ReserveBackupPath(cur);
                 File.Move(cur, old);
-                File.Move(tmp, cur);
+                try
+                {
+                    File.Move(tmp, cur);
+                }
+                catch
+                {
+                    File.Move(old, cur);
+                    throw;
+                }
 
                 Process.Start(new ProcessStartInfo(cur)
                 {
