@@ -75,7 +75,18 @@ namespace CustomLauncher.Core
             ["key_key.superbwarfare.free_camera"] = "key.keyboard.unknown",
             ["key_key.survival_instinct.exo_suit_dash"] = "key.keyboard.unknown",
             ["key_key.saveToolbarActivator"] = "key.keyboard.unknown",
-            ["key_key.loadToolbarActivator"] = "key.keyboard.unknown"
+            ["key_key.loadToolbarActivator"] = "key.keyboard.unknown",
+            ["key_key.battlecraft.goggles_toggle"] = "key.keyboard.n",
+            ["key_key.battlecraft.goggles_mode"] = "key.keyboard.m",
+            ["key_key.battlecraft.goggles_zoom"] = "key.keyboard.y",
+            ["key_key.mute_microphone"] = "key.keyboard.equal",
+            ["key_key.disable_voice_chat"] = MinecraftKeys.Unbound,
+            ["key_key.securitycraft.cameraActivateNightVision"] = MinecraftKeys.Unbound,
+            ["key_key.securitycraft.cameraZoomIn"] = MinecraftKeys.Unbound,
+            ["key_key.securitycraft.cameraZoomOut"] = MinecraftKeys.Unbound,
+            ["key_key.vision_goggles.toggle"] = MinecraftKeys.Unbound,
+            ["key_key.vision_goggles.switch"] = MinecraftKeys.Unbound,
+            ["key_key.vision_goggles.zoom"] = MinecraftKeys.Unbound
         };
 
         public static readonly Dictionary<string, bool> DisabledParkourActions = new()
@@ -87,7 +98,7 @@ namespace CustomLauncher.Core
             ["can_Flipping"] = false
         };
 
-        public const int Revision = 1;
+        public const int Revision = 2;
 
         public static bool HasOptions(string gamePath) =>
             !string.IsNullOrWhiteSpace(gamePath)

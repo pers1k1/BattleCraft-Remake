@@ -126,7 +126,9 @@ namespace CustomLauncher.Core
 
             new(Misc, "Аксессуары", "key_key.curios.open.desc"),
             new(Misc, "Приближение", "key_justzoom.keybinds.keybind.zoom"),
-            new(Misc, "Прибор ночного видения", "key_key.nvg.toggle_nvg")
+            new(Misc, "Очки: ночное зрение", "key_key.battlecraft.goggles_toggle"),
+            new(Misc, "Очки: смена режима", "key_key.battlecraft.goggles_mode"),
+            new(Misc, "Очки: приближение", "key_key.battlecraft.goggles_zoom")
         };
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace CustomLauncher.Core
 {
@@ -82,7 +82,9 @@ namespace CustomLauncher.Core
             ["Осмотр оружия"] = "Inspect weapon",
             ["Карта"] = "Map",
             ["Рация"] = "Walkie-talkie",
-            ["Прибор ночного видения"] = "Night vision",
+            ["Очки: ночное зрение"] = "Goggles: night vision",
+            ["Очки: смена режима"] = "Goggles: switch mode",
+            ["Очки: приближение"] = "Goggles: zoom",
             ["Не хватает места на диске"] = "Not enough disk space",
             ["ЗВУК"] = "SOUND",
             ["ИГРОВОЙ ПРОЦЕСС"] = "GAMEPLAY",

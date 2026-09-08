@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Windows.Input;
 
 namespace CustomLauncher.Core
@@ -69,6 +69,8 @@ namespace CustomLauncher.Core
             ["key.keyboard.slash"] = "/",
             ["key.keyboard.backslash"] = "\\",
             ["key.keyboard.grave.accent"] = "~",
+            ["key.keyboard.equal"] = "+",
+            ["key.keyboard.minus"] = "-",
             ["key.mouse.4"] = "Мышь 4",
             ["key.mouse.5"] = "Мышь 5",
             [Unbound] = "нет"
