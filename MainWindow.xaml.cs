@@ -2947,7 +2947,7 @@ namespace CustomLauncher
             {
                 if (firstRun || await AskToApplyGameDefaults())
                 {
-                    GameDefaults.ApplyAll(_settings.GamePath);
+                    GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
                     Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
                 }
 
@@ -2956,6 +2956,7 @@ namespace CustomLauncher
             }
 
             GameDefaults.ApplyLanguage(_settings.GamePath, _settings.Language);
+            GameDefaults.ApplyFrameRate(_settings.GamePath, _refreshHz);
         }
 
         private Task<bool> AskToApplyGameDefaults() => ShowCustomDialog(
@@ -4033,7 +4034,7 @@ namespace CustomLauncher
         private void BtnRecommendedSettings_Click(object s, RoutedEventArgs e)
         {
             StopListening();
-            GameDefaults.ApplyAll(_settings.GamePath);
+            GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
             _settings.GameDefaultsRevision = GameDefaults.Revision;
             AppSettings.Save(_settings);
             LoadGameSettings();

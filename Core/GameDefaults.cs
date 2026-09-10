@@ -15,7 +15,6 @@ namespace CustomLauncher.Core
             ["simulationDistance"] = "6",
             ["graphicsMode"] = "1",
             ["particles"] = "1",
-            ["maxFps"] = "120",
             ["enableVsync"] = "true",
             ["renderClouds"] = "\"false\"",
             ["mipmapLevels"] = "4",
@@ -106,13 +105,27 @@ namespace CustomLauncher.Core
             && Directory.Exists(gamePath)
             && File.Exists(Path.Combine(gamePath, "options.txt"));
 
-        public static void ApplyAll(string gamePath)
+        public static void ApplyAll(string gamePath, double refreshRate)
         {
             if (string.IsNullOrWhiteSpace(gamePath) || !Directory.Exists(gamePath))
                 return;
 
             Apply(gamePath, RecommendedGraphics.Concat(RecommendedSound).Concat(RecommendedControls));
+            ApplyFrameRate(gamePath, refreshRate);
             ApplyParkour(gamePath);
+        }
+
+        public static void ApplyFrameRate(string gamePath, double refreshRate)
+        {
+            if (!HasOptions(gamePath))
+                return;
+
+            int frameRate = Math.Clamp((int)Math.Round(refreshRate), 10, 260);
+            KeyValuePair<string, string>[] frameRateOption =
+            {
+                new("maxFps", frameRate.ToString())
+            };
+            Apply(gamePath, frameRateOption);
         }
 
         public static void ApplyLanguage(string gamePath, string launcherLanguage)
