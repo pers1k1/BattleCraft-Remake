@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.08";
+        private const string VER = "2026.09.10";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -3900,7 +3900,7 @@ namespace CustomLauncher
         {
             if (GuiScaleCombo.Items.Count > 0) return;
 
-            foreach (string item in new[] { "Авто", "1", "2", "3" }) GuiScaleCombo.Items.Add(Lang.T(item));
+            foreach (string item in new[] { "Авто", "1", "2", "3", "4" }) GuiScaleCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Быстрая", "Детальная", "Максимальная" }) GraphicsModeCombo.Items.Add(Lang.T(item));
             foreach (string item in new[] { "Все", "Уменьшено", "Минимум" }) ParticlesCombo.Items.Add(Lang.T(item));
 
@@ -3929,7 +3929,7 @@ namespace CustomLauncher
             RenderDistanceSlider.Value = ReadNumber(options, "renderDistance", 8);
             SimulationDistanceSlider.Value = ReadNumber(options, "simulationDistance", 6);
             MaxFpsSlider.Value = ReadNumber(options, "maxFps", 120);
-            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 0), 0, 3);
+            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 2), 0, GuiScaleCombo.Items.Count - 1);
             GraphicsModeCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "graphicsMode", 1), 0, 2);
             ParticlesCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "particles", 1), 0, 2);
             WindowedCheck.IsChecked = ReadFlag(options, "fullscreen") == false;
@@ -3949,7 +3949,7 @@ namespace CustomLauncher
             SmoothLightingCheck.IsChecked = ReadFlag(options, "ao") != false;
 
             MasterVolumeSlider.Value = ReadFraction(options, "soundCategory_master", 1.0) * 100;
-            MusicVolumeSlider.Value = ReadFraction(options, "soundCategory_music", 0.3) * 100;
+            MusicVolumeSlider.Value = ReadFraction(options, "soundCategory_music", 0.02) * 100;
             AmbientVolumeSlider.Value = ReadFraction(options, "soundCategory_ambient", 0.6) * 100;
             WeatherVolumeSlider.Value = ReadFraction(options, "soundCategory_weather", 0.6) * 100;
 

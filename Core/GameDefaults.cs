@@ -10,7 +10,7 @@ namespace CustomLauncher.Core
         public static readonly Dictionary<string, string> RecommendedGraphics = new()
         {
             ["fullscreen"] = "false",
-            ["guiScale"] = "0",
+            ["guiScale"] = "2",
             ["renderDistance"] = "8",
             ["simulationDistance"] = "6",
             ["graphicsMode"] = "1",
@@ -27,13 +27,14 @@ namespace CustomLauncher.Core
             ["entityDistanceScaling"] = "5.0",
             ["bobView"] = "true",
             ["autoJump"] = "false",
-            ["darkMojangStudiosBackground"] = "true"
+            ["darkMojangStudiosBackground"] = "true",
+            ["onboardAccessibility"] = "false"
         };
 
         public static readonly Dictionary<string, string> RecommendedSound = new()
         {
             ["soundCategory_master"] = "1.0",
-            ["soundCategory_music"] = "0.0",
+            ["soundCategory_music"] = "0.02",
             ["soundCategory_ambient"] = "0.6",
             ["soundCategory_weather"] = "0.6"
         };
@@ -98,7 +99,7 @@ namespace CustomLauncher.Core
             ["can_Flipping"] = false
         };
 
-        public const int Revision = 2;
+        public const int Revision = 3;
 
         public static bool HasOptions(string gamePath) =>
             !string.IsNullOrWhiteSpace(gamePath)
