@@ -2253,6 +2253,7 @@ namespace CustomLauncher
                 await PrepareGameFolderAsync(path);
                 _settings.IsModpackInstalled = false;
                 _settings.ModpackVersion = "0.0";
+                _settings.GameDefaultsRevision = 0;
             }
 
             _settings.GamePath = path; _settings.RamMb = 4096;
@@ -3677,7 +3678,9 @@ namespace CustomLauncher
             TweenOpacity(BtnPlay, 0, 1, 600, OutQuart, 500);
             TweenOpacity(BtnGitHub, 0, 0.7, 600, OutQuart, 400);
 
-            InitializeLauncher(); await CheckUpdates();
+            InitializeLauncher();
+            await EnsureGameDefaults();
+            await CheckUpdates();
 
             if (TopLeftTitleText.Text != "BattleCraft Remake Launcher")
                 _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
@@ -3818,10 +3821,16 @@ namespace CustomLauncher
 
                 _settings.IsModpackInstalled = false;
                 _settings.ModpackVersion = "0.0";
+                _settings.GameDefaultsRevision = 0;
                 _settings.GamePath = np;
                 PathBox.Text = np;
             }
-            AppSettings.Save(_settings); if (_settings.HasGamePath) InitializeLauncher();
+            AppSettings.Save(_settings);
+            if (_settings.HasGamePath)
+            {
+                InitializeLauncher();
+                await EnsureGameDefaults();
+            }
             CloseSettingsPanel();
         }
 
@@ -3860,7 +3869,7 @@ namespace CustomLauncher
             GameScrollViewer?.ScrollToVerticalOffset(0);
 
             FillGameCombos();
-            MaterializeGameDefaults();
+            await EnsureGameDefaults();
             LoadGameSettings();
 
             GameTitle.Opacity = 0;
@@ -3907,19 +3916,6 @@ namespace CustomLauncher
             var grouped = new System.Windows.Data.CollectionViewSource { Source = _bindings };
             grouped.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(GameBinding.Group)));
             BindingsList.ItemsSource = grouped.View;
-        }
-
-        private void MaterializeGameDefaults()
-        {
-            if (string.IsNullOrWhiteSpace(_settings.GamePath) || !Directory.Exists(_settings.GamePath))
-                return;
-
-            if (GameDefaults.HasOptions(_settings.GamePath))
-                return;
-
-            GameDefaults.ApplyAll(_settings.GamePath);
-            _settings.GameDefaultsRevision = GameDefaults.Revision;
-            AppSettings.Save(_settings);
         }
 
         private void LoadGameSettings()
