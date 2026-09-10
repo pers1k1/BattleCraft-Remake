@@ -2431,6 +2431,8 @@ namespace CustomLauncher
             Lang.Current = code;
             _settings.Language = code;
             AppSettings.Save(_settings);
+            if (_gameProcess == null)
+                GameDefaults.ApplyLanguage(_settings.GamePath, _settings.Language);
             FillColorPresets();
             ApplyThemeFromSettings();
             ApplyLanguage();
@@ -2941,17 +2943,19 @@ namespace CustomLauncher
             bool firstRun = !GameDefaults.HasOptions(_settings.GamePath);
             bool outdated = _settings.GameDefaultsRevision < GameDefaults.Revision;
 
-            if (!firstRun && !outdated)
-                return;
-
-            if (firstRun || await AskToApplyGameDefaults())
+            if (firstRun || outdated)
             {
-                GameDefaults.ApplyAll(_settings.GamePath);
-                Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
+                if (firstRun || await AskToApplyGameDefaults())
+                {
+                    GameDefaults.ApplyAll(_settings.GamePath);
+                    Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
+                }
+
+                _settings.GameDefaultsRevision = GameDefaults.Revision;
+                AppSettings.Save(_settings);
             }
 
-            _settings.GameDefaultsRevision = GameDefaults.Revision;
-            AppSettings.Save(_settings);
+            GameDefaults.ApplyLanguage(_settings.GamePath, _settings.Language);
         }
 
         private Task<bool> AskToApplyGameDefaults() => ShowCustomDialog(

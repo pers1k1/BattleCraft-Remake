@@ -115,6 +115,21 @@ namespace CustomLauncher.Core
             ApplyParkour(gamePath);
         }
 
+        public static void ApplyLanguage(string gamePath, string launcherLanguage)
+        {
+            if (!HasOptions(gamePath))
+                return;
+
+            string gameLanguage = string.Equals(launcherLanguage, "en", StringComparison.OrdinalIgnoreCase)
+                ? "en_us"
+                : "ru_ru";
+            KeyValuePair<string, string>[] languageOption =
+            {
+                new("lang", gameLanguage)
+            };
+            Apply(gamePath, languageOption);
+        }
+
         public static void ApplyParkour(string gamePath)
         {
             string path = Path.Combine(gamePath, "config", "parcool-client.toml");
