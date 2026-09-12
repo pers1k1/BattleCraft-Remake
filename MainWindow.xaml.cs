@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.10hotfix";
+        private const string VER = "2026.09.12";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2253,7 +2253,6 @@ namespace CustomLauncher
                 await PrepareGameFolderAsync(path);
                 _settings.IsModpackInstalled = false;
                 _settings.ModpackVersion = "0.0";
-                _settings.GameDefaultsRevision = 0;
             }
 
             _settings.GamePath = path; _settings.RamMb = 4096;
@@ -2496,7 +2495,7 @@ namespace CustomLauncher
             ControlsHintText.Text = Lang.T("Нажмите на клавишу справа, затем нажмите новую клавишу или кнопку мыши");
             RenderDistanceLabel.Text = Lang.T("Дальность прорисовки:");
             SimulationDistanceLabel.Text = Lang.T("Дальность симуляции:");
-            MaxFpsLabel.Text = Lang.T("Максимум кадров:");
+            UpdateMaxFpsLabel();
             GuiScaleLabel.Text = Lang.T("Масштаб интерфейса:");
             GraphicsModeLabel.Text = Lang.T("Качество графики:");
             ParticlesLabel.Text = Lang.T("Частицы:");
@@ -2508,12 +2507,11 @@ namespace CustomLauncher
             SoundHeaderRun.Text = Lang.T("ЗВУК");
             GameplayHeaderRun.Text = Lang.T("ИГРОВОЙ ПРОЦЕСС");
             SensitivityLabel.Text = Lang.T("Чувствительность мыши:");
-            EntityDistanceLabel.Text = Lang.T("Дальность существ:");
             InvertMouseCheck.Content = Lang.T("Инверсия мыши");
             PauseOnLostFocusCheck.Content = Lang.T("Пауза при сворачивании");
             ToggleCrouchCheck.Content = Lang.T("Приседание переключением");
             ToggleSprintCheck.Content = Lang.T("Бег переключением");
-            SmoothLightingCheck.Content = Lang.T("Плавное освещение");
+            SmoothLightingCheck.Content = Lang.T("Мягкое освещение");
             FovLabel.Text = Lang.T("Поле обзора:");
             GammaLabel.Text = Lang.T("Яркость:");
             MasterVolumeLabel.Text = Lang.T("Общая громкость:");
@@ -2897,7 +2895,7 @@ namespace CustomLauncher
 
                 PerformanceConfig.Apply(_settings.GamePath);
                 PublishGameTheme();
-                await EnsureGameDefaults();
+                EnsureGameDefaults();
 
                 int managed = await ManagedConfig.ApplyAsync(_settings.GamePath, _httpClient);
                 if (managed > 0)
@@ -2935,33 +2933,22 @@ namespace CustomLauncher
             finally { HideUpdateOverlay(); SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
         }
 
-        private async Task EnsureGameDefaults()
+        private void EnsureGameDefaults()
         {
             if (string.IsNullOrWhiteSpace(_settings.GamePath) || !Directory.Exists(_settings.GamePath))
                 return;
 
-            bool firstRun = !GameDefaults.HasOptions(_settings.GamePath);
-            bool outdated = _settings.GameDefaultsRevision < GameDefaults.Revision;
-
-            if (firstRun || outdated)
+            // WHY: игрок, у которого уже есть options.txt, свои правки менял осознанно —
+            // WHY: новый набор он берёт кнопкой «Рекомендованные», а не молча поверх
+            if (!GameDefaults.HasOptions(_settings.GamePath))
             {
-                if (firstRun || await AskToApplyGameDefaults())
-                {
-                    GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
-                    Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
-                }
-
-                _settings.GameDefaultsRevision = GameDefaults.Revision;
-                AppSettings.Save(_settings);
+                GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
+                Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
             }
 
             GameDefaults.ApplyLanguage(_settings.GamePath, _settings.Language);
             GameDefaults.ApplyFrameRate(_settings.GamePath, _refreshHz);
         }
-
-        private Task<bool> AskToApplyGameDefaults() => ShowCustomDialog(
-            Lang.T("У сборки есть свои настройки игры: раскладка клавиш, графика и звук.\nПрименить их? Текущие настройки будут заменены.\nПозже это делает кнопка «Рекомендованные» в настройках игры."),
-            "Настройки игры", true);
 
         private void SetBusy(bool busy)
         {
@@ -3684,7 +3671,7 @@ namespace CustomLauncher
             TweenOpacity(BtnGitHub, 0, 0.7, 600, OutQuart, 400);
 
             InitializeLauncher();
-            await EnsureGameDefaults();
+            EnsureGameDefaults();
             await CheckUpdates();
 
             if (TopLeftTitleText.Text != "BattleCraft Remake Launcher")
@@ -3826,7 +3813,6 @@ namespace CustomLauncher
 
                 _settings.IsModpackInstalled = false;
                 _settings.ModpackVersion = "0.0";
-                _settings.GameDefaultsRevision = 0;
                 _settings.GamePath = np;
                 PathBox.Text = np;
             }
@@ -3834,7 +3820,7 @@ namespace CustomLauncher
             if (_settings.HasGamePath)
             {
                 InitializeLauncher();
-                await EnsureGameDefaults();
+                EnsureGameDefaults();
             }
             CloseSettingsPanel();
         }
@@ -3874,7 +3860,7 @@ namespace CustomLauncher
             GameScrollViewer?.ScrollToVerticalOffset(0);
 
             FillGameCombos();
-            await EnsureGameDefaults();
+            EnsureGameDefaults();
             LoadGameSettings();
 
             GameTitle.Opacity = 0;
@@ -3929,8 +3915,9 @@ namespace CustomLauncher
 
             RenderDistanceSlider.Value = ReadNumber(options, "renderDistance", 8);
             SimulationDistanceSlider.Value = ReadNumber(options, "simulationDistance", 6);
-            MaxFpsSlider.Value = ReadNumber(options, "maxFps", 120);
-            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 2), 0, GuiScaleCombo.Items.Count - 1);
+            MaxFpsSlider.Value = ReadNumber(options, "maxFps", GameDefaults.FrameRateFor(_refreshHz));
+            UpdateMaxFpsLabel();
+            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 0), 0, GuiScaleCombo.Items.Count - 1);
             GraphicsModeCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "graphicsMode", 1), 0, 2);
             ParticlesCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "particles", 1), 0, 2);
             WindowedCheck.IsChecked = ReadFlag(options, "fullscreen") == false;
@@ -3939,10 +3926,12 @@ namespace CustomLauncher
             EntityShadowsCheck.IsChecked = ReadFlag(options, "entityShadows") != false;
             AutoJumpCheck.IsChecked = ReadFlag(options, "autoJump") == true;
 
-            FovSlider.Value = Math.Clamp(30 + ReadFraction(options, "fov", 0.55) * 80, 30, 110);
+            FovSlider.Value = Math.Clamp(
+                GameDefaults.FovDegrees(ReadFraction(options, "fov", 0.0)),
+                GameDefaults.MinFovDegrees,
+                GameDefaults.MaxFovDegrees);
             GammaSlider.Value = ReadFraction(options, "gamma", 0.5) * 100;
             SensitivitySlider.Value = ReadFraction(options, "mouseSensitivity", 0.5) * 200;
-            EntityDistanceSlider.Value = ReadFraction(options, "entityDistanceScaling", 1.0) * 100;
             InvertMouseCheck.IsChecked = ReadFlag(options, "invertYMouse") == true;
             PauseOnLostFocusCheck.IsChecked = ReadFlag(options, "pauseOnLostFocus") != false;
             ToggleCrouchCheck.IsChecked = ReadFlag(options, "toggleCrouch") == true;
@@ -3985,8 +3974,12 @@ namespace CustomLauncher
                 ? value
                 : fallback;
 
-        private static string Fraction(double percent) =>
-            (percent / 100d).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture);
+        // WHY: два знака после запятой округляли чувствительность 43 % в 0.22, и игра
+        // WHY: показывала 44 % — шаг ползунка требует трёх
+        private static string Fraction(double percent) => GameDefaults.Number(percent / 100d);
+
+        private void UpdateMaxFpsLabel() =>
+            MaxFpsLabel.Text = Lang.F("Максимум кадров ({0} Гц):", (int)Math.Round(_refreshHz));
 
         private void SaveGameSettings()
         {
@@ -4005,10 +3998,10 @@ namespace CustomLauncher
                 ["renderClouds"] = CloudsCheck.IsChecked == true ? "\"fast\"" : "\"false\"",
                 ["entityShadows"] = EntityShadowsCheck.IsChecked == true ? "true" : "false",
                 ["autoJump"] = AutoJumpCheck.IsChecked == true ? "true" : "false",
-                ["fov"] = Fraction((FovSlider.Value - 30) / 80d * 100d),
+                ["fov"] = GameDefaults.FovOption(FovSlider.Value),
                 ["gamma"] = Fraction(GammaSlider.Value),
                 ["mouseSensitivity"] = Fraction(SensitivitySlider.Value / 2d),
-                ["entityDistanceScaling"] = Fraction(EntityDistanceSlider.Value),
+                ["entityDistanceScaling"] = GameDefaults.MaxEntityDistance,
                 ["invertYMouse"] = InvertMouseCheck.IsChecked == true ? "true" : "false",
                 ["pauseOnLostFocus"] = PauseOnLostFocusCheck.IsChecked == true ? "true" : "false",
                 ["toggleCrouch"] = ToggleCrouchCheck.IsChecked == true ? "true" : "false",
@@ -4035,8 +4028,6 @@ namespace CustomLauncher
         {
             StopListening();
             GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
-            _settings.GameDefaultsRevision = GameDefaults.Revision;
-            AppSettings.Save(_settings);
             LoadGameSettings();
         }
 

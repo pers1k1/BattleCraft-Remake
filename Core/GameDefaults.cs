@@ -7,10 +7,19 @@ namespace CustomLauncher.Core
 {
     public static class GameDefaults
     {
+        public const double DefaultFovDegrees = 70;
+        public const double MinFovDegrees = 30;
+        public const double MaxFovDegrees = 110;
+        public const string MaxEntityDistance = "5.0";
+
+        // WHY: Minecraft держит поле обзора не в градусах, а как (градусы - 70) / 40
+        private const double FovNeutralDegrees = 70;
+        private const double FovDegreesPerUnit = 40;
+
         public static readonly Dictionary<string, string> RecommendedGraphics = new()
         {
             ["fullscreen"] = "false",
-            ["guiScale"] = "2",
+            ["guiScale"] = "0",
             ["renderDistance"] = "8",
             ["simulationDistance"] = "6",
             ["graphicsMode"] = "1",
@@ -22,8 +31,8 @@ namespace CustomLauncher.Core
             ["entityShadows"] = "true",
             ["ao"] = "true",
             ["gamma"] = "0.5",
-            ["fov"] = "0.55",
-            ["entityDistanceScaling"] = "5.0",
+            ["fov"] = FovOption(DefaultFovDegrees),
+            ["entityDistanceScaling"] = MaxEntityDistance,
             ["bobView"] = "true",
             ["autoJump"] = "false",
             ["darkMojangStudiosBackground"] = "true",
@@ -98,7 +107,23 @@ namespace CustomLauncher.Core
             ["can_Flipping"] = false
         };
 
-        public const int Revision = 3;
+        public static double FovDegrees(double storedFov) =>
+            FovNeutralDegrees + storedFov * FovDegreesPerUnit;
+
+        public static string FovOption(double degrees) =>
+            Number((degrees - FovNeutralDegrees) / FovDegreesPerUnit);
+
+        public static string Number(double value) =>
+            value.ToString("0.0###", System.Globalization.CultureInfo.InvariantCulture);
+
+        // WHY: ползунок лимита кадров в Embeddium ходит шагом 5 и подтягивает к себе
+        // WHY: соседнее значение, а лимит ровно по частоте монитора даёт рывки под vsync
+        public static int FrameRateFor(double refreshRate)
+        {
+            int measured = (int)Math.Round(Math.Clamp(refreshRate, 24, 480));
+            int roundedUp = (measured + 9) / 10 * 10;
+            return Math.Clamp(roundedUp, 30, 260);
+        }
 
         public static bool HasOptions(string gamePath) =>
             !string.IsNullOrWhiteSpace(gamePath)
@@ -120,10 +145,9 @@ namespace CustomLauncher.Core
             if (!HasOptions(gamePath))
                 return;
 
-            int frameRate = Math.Clamp((int)Math.Round(refreshRate), 10, 260);
             KeyValuePair<string, string>[] frameRateOption =
             {
-                new("maxFps", frameRate.ToString())
+                new("maxFps", FrameRateFor(refreshRate).ToString())
             };
             Apply(gamePath, frameRateOption);
         }
