@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.12";
+        private const string VER = "2026.09.12hotfix";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -3917,7 +3917,7 @@ namespace CustomLauncher
             SimulationDistanceSlider.Value = ReadNumber(options, "simulationDistance", 6);
             MaxFpsSlider.Value = ReadNumber(options, "maxFps", GameDefaults.FrameRateFor(_refreshHz));
             UpdateMaxFpsLabel();
-            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 0), 0, GuiScaleCombo.Items.Count - 1);
+            GuiScaleCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "guiScale", 2), 0, GuiScaleCombo.Items.Count - 1);
             GraphicsModeCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "graphicsMode", 1), 0, 2);
             ParticlesCombo.SelectedIndex = Math.Clamp(ReadNumber(options, "particles", 1), 0, 2);
             WindowedCheck.IsChecked = ReadFlag(options, "fullscreen") == false;
