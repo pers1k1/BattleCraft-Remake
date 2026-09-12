@@ -11,6 +11,7 @@ namespace CustomLauncher.Core
         public const double MinFovDegrees = 30;
         public const double MaxFovDegrees = 110;
         public const string MaxEntityDistance = "5.0";
+        private const string DataVersionKey = "version";
 
         // WHY: Minecraft держит поле обзора не в градусах, а как (градусы - 70) / 40
         private const double FovNeutralDegrees = 70;
@@ -224,7 +225,11 @@ namespace CustomLauncher.Core
             foreach (var pair in values)
                 merged[pair.Key] = pair.Value;
 
-            File.WriteAllLines(optionsPath, merged.Select(pair => $"{pair.Key}:{pair.Value}"));
+            if (!merged.ContainsKey(DataVersionKey))
+                merged[DataVersionKey] = GameVersions.MinecraftDataVersion;
+
+            var ordered = merged.OrderBy(pair => pair.Key == DataVersionKey ? 0 : 1);
+            File.WriteAllLines(optionsPath, ordered.Select(pair => $"{pair.Key}:{pair.Value}"));
         }
     }
 }
