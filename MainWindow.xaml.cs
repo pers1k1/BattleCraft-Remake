@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13v4";
+        private const string VER = "2026.09.13v5";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -3145,10 +3145,14 @@ namespace CustomLauncher
                 }
             }
 
-            if (await ShowCustomDialog(Lang.F("{0}: {1}\n\nОткрыть файл с логами?", context, ex.Message), "Ошибка", true))
+            string body = NetworkTrouble.Looks(ex)
+                ? context + ": " + NetworkTrouble.Explain(ex)
+                : Lang.F("{0}: {1}", context, ex.Message);
+
+            if (await ShowCustomDialog(body + "\n\n" + Lang.T("Открыть файл с логами?"), "Ошибка", true))
             {
                 string toOpen = !string.IsNullOrEmpty(logPath) && File.Exists(logPath) ? logPath : AppSettings.GetConfigDir();
-                try { Process.Start(new ProcessStartInfo(toOpen) { UseShellExecute = true }); } catch { }
+                OpenInShell(toOpen);
             }
         }
 
@@ -4582,7 +4586,13 @@ namespace CustomLauncher
                 if (ReleaseVersion.IsNewer(launcherVerStr, VER)
                     && await ShowCustomDialog(Lang.F("Обновить лаунчер до {0}?", ReleaseVersion.Display(launcherVerStr)), "Обновление", true)) await UpdateLauncher();
             }
-            catch { LogError(Lang.T("Ошибка сети")); }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[ERROR] Проверка версий не прошла: {error}");
+                LogError(NetworkTrouble.Looks(error)
+                    ? Lang.F("Сеть недоступна: {0}", NetworkTrouble.Deepest(error).Message)
+                    : Lang.F("Ошибка сети: {0}", error.Message));
+            }
         }
 
         private async Task UpdateLauncher()

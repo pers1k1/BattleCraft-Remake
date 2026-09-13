@@ -445,7 +445,14 @@ namespace CustomLauncher.Core
             ["Вход через Microsoft (WebView2)"] = "Microsoft sign-in (WebView2)",
             ["Компонент Microsoft Edge WebView2 не установлен: окно входа по лицензии не откроется. Ставится автоматически."] = "The Microsoft Edge WebView2 component is missing: the licensed sign-in window will not open. It installs automatically.",
             ["WebView2 установлен, вход по лицензии заработает."] = "WebView2 is installed, the licensed sign-in will work.",
-            ["Папка «Документы» закрыта, поэтому настройки и логи лежат здесь: {0}\nПричина: {1}\nОбычно это облачная синхронизация документов или защита папок в антивирусе."] = "The Documents folder is closed, so settings and logs live here: {0}\nReason: {1}\nUsually that is cloud sync of documents or an antivirus folder shield."
+            ["Папка «Документы» закрыта, поэтому настройки и логи лежат здесь: {0}\nПричина: {1}\nОбычно это облачная синхронизация документов или защита папок в антивирусе."] = "The Documents folder is closed, so settings and logs live here: {0}\nReason: {1}\nUsually that is cloud sync of documents or an antivirus folder shield.",
+            ["Связь с сервером оборвалась на середине запроса."] = "The connection to the server broke in the middle of a request.",
+            ["Так себя ведут: проверка HTTPS в антивирусе, VPN или прокси, блокировка со стороны провайдера и нестабильный Wi-Fi."] = "The usual culprits: HTTPS scanning in an antivirus, a VPN or proxy, blocking by the provider, and unstable Wi-Fi.",
+            ["Что помогает: выключить проверку защищённых соединений в антивирусе, включить или наоборот выключить VPN, сменить сеть и повторить попытку."] = "What helps: turn off secure-connection scanning in the antivirus, switch the VPN on or off, change the network and try again.",
+            ["Текст ошибки: {0}"] = "Error text: {0}",
+            ["Открыть файл с логами?"] = "Open the log file?",
+            ["Сеть недоступна: {0}"] = "Network unavailable: {0}",
+            ["Ошибка сети: {0}"] = "Network error: {0}"
         };
     }
 }

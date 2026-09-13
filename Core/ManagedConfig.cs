@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
@@ -68,8 +68,9 @@ namespace CustomLauncher.Core
                 string url = ManifestUrl + "?t=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 return JObject.Parse(await client.GetStringAsync(url));
             }
-            catch
+            catch (Exception error)
             {
+                LauncherLog.Write($"[WARN] Общие настройки модов не скачаны: {error.Message}");
                 return null;
             }
         }
