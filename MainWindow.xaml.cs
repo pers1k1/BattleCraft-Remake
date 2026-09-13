@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13hotfix";
+        private const string VER = "2026.09.13v3";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -1897,61 +1897,26 @@ namespace CustomLauncher
         {
             try
             {
-                if (IsWebView2Installed()) return;
+                if (WebView2Runtime.Installed()) return;
 
                 MessageBox.Show(this,
                     Lang.T("Для входа через Microsoft нужен компонент Microsoft Edge WebView2 Runtime, который не установлен в системе.\n\nСейчас он будет загружен и установлен."),
                     Lang.T("Требуется компонент"), MessageBoxButton.OK, MessageBoxImage.Information);
 
                 ShowSpinnerOverlay(Lang.T("Установка компонента"), Lang.T("Загрузка WebView2 Runtime…"), false);
-                bool ok = await InstallWebView2Async();
+                bool ok = await WebView2Runtime.InstallAsync();
                 HideUpdateOverlay();
 
                 if (!ok)
                     MessageBox.Show(this,
                         Lang.T("Не удалось установить WebView2 Runtime автоматически. Открою страницу загрузки — установите его вручную, иначе вход через Microsoft работать не будет."),
                         Lang.T("Требуется компонент"), MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-            catch { }
-        }
 
-        private static bool IsWebView2Installed()
-        {
-            const string guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
-            string[] hklmKeys =
-            {
-                $@"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{guid}",
-                $@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{guid}"
-            };
-            foreach (var key in hklmKeys)
-            {
-                using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key);
-                if (k?.GetValue("pv") is string v && !string.IsNullOrEmpty(v) && v != "0.0.0.0") return true;
+                if (!ok) OpenInShell(WebView2Runtime.ManualPage);
             }
-            using var cu = Microsoft.Win32.Registry.CurrentUser.OpenSubKey($@"SOFTWARE\Microsoft\EdgeUpdate\Clients\{guid}");
-            return cu?.GetValue("pv") is string cv && !string.IsNullOrEmpty(cv) && cv != "0.0.0.0";
-        }
-
-        private async Task<bool> InstallWebView2Async()
-        {
-            try
+            catch (Exception error)
             {
-                string tmp = Path.Combine(Path.GetTempPath(), "MicrosoftEdgeWebview2Setup.exe");
-                using (var http = new HttpClient())
-                {
-                    http.Timeout = TimeSpan.FromMinutes(5);
-                    var bytes = await http.GetByteArrayAsync("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
-                    await File.WriteAllBytesAsync(tmp, bytes);
-                }
-                var psi = new ProcessStartInfo(tmp, "/silent /install") { UseShellExecute = true };
-                var proc = Process.Start(psi);
-                if (proc != null) await proc.WaitForExitAsync();
-                return IsWebView2Installed();
-            }
-            catch
-            {
-                try { Process.Start(new ProcessStartInfo("https://developer.microsoft.com/microsoft-edge/webview2/") { UseShellExecute = true }); } catch { }
-                return false;
+                LauncherLog.Write($"[ERROR] Проверка WebView2 сорвалась: {error.Message}");
             }
         }
 
@@ -2457,6 +2422,11 @@ namespace CustomLauncher
             NavServerText.Text = Lang.T("Серверы");
             BtnReinstallText.Text = Lang.T("Перекачать моды");
             BtnSettingsText.Text = Lang.T("Настройки");
+            BtnChecksText.Text = Lang.T("Проверка системы");
+            ChecksTitleRun.Text = Lang.T("проверка системы");
+            BtnRecheckText.Text = Lang.T("Проверить снова");
+            BtnOpenLogText.Text = Lang.T("Открыть лог");
+            BtnCloseChecksText.Text = Lang.T("Закрыть");
             ForgeWarnText.Text = Lang.T("Установка библиотек Forge. Этот этап займёт от 1 до 5 минут.");
             LogTerminalText.Text = Lang.Tr(LogTerminalText.Text);
             if (BtnPlay.Content is string pc) BtnPlay.Content = Lang.Tr(pc);
@@ -2867,7 +2837,11 @@ namespace CustomLauncher
                     ShowSpinnerOverlay(Lang.T("Загрузка профиля Minecraft"), Lang.T("Проверка лицензии Microsoft…"), false);
                     var handler = JELoginHandlerBuilder.BuildDefault();
                     dynamic? sessionObj = null;
-                    try { sessionObj = await handler.AuthenticateSilently(); } catch { }
+                    try { sessionObj = await handler.AuthenticateSilently(); }
+                    catch (Exception error)
+                    {
+                        LauncherLog.Write($"[WARN] Тихий вход Microsoft не прошёл: {error.Message}");
+                    }
 
                     string? msaName = sessionObj is null ? null : (string?)sessionObj.Username;
                     if (sessionObj is not null && !string.IsNullOrEmpty(msaName))
@@ -2901,7 +2875,23 @@ namespace CustomLauncher
                 if (managed > 0)
                     Log(Lang.T("Настройки модов приведены к общим значениям:") + " " + managed);
 
-                var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = FindJava() };
+                string java = FindJava();
+                if (!JavaRuntime.IsBundled(java))
+                {
+                    Log(Lang.T("Java сборки не найдена, лаунчер ставит её заново"));
+                    await DownloadAndInstallJava();
+                    java = FindJava();
+                    if (!JavaRuntime.IsBundled(java))
+                    {
+                        await ShowCustomDialog(
+                            Lang.T("Java для игры не установилась, запуск невозможен. Откройте «Проверка системы» и посмотрите, что мешает."),
+                            Lang.T("Ошибка запуска"));
+                        SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false);
+                        return;
+                    }
+                }
+
+                var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = java };
                 Process game = await _launcher.CreateProcessAsync(ver.Name, opt);
                 _gameProcess = game;
                 InjectJvmArgs(game);
@@ -2913,6 +2903,7 @@ namespace CustomLauncher
                 game.StartInfo.Environment["FML_EARLY_WINDOW_DARK"] = "1";
 
                 game.Start();
+                DateTime started = DateTime.Now;
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
                 _discordManager.ReleaseForGame();
@@ -2927,10 +2918,43 @@ namespace CustomLauncher
                 SetPlayState("idle");
                 StatusText.Text = Lang.T("Готов");
                 _discordManager.SetMenuState();
+                await ReportGameExit(game.ExitCode, DateTime.Now - started);
             }
             catch (OperationCanceledException) { Log(Lang.T("Установка отменена.")); StatusText.Text = Lang.T("Отменено"); SetPlayState("idle"); }
             catch (Exception ex) { await HandleErrorAsync(ex, Lang.T("Ошибка запуска")); }
             finally { HideUpdateOverlay(); SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
+        }
+
+        private static readonly TimeSpan SuspiciouslyShortSession = TimeSpan.FromSeconds(40);
+
+        // WHY: Minecraft уносит свои ошибки в собственный лог и молча закрывается, а игрок
+        // WHY: видит только вернувшийся лаунчер и не понимает, что вообще произошло
+        private async Task ReportGameExit(int exitCode, TimeSpan ran)
+        {
+            bool crashed = exitCode != 0;
+            bool diedOnLoading = !crashed && ran < SuspiciouslyShortSession
+                && !GameLogTail.ReachedMenu(_settings.GamePath);
+
+            LauncherLog.Write($"[SYS] Игра завершилась с кодом {exitCode} через {ran.TotalSeconds:F0} с");
+            if (!crashed && !diedOnLoading) return;
+
+            string report = GameLogTail.NewestCrashReport(_settings.GamePath, TimeSpan.FromMinutes(5));
+            List<string> problems = GameLogTail.Problems(_settings.GamePath, 6);
+
+            string message = crashed
+                ? Lang.F("Игра закрылась с ошибкой (код {0}) через {1} секунд.", exitCode, (int)ran.TotalSeconds)
+                : Lang.F("Игра закрылась сама через {0} секунд, до загрузки меню.", (int)ran.TotalSeconds);
+
+            if (problems.Count > 0)
+                message += "\n\n" + Lang.T("Последние ошибки из лога игры:") + "\n" + string.Join("\n", problems);
+
+            if (!string.IsNullOrEmpty(report))
+                message += "\n\n" + Lang.F("Отчёт игры: {0}", report);
+
+            message += "\n\n" + Lang.F("Полный лог: {0}", GameLogTail.LatestLogPath(_settings.GamePath));
+
+            Log(message.Replace("\n", " "));
+            await ShowCustomDialog(message, Lang.T("Игра завершилась с ошибкой"));
         }
 
         private void EnsureGameDefaults()
@@ -3003,14 +3027,7 @@ namespace CustomLauncher
             return false;
         }
 
-        private string FindJava()
-        {
-            string old = Path.Combine(_settings.GamePath, "runtime", "java-runtime-gamma", "windows-x64", "java-runtime-gamma", "bin", "java.exe");
-            if (File.Exists(old)) return old;
-            string rt = Path.Combine(_settings.GamePath, "runtime");
-            if (Directory.Exists(rt)) { var f = Directory.GetFiles(rt, "java.exe", SearchOption.AllDirectories).FirstOrDefault(j => j.Contains("bin") && !j.Contains("javaw")); if (f != null) return f; }
-            return "java";
-        }
+        private string FindJava() => JavaRuntime.Find(_settings.GamePath);
 
         private void EnsureProfiles() { string p = Path.Combine(_settings.GamePath, "launcher_profiles.json"); if (!File.Exists(p)) File.WriteAllText(p, "{\"profiles\":{}}"); }
 
@@ -3214,7 +3231,11 @@ namespace CustomLauncher
             foreach (string name in PlayerOptionFiles)
             {
                 string path = Path.Combine(_settings.GamePath, name);
-                try { if (File.Exists(path)) saved[name] = File.ReadAllBytes(path); } catch { }
+                try { if (File.Exists(path)) saved[name] = File.ReadAllBytes(path); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    LauncherLog.Write($"[WARN] Настройки {name} не сняты перед обновлением: {error.Message}");
+                }
             }
 
             return saved;
@@ -3230,7 +3251,11 @@ namespace CustomLauncher
                     if (saved.TryGetValue(name, out byte[]? data)) File.WriteAllBytes(path, data);
                     else if (File.Exists(path)) File.Delete(path);
                 }
-                catch { }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    LauncherLog.Write($"[ERROR] Настройки {name} не вернулись после обновления: {error.Message}");
+                    Log(Lang.F("Настройки {0} не удалось вернуть после обновления: {1}", name, error.Message));
+                }
             }
         }
 
@@ -3245,7 +3270,12 @@ namespace CustomLauncher
                 foreach (var dir in ModpackDirs)
                 {
                     string p = Path.Combine(_settings.GamePath, dir);
-                    try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
+                    try { if (Directory.Exists(p)) Directory.Delete(p, true); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                    {
+                        LauncherLog.Write($"[ERROR] Папка {dir} не очищена перед установкой: {error.Message}");
+                        Log(Lang.F("Не удалось очистить папку {0}: {1}. Закройте игру и попробуйте снова.", dir, error.Message));
+                    }
                 }
             }
 
@@ -3263,6 +3293,7 @@ namespace CustomLauncher
                     StatusText.Text = Lang.T("Распаковка...");
                     await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
                     RestorePlayerOptions(playerOptions);
+                    VerifyExtractedModpack();
                     Log(Lang.T("Распаковка завершена!"));
                     _settings.IsModpackInstalled = true;
                     _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
@@ -3302,6 +3333,29 @@ namespace CustomLauncher
             catch { return false; }
         }
 
+        // WHY: распаковка молча заканчивалась ничем, когда архив резал антивирус или
+        // WHY: обрывался диск, и игрок узнавал об этом только по пустой игре без модов
+        private void VerifyExtractedModpack()
+        {
+            string mods = Path.Combine(_settings.GamePath, "mods");
+            int jars = Directory.Exists(mods) ? Directory.GetFiles(mods, "*.jar").Length : 0;
+
+            if (jars == 0)
+                throw new IOException(Lang.T("После распаковки в папке mods нет ни одного мода. Проверьте антивирус и свободное место."));
+
+            LauncherLog.Write($"[SYS] После распаковки модов в папке: {jars}");
+        }
+
+        private void VerifyBattleCraftJar(string path)
+        {
+            var file = new FileInfo(path);
+
+            if (!file.Exists || file.Length == 0)
+                throw new IOException(Lang.F("Мод BattleCraft не сохранился: {0}. Скорее всего файл удалил антивирус.", path));
+
+            LauncherLog.Write($"[SYS] Мод BattleCraft установлен: {file.Name}, {file.Length} байт");
+        }
+
         private async Task InstallBattleCraftMod()
         {
             string ver = _onlineBattleCraftModVer;
@@ -3313,9 +3367,19 @@ namespace CustomLauncher
             try
             {
                 foreach (var f in Directory.GetFiles(modsDir, "battlecraft*.jar"))
-                    try { File.Delete(f); } catch { }
+                {
+                    try { File.Delete(f); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                    {
+                        LauncherLog.Write($"[ERROR] Старый мод {Path.GetFileName(f)} не удалён: {error.Message}");
+                        Log(Lang.F("Старый мод {0} занят и не удалён: {1}. Две версии мода вместе игру не запустят.", Path.GetFileName(f), error.Message));
+                    }
+                }
             }
-            catch { }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                LauncherLog.Write($"[WARN] Папка модов не просмотрена: {error.Message}");
+            }
 
             string url = BattleCraftJarUrl(ver);
             string dest = Path.Combine(modsDir, Path.GetFileName(new Uri(url).AbsolutePath));
@@ -3329,6 +3393,7 @@ namespace CustomLauncher
                     dl.LogMessage += LogNet;
                     dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(v); });
                     await dl.DownloadFileAsync(url, dest);
+                    VerifyBattleCraftJar(dest);
                     _settings.BattleCraftModVersion = ver;
                     AppSettings.Save(_settings);
                     success = true;
@@ -3672,6 +3737,7 @@ namespace CustomLauncher
 
             InitializeLauncher();
             EnsureGameDefaults();
+            RunStartupChecks();
             await CheckUpdates();
 
             if (TopLeftTitleText.Text != "BattleCraft Remake Launcher")
@@ -3874,6 +3940,257 @@ namespace CustomLauncher
                 TweenOpacity(GameTitle, 0, 1, 650, OutQuart);
                 TweenY(GameTitleTranslate, 20, 0, 650, OutQuart);
             });
+        }
+
+        private sealed class CheckRow
+        {
+            public required RequirementCheck Source { get; init; }
+            public required string Title { get; init; }
+            public required string Detail { get; init; }
+            public required string Badge { get; init; }
+            public required Brush BadgeBrush { get; init; }
+            public string ActionLabel { get; init; } = "";
+            public Visibility ActionVisibility { get; init; } = Visibility.Collapsed;
+        }
+
+        private readonly System.Collections.ObjectModel.ObservableCollection<CheckRow> _checkRows = new();
+        private bool _effectsSoftened;
+        private bool _checkActionRunning;
+
+        private static int RenderTier => RenderCapability.Tier >> 16;
+
+        private List<RequirementCheck> InspectSystem() => SystemRequirements.Inspect(new RequirementContext
+        {
+            GamePath = _settings.GamePath ?? "",
+            ModpackInstalled = _settings.IsModpackInstalled,
+            RenderTier = RenderTier,
+            RamMb = _settings.RamMb,
+            LicensedAccount = _settings.UserType == "msa"
+        });
+
+        private void RunStartupChecks()
+        {
+            List<RequirementCheck> results = InspectSystem();
+            WriteChecksToLog(results);
+            SoftenEffectsWithoutAcceleration();
+
+            if (SystemRequirements.AllGood(results)) return;
+
+            FillChecks(results);
+            OpenChecksPanel();
+        }
+
+        // WHY: без ускорения WPF рисует окно процессором, и свечение размазывается
+        // WHY: чёрными прямоугольниками; гасим его в этом сеансе, не трогая выбор игрока
+        private void SoftenEffectsWithoutAcceleration()
+        {
+            if (RenderTier >= 1 || _effectsSoftened) return;
+
+            _effectsSoftened = true;
+            ApplyBloom(false, _settings.BloomStrength ?? 60, false);
+            Log(Lang.T("Аппаратного ускорения нет: свечение выключено, чтобы окно не мерцало"));
+        }
+
+        private static void WriteChecksToLog(List<RequirementCheck> results)
+        {
+            foreach (RequirementCheck check in results)
+            {
+                if (check.State == RequirementState.Ok) continue;
+
+                string level = check.State == RequirementState.Missing ? "ERROR" : "WARN";
+                LauncherLog.Write($"[{level}] {check.Title}: {check.Detail.Replace("\n", " ")}");
+            }
+        }
+
+        private void FillChecks(List<RequirementCheck> results)
+        {
+            _checkRows.Clear();
+
+            foreach (RequirementCheck check in results)
+            {
+                bool hasAction = check.Fix != RequirementFix.None;
+                _checkRows.Add(new CheckRow
+                {
+                    Source = check,
+                    Title = check.Title,
+                    Detail = check.Detail,
+                    Badge = check.State switch
+                    {
+                        RequirementState.Ok => "[ ok ]",
+                        RequirementState.Warning => "[ !! ]",
+                        _ => "[ xx ]"
+                    },
+                    BadgeBrush = new SolidColorBrush(check.State switch
+                    {
+                        RequirementState.Ok => Color.FromRgb(0x7C, 0xDB, 0x6A),
+                        RequirementState.Warning => Color.FromRgb(0xFE, 0xBC, 0x2E),
+                        _ => Color.FromRgb(0xFF, 0x5F, 0x57)
+                    }),
+                    ActionLabel = check.FixLabel,
+                    ActionVisibility = hasAction ? Visibility.Visible : Visibility.Collapsed
+                });
+            }
+
+            if (ChecksList != null) ChecksList.ItemsSource = _checkRows;
+
+            int broken = results.Count(check => check.State == RequirementState.Missing);
+            int shaky = results.Count(check => check.State == RequirementState.Warning);
+
+            if (ChecksSummary != null)
+            {
+                ChecksSummary.Text = broken == 0 && shaky == 0
+                    ? Lang.T("Всё на месте, лаунчеру ничего не мешает.")
+                    : Lang.F("Мешает работе: {0}, под вопросом: {1}. Лаунчер запустится в любом случае, но эти пункты стоит закрыть.", broken, shaky);
+            }
+        }
+
+        private void BtnChecks_Click(object s, RoutedEventArgs e)
+        {
+            FillChecks(InspectSystem());
+            OpenChecksPanel();
+        }
+
+        private void OpenChecksPanel()
+        {
+            if (ChecksPanel.Visibility == Visibility.Visible) return;
+
+            ChecksPanel.Visibility = Visibility.Visible;
+            Dispatcher.BeginInvoke(() => ChecksScrollViewer?.ScrollToVerticalOffset(0),
+                System.Windows.Threading.DispatcherPriority.Loaded);
+
+            ChecksTitle.Opacity = 0;
+            ChecksTitleTranslate.Y = 20;
+            CacheWhileMoving(ChecksBox, true);
+            TweenOpacity(ChecksPanel, 0, 1, 180, Linear);
+            TweenScale(ChecksScale, 0.85, 1, 420, OutBackWide);
+            TweenY(ChecksTranslate, 30, 0, 420, OutCubic, 0, () =>
+            {
+                CacheWhileMoving(ChecksBox, false);
+                TweenOpacity(ChecksTitle, 0, 1, 650, OutQuart);
+                TweenY(ChecksTitleTranslate, 20, 0, 650, OutQuart);
+            });
+        }
+
+        private void BtnCloseChecks_Click(object s, RoutedEventArgs e)
+        {
+            if (ChecksPanel.Visibility != Visibility.Visible) return;
+
+            CacheWhileMoving(ChecksBox, true);
+            TweenScale(ChecksScale, 1, 0.88, 200, InBackSoft);
+            TweenY(ChecksTranslate, 0, 18, 200, InCubic);
+            TweenOpacity(ChecksPanel, 1, 0, 200, Linear, 0, () =>
+            {
+                CacheWhileMoving(ChecksBox, false);
+                ChecksPanel.Visibility = Visibility.Hidden;
+                ChecksPanel.Opacity = 1;
+                ChecksScale.ScaleX = 1; ChecksScale.ScaleY = 1;
+                ChecksTranslate.Y = 0;
+            });
+        }
+
+        private void BtnRecheck_Click(object s, RoutedEventArgs e)
+        {
+            List<RequirementCheck> results = InspectSystem();
+            WriteChecksToLog(results);
+            FillChecks(results);
+        }
+
+        private void BtnOpenLauncherLog_Click(object s, RoutedEventArgs e)
+        {
+            string log = Path.Combine(AppSettings.GetConfigDir(), "latest.log");
+
+            if (!File.Exists(log))
+            {
+                _ = ShowCustomDialog(Lang.F("Лог ещё не создан: {0}", log), "Проверка системы");
+                return;
+            }
+
+            OpenInShell(log);
+        }
+
+        private void OpenInShell(string target)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+            }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[WARN] Не удалось открыть {target}: {error.Message}");
+                _ = ShowCustomDialog(Lang.F("Не удалось открыть {0}: {1}", target, error.Message), "Проверка системы");
+            }
+        }
+
+        private async void CheckAction_Click(object s, RoutedEventArgs e)
+        {
+            if (_checkActionRunning) return;
+            if (s is not FrameworkElement element || element.DataContext is not CheckRow row) return;
+
+            _checkActionRunning = true;
+            try
+            {
+                switch (row.Source.Fix)
+                {
+                    case RequirementFix.InstallVcRedist:
+                        await InstallVcRedist();
+                        break;
+                    case RequirementFix.InstallWebView2:
+                        await InstallWebView2();
+                        break;
+                    case RequirementFix.OpenUrl:
+                        OpenInShell(row.Source.FixTarget);
+                        break;
+                    case RequirementFix.OpenGameFolder:
+                        OpenInShell(_settings.GamePath);
+                        break;
+                    case RequirementFix.InstallJava:
+                        BtnCloseChecks_Click(s, e);
+                        await DownloadAndInstallJava();
+                        break;
+                    case RequirementFix.ReinstallModpack:
+                        BtnCloseChecks_Click(s, e);
+                        BtnReinstall_Click(s, e);
+                        break;
+                }
+            }
+            finally
+            {
+                _checkActionRunning = false;
+                BtnRecheck_Click(s, e);
+            }
+        }
+
+        private async Task InstallWebView2()
+        {
+            ShowSpinnerOverlay(Lang.T("Установка компонента"), Lang.T("Загрузка WebView2 Runtime…"), false);
+            bool installed = await WebView2Runtime.InstallAsync();
+            HideUpdateOverlay();
+
+            if (!installed) OpenInShell(WebView2Runtime.ManualPage);
+
+            await ShowCustomDialog(
+                installed
+                    ? Lang.T("WebView2 установлен, вход по лицензии заработает.")
+                    : Lang.T("Не удалось установить WebView2 Runtime автоматически. Открою страницу загрузки — установите его вручную, иначе вход через Microsoft работать не будет."),
+                Lang.T("Проверка системы"));
+        }
+
+        private async Task InstallVcRedist()
+        {
+            ShowSpinnerOverlay(Lang.T("Установка компонента"), Lang.T("Visual C++ 2015-2022…"), true);
+
+            var downloader = new FileDownloader();
+            downloader.LogMessage += LogNet;
+            downloader.ProgressChanged += p => Dispatcher.BeginInvoke(() => SetUpdateProgress(p));
+
+            bool installed = await VcRedist.InstallAsync(downloader);
+            HideUpdateOverlay();
+
+            await ShowCustomDialog(
+                installed
+                    ? Lang.T("Visual C++ установлен. Если Windows попросит перезагрузку, перезагрузитесь.")
+                    : Lang.T("Установить Visual C++ не вышло. Скачайте его вручную с сайта Microsoft: aka.ms/vs/17/release/vc_redist.x64.exe"),
+                Lang.T("Проверка системы"));
         }
 
         private void BtnCloseGameSettings_Click(object s, RoutedEventArgs e)

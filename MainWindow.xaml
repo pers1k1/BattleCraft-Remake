@@ -1266,6 +1266,12 @@
                                 <TextBlock x:Name="BtnSettingsText" Text="Настройки" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+                        <Button x:Name="BtnChecksOpen" Click="BtnChecks_Click" Style="{StaticResource NavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path x:Name="BtnChecksIcon" Data="{StaticResource IconDoc}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock x:Name="BtnChecksText" Text="Проверка системы" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button x:Name="BtnGitHub" Click="BtnGitHub_Click" Style="{StaticResource NavButton}" ToolTip="github.com/pers1k1">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource IconFork}" Fill="{DynamicResource AccentBrush}" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -1876,6 +1882,95 @@
                                 </Button>
                                 <Button x:Name="BtnSaveGameSettings" Click="BtnSaveGameSettings_Click" Style="{StaticResource GlowButton}">
                                     <TextBlock x:Name="BtnSaveGameText" Text="Сохранить" Margin="18,0"/>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="ChecksPanel" Background="#CC000000" Visibility="Hidden">
+            <Border Background="Transparent" MouseDown="BtnCloseChecks_Click"/>
+            <Border x:Name="ChecksBox" Background="#8E080611"
+                    Width="660" MaxHeight="640" VerticalAlignment="Center" Margin="0,20,0,20"
+                    CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="ChecksScale" ScaleX="1" ScaleY="1"/>
+                        <TranslateTransform x:Name="ChecksTranslate" Y="0"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="20" ShadowDepth="0" Opacity="{DynamicResource SettingsBloomOpacity}"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Ellipse Width="11" Height="11" Fill="#FF5F57" Margin="0,0,7,0" Cursor="Hand" MouseDown="BtnCloseChecks_Click" ToolTip="Закрыть"/>
+                                <Ellipse Width="11" Height="11" Fill="#FEBC2E" Margin="0,0,7,0"/>
+                                <Ellipse Width="11" Height="11" Fill="#28C840"/>
+                            </StackPanel>
+                            <TextBlock Text="player@battlecraft: ~/check" FontFamily="Consolas, Courier New" FontSize="12" Foreground="#77FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" x:Name="ChecksScrollViewer" VerticalScrollBarVisibility="Auto" Margin="0,10,0,10" PreviewMouseWheel="SmoothWheel_Preview">
+                        <StackPanel Margin="25,15,25,25" TextElement.FontFamily="Consolas, Courier New">
+                            <TextBlock x:Name="ChecksTitle" FontSize="20" FontWeight="Bold" Margin="0,0,0,8" FontFamily="Consolas, Courier New">
+                                <Run Text="bcr" Foreground="#7CDB6A"/><Run Text=" &#x03BB; " Foreground="{DynamicResource AccentBrush}"/><Run x:Name="ChecksTitleRun" Text="проверка системы" Foreground="White"/>
+                                <TextBlock.RenderTransform>
+                                    <TranslateTransform x:Name="ChecksTitleTranslate" Y="0"/>
+                                </TextBlock.RenderTransform>
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="{DynamicResource TitleBloomBlurRadius}" ShadowDepth="0" Opacity="{DynamicResource TitleBloomOpacity}"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+
+                            <TextBlock x:Name="ChecksSummary" Foreground="#AAFFFFFF" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                            <ItemsControl x:Name="ChecksList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#10FFFFFF" CornerRadius="6" Padding="12,10" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="{Binding Badge}" Foreground="{Binding BadgeBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Top" Margin="0,1,12,0"/>
+
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Title}" Foreground="#EEFFFFFF" FontSize="13" FontWeight="Bold" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Detail}" Foreground="#99FFFFFF" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="2" Content="{Binding ActionLabel}" Click="CheckAction_Click" Style="{StaticResource GlowButton}"
+                                                        MinWidth="110" Margin="12,0,0,0" VerticalAlignment="Center" Visibility="{Binding ActionVisibility}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">
+                                <Button x:Name="BtnRecheck" Click="BtnRecheck_Click" Style="{StaticResource GlowButton}" Margin="0,0,10,0">
+                                    <TextBlock x:Name="BtnRecheckText" Text="Проверить снова" Margin="18,0"/>
+                                </Button>
+                                <Button x:Name="BtnOpenLauncherLog" Click="BtnOpenLauncherLog_Click" Style="{StaticResource GlowButton}" Margin="0,0,10,0">
+                                    <TextBlock x:Name="BtnOpenLogText" Text="Открыть лог" Margin="18,0"/>
+                                </Button>
+                                <Button x:Name="BtnCloseChecks" Click="BtnCloseChecks_Click" Style="{StaticResource GlowButton}">
+                                    <TextBlock x:Name="BtnCloseChecksText" Text="Закрыть" Margin="18,0"/>
                                 </Button>
                             </StackPanel>
                         </StackPanel>
