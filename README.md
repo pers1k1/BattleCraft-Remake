@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 13.09.26 |
+| Launcher | 13.09.26hotfix |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -47,6 +47,7 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 - The recommended set also writes `chatLineSpacing`. The pack's own mod widens the chat line spacing on startup and saves `options.txt` right away - before Forge re-reads the file for the mod key bindings - so that save used to push every modded binding back to its default and the first launch of a fresh install came up with the mod defaults. With the value already in place the mod leaves the file alone.
 - Field of view and mouse sensitivity are written the way Minecraft stores them: the game keeps the field of view as an offset from 70 degrees divided by 40, not as degrees, and reads the sensitivity with three decimals. The launcher converts both, so the number on the slider is the number the game shows.
 - The framerate cap is rounded up to whole tens instead of matching the refresh rate exactly: the Embeddium slider moves in steps of five and pulls a neighbouring value in, and a cap sitting exactly on the refresh rate stutters under vsync. A 144 Hz display gets 150, a 101 Hz one gets 110.
+- Writing `options.txt` never takes the launcher down. The file is replaced through a temporary file and an atomic move, and a locked file - a second copy of the launcher started by a self-update, or the game itself - is logged and skipped instead of raising an unhandled error. A settings file that cannot be read is left alone rather than overwritten with the recommended set, so a lock never costs the player his own settings.
 - The Minecraft language follows the launcher language: Russian selects `ru_ru`, English selects `en_us`. An existing `options.txt` is synchronized immediately when the launcher language changes and checked again before every game launch.
 - A modpack update never touches personal settings: `options.txt` (and the OptiFine/shader variants) is taken aside before the archive is unpacked and put back afterwards, so a pack that happens to carry someone else's options file cannot replace the player's own, and cannot mask the recommended defaults either.
 - The loader's own splash is started dark rather than red. Forge reads `FML_EARLY_WINDOW_DARK` from the game process environment before it looks at `options.txt`, so the launcher sets it on every launch and the mod-loading window matches the pack instead of flashing red first.

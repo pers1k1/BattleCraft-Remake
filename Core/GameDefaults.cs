@@ -180,23 +180,30 @@ namespace CustomLauncher.Core
             if (!File.Exists(path))
                 return;
 
-            string[] lines = File.ReadAllLines(path);
-
-            for (int index = 0; index < lines.Length; index++)
+            try
             {
-                string trimmed = lines[index].TrimStart();
-                int separator = trimmed.IndexOf('=');
-                if (separator <= 0)
-                    continue;
+                string[] lines = File.ReadAllLines(path);
 
-                string key = trimmed[..separator].Trim();
-                if (!DisabledParkourActions.ContainsKey(key))
-                    continue;
+                for (int index = 0; index < lines.Length; index++)
+                {
+                    string trimmed = lines[index].TrimStart();
+                    int separator = trimmed.IndexOf('=');
+                    if (separator <= 0)
+                        continue;
 
-                lines[index] = $"\t{key} = false";
+                    string key = trimmed[..separator].Trim();
+                    if (!DisabledParkourActions.ContainsKey(key))
+                        continue;
+
+                    lines[index] = $"\t{key} = false";
+                }
+
+                WriteLines(path, lines);
             }
-
-            File.WriteAllLines(path, lines);
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                LauncherLog.Write($"[WARN] Настройки паркура не применены: {error.Message}");
+            }
         }
 
         public static void Write(string gamePath, IEnumerable<KeyValuePair<string, string>> values) =>
@@ -210,11 +217,19 @@ namespace CustomLauncher.Core
             if (!File.Exists(optionsPath))
                 return options;
 
-            foreach (string line in File.ReadAllLines(optionsPath))
+            try
             {
-                int separator = line.IndexOf(':');
-                if (separator > 0)
-                    options[line[..separator]] = line[(separator + 1)..];
+                foreach (string line in File.ReadAllLines(optionsPath))
+                {
+                    int separator = line.IndexOf(':');
+                    if (separator > 0)
+                        options[line[..separator]] = line[(separator + 1)..];
+                }
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                LauncherLog.Write($"[WARN] Настройки игры не прочитаны: {error.Message}");
+                options.Clear();
             }
 
             return options;
@@ -227,6 +242,8 @@ namespace CustomLauncher.Core
 
             string optionsPath = Path.Combine(gamePath, "options.txt");
             var merged = Read(gamePath);
+            if (File.Exists(optionsPath) && merged.Count == 0)
+                return;
 
             foreach (var pair in values)
                 merged[pair.Key] = pair.Value;
@@ -235,7 +252,24 @@ namespace CustomLauncher.Core
                 merged[DataVersionKey] = GameVersions.MinecraftDataVersion;
 
             var ordered = merged.OrderBy(pair => pair.Key == DataVersionKey ? 0 : 1);
-            File.WriteAllLines(optionsPath, ordered.Select(pair => $"{pair.Key}:{pair.Value}"));
+
+            try
+            {
+                WriteLines(optionsPath, ordered.Select(pair => $"{pair.Key}:{pair.Value}"));
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                LauncherLog.Write($"[WARN] Настройки игры не записаны: {error.Message}");
+            }
+        }
+
+        // WHY: файл может держать вторая копия лаунчера или сама игра, а подмена целиком не
+        // WHY: оставляет полузаписанных настроек, если запись всё же оборвётся
+        private static void WriteLines(string path, IEnumerable<string> lines)
+        {
+            string temporary = path + ".tmp";
+            File.WriteAllLines(temporary, lines);
+            File.Move(temporary, path, true);
         }
     }
 }
