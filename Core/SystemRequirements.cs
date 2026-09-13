@@ -332,11 +332,12 @@ namespace CustomLauncher.Core
                 return Reinstall(title, Lang.T("Мод BattleCraft отсутствует, на сервер зайти не выйдет."));
             }
 
-            string[] empty = jars.Where(jar => new FileInfo(jar).Length == 0).ToArray();
-            if (empty.Length > 0)
+            List<string> broken = BrokenJars.Find(gamePath);
+            if (broken.Count > 0)
             {
                 return Reinstall(title,
-                    Lang.F("Пустых файлов модов: {0}. Скачивание оборвалось, нужна переустановка.", empty.Length));
+                    Lang.F("Повреждённых файлов: {0}, первый из них {1}. Скачивание оборвалось, нужна переустановка.",
+                        broken.Count, Path.GetFileName(broken[0])));
             }
 
             return Ok(title, "modpack", Lang.F("Модов установлено: {0}", jars.Length));

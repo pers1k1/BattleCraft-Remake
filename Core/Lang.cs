@@ -457,7 +457,11 @@ namespace CustomLauncher.Core
             ["Java не приняла настройки запуска сборки. Пробую ещё раз с безопасными настройками."] = "Java refused the pack launch options. Trying again with safe settings.",
             ["Java не смогла занять {0} МБ под игру. Пробую ещё раз с меньшим объёмом."] = "Java could not reserve {0} MB for the game. Trying again with less.",
             ["Сборщик мусора: по умолчанию (безопасный режим Java)"] = "Garbage collector: default (safe Java mode)",
-            ["Вывод игры: {0}"] = "Game output: {0}"
+            ["Вывод игры: {0}"] = "Game output: {0}",
+            ["Файлы игры повреждены после обрыва загрузки. Перекачиваю их со сверкой и запускаю снова."] = "The game files were damaged by a broken download. Re-downloading them with verification and starting again.",
+            ["Повреждённых файлов после обрыва загрузки: {0}. Перекачиваю их и запускаю снова."] = "Files damaged by the broken download: {0}. Re-downloading them and starting again.",
+            ["Ошибка восстановления файлов"] = "File recovery error",
+            ["Повреждённых файлов: {0}, первый из них {1}. Скачивание оборвалось, нужна переустановка."] = "Damaged files: {0}, the first one is {1}. The download broke, a reinstall is needed."
         };
     }
 }

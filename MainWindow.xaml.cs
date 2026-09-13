@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13v7";
+        private const string VER = "2026.09.13v8";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2707,8 +2707,13 @@ namespace CustomLauncher
             if (_settings.DownloadLanes > 0)
                 parameters.GameInstaller = new ParallelGameInstaller(
                     DownloadCheckers, _settings.DownloadLanes, DownloadQueueSize, ResilientHttpClientFactory.Shared);
+            // WHY: обрыв загрузки оставляет обрезанный jar, а без сверки размера установщик
+            // WHY: считает его готовым, и игра падает на SecureJar ещё до своего лога
             if (parameters.GameInstaller is GameInstallerBase installerBase)
-                installerBase.CheckFileChecksum = false;
+            {
+                installerBase.CheckFileSize = true;
+                installerBase.CheckFileChecksum = _settings.RepairGameFiles;
+            }
             _launcher = new MinecraftLauncher(parameters);
             _launcher.FileProgressChanged += (s, e) =>
             {
@@ -2925,7 +2930,9 @@ namespace CustomLauncher
                 StatusText.Text = Lang.T("Готов");
                 _discordManager.SetMenuState();
                 _gameOutput.Close();
+                ForgetRepairFlag(game.ExitCode, DateTime.Now - started);
                 if (await RestartWithSafeJvm(game.ExitCode, DateTime.Now - started)) return;
+                if (await RestartAfterRepair(game.ExitCode, DateTime.Now - started)) return;
                 await ReportGameExit(game.ExitCode, DateTime.Now - started);
             }
             catch (OperationCanceledException) { Log(Lang.T("Установка отменена.")); StatusText.Text = Lang.T("Отменено"); SetPlayState("idle"); }
@@ -2999,6 +3006,69 @@ namespace CustomLauncher
             _settings.RamMb = reduced;
             Dispatcher.BeginInvoke(() => { if (RamSlider != null) RamSlider.Value = reduced; });
             return true;
+        }
+
+        // WHY: Forge открывает каждый jar через SecureJar, и первый же обрезанный файл роняет
+        // WHY: запуск за секунду - лечится только повторной закачкой со сверкой контрольных сумм
+        private static readonly string[] BrokenJarMarkers =
+        {
+            "UnionFileSystemProvider",
+            "SecureJar",
+            "ZipException",
+            "zip END header not found",
+            "Invalid or corrupt jarfile",
+            "Could not find or load main class"
+        };
+
+        private async Task<bool> RestartAfterRepair(int exitCode, TimeSpan ran)
+        {
+            if (exitCode == 0 || ran > TimeSpan.FromSeconds(30)) return false;
+            if (_settings.RepairGameFiles || !_gameOutput.Mentions(BrokenJarMarkers)) return false;
+
+            List<string> broken = BrokenJars.Find(_settings.GamePath);
+            if (broken.Count == 0) return false;
+
+            bool modsHurt = broken.Any(jar => jar.Contains(Path.DirectorySeparatorChar + "mods" + Path.DirectorySeparatorChar));
+            _settings.RepairGameFiles = true;
+            AppSettings.Save(_settings);
+
+            Log(Lang.F("Повреждённых файлов после обрыва загрузки: {0}. Перекачиваю их и запускаю снова.", broken.Count));
+            BrokenJars.Remove(broken);
+            SetBusy(true);
+
+            try
+            {
+                if (modsHurt)
+                {
+                    await InstallModpack(true);
+                    await InstallBattleCraftMod();
+                }
+                else
+                {
+                    await InstallForgeSilent();
+                }
+            }
+            catch (Exception error)
+            {
+                SetBusy(false);
+                await HandleErrorAsync(error, Lang.T("Ошибка восстановления файлов"));
+                return true;
+            }
+
+            SetBusy(false);
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            BtnPlay_Click(this, new RoutedEventArgs());
+            return true;
+        }
+
+        private void ForgetRepairFlag(int exitCode, TimeSpan ran)
+        {
+            if (!_settings.RepairGameFiles) return;
+            if (exitCode != 0 && ran < TimeSpan.FromSeconds(30)) return;
+
+            _settings.RepairGameFiles = false;
+            AppSettings.Save(_settings);
+            LauncherLog.Write("[SYS] Файлы игры в порядке, сверка контрольных сумм снова выключена");
         }
 
         private static readonly TimeSpan SuspiciouslyShortSession = TimeSpan.FromSeconds(40);
