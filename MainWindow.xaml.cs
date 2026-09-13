@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13v5";
+        private const string VER = "2026.09.13v6";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2704,6 +2704,9 @@ namespace CustomLauncher
             _minecraftPath = new MinecraftPath(_settings.GamePath);
 
             var parameters = MinecraftLauncherParameters.CreateDefault(_minecraftPath, ResilientHttpClientFactory.Shared);
+            if (_settings.DownloadLanes > 0)
+                parameters.GameInstaller = new ParallelGameInstaller(
+                    DownloadCheckers, _settings.DownloadLanes, DownloadQueueSize, ResilientHttpClientFactory.Shared);
             if (parameters.GameInstaller is GameInstallerBase installerBase)
                 installerBase.CheckFileChecksum = false;
             _launcher = new MinecraftLauncher(parameters);
@@ -2892,7 +2895,7 @@ namespace CustomLauncher
                 }
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = java };
-                Process game = await _launcher.CreateProcessAsync(ver.Name, opt);
+                Process game = await KeepDownloading(() => _launcher.CreateProcessAsync(ver.Name, opt).AsTask());
                 _gameProcess = game;
                 InjectJvmArgs(game);
 
@@ -3031,13 +3034,68 @@ namespace CustomLauncher
 
         private void EnsureProfiles() { string p = Path.Combine(_settings.GamePath, "launcher_profiles.json"); if (!File.Exists(p)) File.WriteAllText(p, "{\"profiles\":{}}"); }
 
+        // WHY: CmlLib качает ассеты в двенадцать потоков, и у игроков с проверкой HTTPS в
+        // WHY: антивирусе соединение рвётся на середине; скачанное остаётся на диске, поэтому
+        // WHY: повтор продолжает с места обрыва, а каждая неудача сужает число потоков
+        private const int DownloadCheckers = 4;
+        private const int DownloadQueueSize = 2048;
+        private static readonly int[] DownloadLaneSteps = { 4, 2, 1 };
+        private const int DownloadAttempts = 12;
+
+        private async Task KeepDownloading(Func<Task> download)
+        {
+            await KeepDownloading(async () => { await download(); return true; });
+        }
+
+        private async Task<T> KeepDownloading<T>(Func<Task<T>> download)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    T result = await download();
+                    RememberDownloadLanes();
+                    return result;
+                }
+                catch (Exception error) when (attempt < DownloadAttempts && NetworkTrouble.Looks(error))
+                {
+                    LauncherLog.Write($"[WARN] Загрузка оборвалась на попытке {attempt}: {NetworkTrouble.Deepest(error).Message}");
+                    NarrowDownloadLanes();
+                    Log(Lang.F("Соединение оборвалось, продолжаю с места обрыва: попытка {0} из {1}, потоков загрузки {2}",
+                        attempt + 1, DownloadAttempts, _settings.DownloadLanes));
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Min(8, attempt * 2)));
+                }
+            }
+        }
+
+        private void NarrowDownloadLanes()
+        {
+            int current = _settings.DownloadLanes;
+            int next = DownloadLaneSteps.FirstOrDefault(lanes => current == 0 || lanes < current);
+            _settings.DownloadLanes = next == 0 ? DownloadLaneSteps[^1] : next;
+            _downloadLanesChanged = true;
+            InitializeLauncher();
+        }
+
+        private void RememberDownloadLanes()
+        {
+            if (!_downloadLanesChanged) return;
+
+            _downloadLanesChanged = false;
+            AppSettings.Save(_settings);
+            LauncherLog.Write($"[SYS] Число потоков загрузки закреплено: {_settings.DownloadLanes}");
+        }
+
+        private bool _downloadLanesChanged;
+
         private async Task InstallForgeSilent()
         {
             try
             {
                 SetProgress(0);
                 StatusText.Text = Lang.T("Загрузка файлов Minecraft...");
-                await _launcher.InstallAsync(MC); EnsureProfiles();
+                await KeepDownloading(() => _launcher.InstallAsync(MC).AsTask());
+                EnsureProfiles();
 
                 StatusText.Text = Lang.T("Загрузка установщика Forge...");
                 string jar = Path.Combine(Path.GetTempPath(), "forge_installer.jar");
@@ -3999,12 +4057,20 @@ namespace CustomLauncher
             Log(Lang.T("Аппаратного ускорения нет: свечение выключено, чтобы окно не мерцало"));
         }
 
+        private static string _loggedChecks = "";
+
+        // WHY: проверка гоняется после каждого действия в панели, и без этой отсечки лог
+        // WHY: превращается в сотню одинаковых строк про одну и ту же незакрытую проблему
         private static void WriteChecksToLog(List<RequirementCheck> results)
         {
-            foreach (RequirementCheck check in results)
-            {
-                if (check.State == RequirementState.Ok) continue;
+            var trouble = results.Where(check => check.State != RequirementState.Ok).ToList();
+            string signature = string.Join("|", trouble.Select(check => check.Id + ":" + check.State));
+            if (signature == _loggedChecks) return;
 
+            _loggedChecks = signature;
+
+            foreach (RequirementCheck check in trouble)
+            {
                 string level = check.State == RequirementState.Missing ? "ERROR" : "WARN";
                 LauncherLog.Write($"[{level}] {check.Title}: {check.Detail.Replace("\n", " ")}");
             }

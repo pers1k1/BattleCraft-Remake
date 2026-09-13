@@ -33,6 +33,7 @@ namespace CustomLauncher
         public string GamePath { get; set; } = "";
         public bool IsModpackInstalled { get; set; } = false;
         public bool DebugConsole { get; set; } = false;
+        public int DownloadLanes { get; set; } = 0;
         public string ModpackVersion { get; set; } = "0.0";
         public string BattleCraftModVersion { get; set; } = "0.0";
         public string ServerModpackVersion { get; set; } = "0.0";

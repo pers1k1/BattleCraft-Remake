@@ -452,7 +452,8 @@ namespace CustomLauncher.Core
             ["Текст ошибки: {0}"] = "Error text: {0}",
             ["Открыть файл с логами?"] = "Open the log file?",
             ["Сеть недоступна: {0}"] = "Network unavailable: {0}",
-            ["Ошибка сети: {0}"] = "Network error: {0}"
+            ["Ошибка сети: {0}"] = "Network error: {0}",
+            ["Соединение оборвалось, продолжаю с места обрыва: попытка {0} из {1}, потоков загрузки {2}"] = "The connection broke, resuming where it stopped: attempt {0} of {1}, download threads {2}"
         };
     }
 }
