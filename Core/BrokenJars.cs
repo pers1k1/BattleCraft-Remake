@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CustomLauncher.Core
 {
@@ -12,9 +15,11 @@ namespace CustomLauncher.Core
     {
         public static readonly string[] Folders = { "libraries", "versions", "mods" };
 
+        // WHY: проверка упирается в диск, а не в процессор: на холодной папке сборки
+        // WHY: последовательный обход занимает секунду, а параллельный - две десятых
         public static List<string> Find(string gamePath)
         {
-            var broken = new List<string>();
+            var jars = new List<string>();
 
             foreach (string folder in Folders)
             {
@@ -23,10 +28,7 @@ namespace CustomLauncher.Core
 
                 try
                 {
-                    foreach (string jar in Directory.EnumerateFiles(path, "*.jar", SearchOption.AllDirectories))
-                    {
-                        if (!Readable(jar)) broken.Add(jar);
-                    }
+                    jars.AddRange(Directory.EnumerateFiles(path, "*.jar", SearchOption.AllDirectories));
                 }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 {
@@ -34,7 +36,10 @@ namespace CustomLauncher.Core
                 }
             }
 
-            return broken;
+            var broken = new ConcurrentBag<string>();
+            Parallel.ForEach(jars, jar => { if (!Readable(jar)) broken.Add(jar); });
+
+            return broken.OrderBy(jar => jar).ToList();
         }
 
         public static int Remove(IEnumerable<string> jars)
