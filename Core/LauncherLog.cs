@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 
@@ -28,8 +28,14 @@ namespace CustomLauncher.Core
                 {
                     File.WriteAllText(_logFile, $"[{Stamp()}] [SYS] Лаунчер запущен{Environment.NewLine}");
                 }
+
+                if (!string.IsNullOrEmpty(AppSettings.ConfigDirNotice))
+                    Write($"[WARN] Папка Документы недоступна, настройки и лог легли в {dir}. Причина: {AppSettings.ConfigDirNotice}");
             }
-            catch { }
+            catch (Exception error)
+            {
+                System.Diagnostics.Debug.WriteLine($"Лог не инициализирован: {error.Message}");
+            }
         }
 
         public static void Write(string message)

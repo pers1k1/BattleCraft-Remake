@@ -444,7 +444,8 @@ namespace CustomLauncher.Core
             ["проверка системы"] = "system check",
             ["Вход через Microsoft (WebView2)"] = "Microsoft sign-in (WebView2)",
             ["Компонент Microsoft Edge WebView2 не установлен: окно входа по лицензии не откроется. Ставится автоматически."] = "The Microsoft Edge WebView2 component is missing: the licensed sign-in window will not open. It installs automatically.",
-            ["WebView2 установлен, вход по лицензии заработает."] = "WebView2 is installed, the licensed sign-in will work."
+            ["WebView2 установлен, вход по лицензии заработает."] = "WebView2 is installed, the licensed sign-in will work.",
+            ["Папка «Документы» закрыта, поэтому настройки и логи лежат здесь: {0}\nПричина: {1}\nОбычно это облачная синхронизация документов или защита папок в антивирусе."] = "The Documents folder is closed, so settings and logs live here: {0}\nReason: {1}\nUsually that is cloud sync of documents or an antivirus folder shield."
         };
     }
 }

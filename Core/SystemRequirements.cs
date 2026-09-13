@@ -193,10 +193,18 @@ namespace CustomLauncher.Core
             string title = Lang.T("Папка настроек лаунчера");
             string path = AppSettings.GetConfigDir();
 
-            return Writable(path, out string error)
-                ? Ok(title, "config", path)
-                : Missing(title, "config",
+            if (!Writable(path, out string error))
+            {
+                return Missing(title, "config",
                     Lang.F("Не получается писать в {0}: {1}\nНастройки и логи не сохранятся.", path, error));
+            }
+
+            string notice = AppSettings.ConfigDirNotice;
+            if (string.IsNullOrEmpty(notice)) return Ok(title, "config", path);
+
+            return Warning(title, "config",
+                Lang.F("Папка «Документы» закрыта, поэтому настройки и логи лежат здесь: {0}\nПричина: {1}\nОбычно это облачная синхронизация документов или защита папок в антивирусе.",
+                    path, notice));
         }
 
         private static RequirementCheck CheckGameFolder(string gamePath)

@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13v3";
+        private const string VER = "2026.09.13v4";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2130,7 +2130,7 @@ namespace CustomLauncher
             _discordManager.ModpackVersion = _settings.ModpackVersion;
             _discordManager.Initialize();
 
-            if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); }
+            if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); RunStartupChecks(); }
             else
             {
                 UsernameBox.Text = _settings.Username;
@@ -3956,6 +3956,7 @@ namespace CustomLauncher
         private readonly System.Collections.ObjectModel.ObservableCollection<CheckRow> _checkRows = new();
         private bool _effectsSoftened;
         private bool _checkActionRunning;
+        private bool _startupChecksDone;
 
         private static int RenderTier => RenderCapability.Tier >> 16;
 
@@ -3970,6 +3971,9 @@ namespace CustomLauncher
 
         private void RunStartupChecks()
         {
+            if (_startupChecksDone) return;
+            _startupChecksDone = true;
+
             List<RequirementCheck> results = InspectSystem();
             WriteChecksToLog(results);
             SoftenEffectsWithoutAcceleration();
