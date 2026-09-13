@@ -453,7 +453,11 @@ namespace CustomLauncher.Core
             ["Открыть файл с логами?"] = "Open the log file?",
             ["Сеть недоступна: {0}"] = "Network unavailable: {0}",
             ["Ошибка сети: {0}"] = "Network error: {0}",
-            ["Соединение оборвалось, продолжаю с места обрыва: попытка {0} из {1}, потоков загрузки {2}"] = "The connection broke, resuming where it stopped: attempt {0} of {1}, download threads {2}"
+            ["Соединение оборвалось, продолжаю с места обрыва: попытка {0} из {1}, потоков загрузки {2}"] = "The connection broke, resuming where it stopped: attempt {0} of {1}, download threads {2}",
+            ["Java не приняла настройки запуска сборки. Пробую ещё раз с безопасными настройками."] = "Java refused the pack launch options. Trying again with safe settings.",
+            ["Java не смогла занять {0} МБ под игру. Пробую ещё раз с меньшим объёмом."] = "Java could not reserve {0} MB for the game. Trying again with less.",
+            ["Сборщик мусора: по умолчанию (безопасный режим Java)"] = "Garbage collector: default (safe Java mode)",
+            ["Вывод игры: {0}"] = "Game output: {0}"
         };
     }
 }

@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13v6";
+        private const string VER = "2026.09.13v7";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -2899,13 +2899,16 @@ namespace CustomLauncher
                 _gameProcess = game;
                 InjectJvmArgs(game);
 
-                game.StartInfo.CreateNoWindow = !_settings.DebugConsole;
+                game.StartInfo.CreateNoWindow = true;
                 game.StartInfo.UseShellExecute = false;
+                CatchGameOutput(game);
                 // WHY: раннее окно Forge спрашивает эту переменную раньше options.txt и берёт
                 // WHY: чёрную схему вместо красной; на первом запуске options.txt ещё не существует
                 game.StartInfo.Environment["FML_EARLY_WINDOW_DARK"] = "1";
 
                 game.Start();
+                game.BeginOutputReadLine();
+                game.BeginErrorReadLine();
                 DateTime started = DateTime.Now;
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
@@ -2921,11 +2924,81 @@ namespace CustomLauncher
                 SetPlayState("idle");
                 StatusText.Text = Lang.T("Готов");
                 _discordManager.SetMenuState();
+                _gameOutput.Close();
+                if (await RestartWithSafeJvm(game.ExitCode, DateTime.Now - started)) return;
                 await ReportGameExit(game.ExitCode, DateTime.Now - started);
             }
             catch (OperationCanceledException) { Log(Lang.T("Установка отменена.")); StatusText.Text = Lang.T("Отменено"); SetPlayState("idle"); }
             catch (Exception ex) { await HandleErrorAsync(ex, Lang.T("Ошибка запуска")); }
             finally { HideUpdateOverlay(); SetProgress(0); BtnPlay.IsEnabled = true; SetBusy(false); }
+        }
+
+        private readonly GameOutput _gameOutput = new();
+
+        private void CatchGameOutput(Process game)
+        {
+            game.StartInfo.RedirectStandardOutput = true;
+            game.StartInfo.RedirectStandardError = true;
+            game.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+            game.StartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
+
+            _gameOutput.Begin(game.StartInfo.FileName + " " + game.StartInfo.Arguments);
+            game.OutputDataReceived += (_, e) => TakeGameLine(e.Data);
+            game.ErrorDataReceived += (_, e) => TakeGameLine(e.Data);
+        }
+
+        private void TakeGameLine(string? line)
+        {
+            if (string.IsNullOrEmpty(line)) return;
+
+            _gameOutput.Add(line);
+            if (_settings.DebugConsole) Dispatcher.BeginInvoke(() => Log(line));
+        }
+
+        // WHY: JVM без Shenandoah или с нехваткой памяти под кучу падает мгновенно и молча,
+        // WHY: до создания logs/latest.log, поэтому разбираем её собственный вывод и повторяем
+        private static readonly string[] JvmRefusedMarkers =
+        {
+            "Unrecognized VM option",
+            "Could not create the Java Virtual Machine",
+            "Could not reserve enough space for object heap",
+            "Error occurred during initialization of VM",
+            "Unrecognized option"
+        };
+
+        private const string HeapRefusedMarker = "Could not reserve enough space for object heap";
+        private const int MinimalHeapMb = 2048;
+
+        private async Task<bool> RestartWithSafeJvm(int exitCode, TimeSpan ran)
+        {
+            if (exitCode == 0 || ran > TimeSpan.FromSeconds(30)) return false;
+
+            bool heapTooBig = _gameOutput.Mentions(HeapRefusedMarker);
+            bool optionsRefused = !_settings.SafeJvm && _gameOutput.Mentions(JvmRefusedMarkers);
+            if (!heapTooBig && !optionsRefused) return false;
+
+            if (heapTooBig && !ShrinkHeap()) return false;
+            if (optionsRefused) _settings.SafeJvm = true;
+
+            AppSettings.Save(_settings);
+            LauncherLog.Write($"[SYS] Java отказалась стартовать, повтор с другими настройками: память {_settings.RamMb} МБ, безопасный режим {_settings.SafeJvm}");
+            Log(heapTooBig
+                ? Lang.F("Java не смогла занять {0} МБ под игру. Пробую ещё раз с меньшим объёмом.", _settings.RamMb)
+                : Lang.T("Java не приняла настройки запуска сборки. Пробую ещё раз с безопасными настройками."));
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+            BtnPlay_Click(this, new RoutedEventArgs());
+            return true;
+        }
+
+        private bool ShrinkHeap()
+        {
+            int reduced = Math.Max(MinimalHeapMb, _settings.RamMb / 2);
+            if (reduced >= _settings.RamMb) return false;
+
+            _settings.RamMb = reduced;
+            Dispatcher.BeginInvoke(() => { if (RamSlider != null) RamSlider.Value = reduced; });
+            return true;
         }
 
         private static readonly TimeSpan SuspiciouslyShortSession = TimeSpan.FromSeconds(40);
@@ -2943,6 +3016,7 @@ namespace CustomLauncher
 
             string report = GameLogTail.NewestCrashReport(_settings.GamePath, TimeSpan.FromMinutes(5));
             List<string> problems = GameLogTail.Problems(_settings.GamePath, 6);
+            if (problems.Count == 0) problems = _gameOutput.Tail(8);
 
             string message = crashed
                 ? Lang.F("Игра закрылась с ошибкой (код {0}) через {1} секунд.", exitCode, (int)ran.TotalSeconds)
@@ -2954,7 +3028,9 @@ namespace CustomLauncher
             if (!string.IsNullOrEmpty(report))
                 message += "\n\n" + Lang.F("Отчёт игры: {0}", report);
 
-            message += "\n\n" + Lang.F("Полный лог: {0}", GameLogTail.LatestLogPath(_settings.GamePath));
+            message += "\n\n" + Lang.F("Вывод игры: {0}", _gameOutput.Path_);
+            if (File.Exists(GameLogTail.LatestLogPath(_settings.GamePath)))
+                message += "\n" + Lang.F("Полный лог: {0}", GameLogTail.LatestLogPath(_settings.GamePath));
 
             Log(message.Replace("\n", " "));
             await ShowCustomDialog(message, Lang.T("Игра завершилась с ошибкой"));
@@ -3008,6 +3084,12 @@ namespace CustomLauncher
         private void InjectJvmArgs(Process p)
         {
             if (string.IsNullOrEmpty(p.StartInfo.Arguments)) return;
+            if (_settings.SafeJvm)
+            {
+                Log(Lang.T("Сборщик мусора: по умолчанию (безопасный режим Java)"));
+                return;
+            }
+
             bool preferShenandoah = _settings.RamMb >= ShenandoahHeapThresholdMb;
             string a = preferShenandoah ? StripDefaultCollectorArgs(p.StartInfo.Arguments) : p.StartInfo.Arguments;
             string jvm = string.Join(" ", preferShenandoah ? _shenandoahArgs.Concat(_jvmArgs) : _jvmArgs);
