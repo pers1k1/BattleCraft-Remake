@@ -281,10 +281,16 @@ namespace CustomLauncher
         private bool[] _canSak = Array.Empty<bool>();
         private double[] _fallX = Array.Empty<double>(), _fallY = Array.Empty<double>(), _fallP = Array.Empty<double>();
         private int[] _fallK = Array.Empty<int>();
+        private bool[] _fallSak = Array.Empty<bool>();
+        private double[] _fallZ = Array.Empty<double>();
+        private int[] _fallRest = Array.Empty<int>();
         private const int FallAmbient = 56;
         private const int FallGust = 58;
+        private const int FallRestFrames = 70;
+        private const int FallFadeFrames = 45;
+        private const int SnowRestFrames = 26;
 
-        private double _snowCover, _leafCover, _rainWet;
+        private double _snowCover, _leafCover, _rainWet, _petalCover;
         private readonly double[] _snowPile = new double[SCN_W];
         private readonly double[] _pileTmp = new double[SCN_W];
         private int[] _puddleX = Array.Empty<int>();
@@ -297,6 +303,7 @@ namespace CustomLauncher
 
         private double[] _pX = Array.Empty<double>(), _pY = Array.Empty<double>(), _pP = Array.Empty<double>();
         private double[] _pV = Array.Empty<double>(), _pZ = Array.Empty<double>();
+        private int[] _pRest = Array.Empty<int>();
 
         private double _cometX, _cometY; private int _cometLife;
 
@@ -364,6 +371,7 @@ namespace CustomLauncher
 
                 int fallN = FallAmbient + FallGust;
                 _fallX = new double[fallN]; _fallY = new double[fallN]; _fallP = new double[fallN]; _fallK = new int[fallN];
+                _fallSak = new bool[fallN]; _fallRest = new int[fallN]; _fallZ = new double[fallN];
                 for (int i = 0; i < fallN; i++) RespawnFall(i, im >= 3 && im <= 5);
 
                 int pc = 6; _puddleX = new int[pc]; _puddleR = new double[pc];
@@ -371,6 +379,7 @@ namespace CustomLauncher
 
                 if (im == 12 || im <= 2) _snowCover = 0.55;
                 else if (im >= 9 && im <= 11) _leafCover = 0.3;
+                else if (im >= 3 && im <= 5 && _sakIdx.Length > 0) _petalCover = 0.35;
 
                 int sc = 70; _starX = new int[sc]; _starY = new int[sc]; _starP = new double[sc];
                 for (int i = 0; i < sc; i++) { _starX[i] = _sceneRng.Next(SCN_W); _starY[i] = _sceneRng.Next(HORIZON - 14); _starP[i] = _sceneRng.NextDouble() * 6.28; }
@@ -827,6 +836,7 @@ namespace CustomLauncher
         {
             int n = _weather switch { Weather.Rain => 120, Weather.Snow => 90, _ => 0 };
             _pX = new double[n]; _pY = new double[n]; _pP = new double[n]; _pV = new double[n]; _pZ = new double[n];
+            _pRest = new int[n];
             for (int i = 0; i < n; i++)
             {
                 _pX[i] = _sceneRng.NextDouble() * SCN_W;
@@ -993,23 +1003,25 @@ namespace CustomLauncher
 
                 DrawGroundDetail(gWinter, gAutumn, gSpring, bright);
                 DrawAccumulation(bright);
+                if (gSpring) DrawSettledFall(true, bright);
+                else if (gAutumn) DrawSettledFall(false, bright);
                 DrawTrees(gWinter, gAutumn, gSpring, bright, snowAmount);
-                if (gSpring) UpdateFalling(true);
-                else if (gAutumn) UpdateFalling(false);
+                if (gSpring) UpdateFalling(true, bright);
+                else if (gAutumn) UpdateFalling(false, bright);
 
                 bool badWeather = _weather == Weather.Rain || _weather == Weather.Snow;
-                if (!badWeather) DrawKite();
+                if (!badWeather) DrawKite(bright);
 
                 switch (_weather)
                 {
-                    case Weather.Rain: UpdateRain(); break;
-                    case Weather.Snow: UpdateSnow(); break;
-                    case Weather.Wind: UpdateWind(); break;
-                    case Weather.Fog: DrawFog(0.34 * _wxIntensity); break;
-                    case Weather.Comets: if (night) UpdateComets(); break;
+                    case Weather.Rain: UpdateRain(bright); break;
+                    case Weather.Snow: UpdateSnow(bright); break;
+                    case Weather.Wind: UpdateWind(bright); break;
+                    case Weather.Fog: DrawFog(0.34 * _wxIntensity, bright); break;
+                    case Weather.Comets: if (night) UpdateComets(bright); break;
                 }
 
-                if (badWeather) DrawUmbrellaPerson(night);
+                if (badWeather) DrawUmbrellaPerson(night, bright);
             }
             catch { }
         }
@@ -1103,18 +1115,22 @@ namespace CustomLauncher
                 BP((int)(cx + dxs * d), (int)(cy + dys * d), r, g, b, a * (1 - (d - r0) / len));
         }
 
-        private void DrawKite()
+        private static double ParticleLight(double bright) => 0.45 + 0.55 * bright;
+
+        private void DrawKite(double bright)
         {
+            double lit = ParticleLight(bright);
             double wind = _weather == Weather.Wind ? 1.0 : 0.0;
             double bx = SCN_W * 0.26 + Math.Sin(_frame * 0.04) * (6 + wind * 14) + wind * 10;
             double by = 22 + Math.Sin(_frame * 0.06 + 1) * (3 + wind * 4);
             int kx = (int)bx, ky = (int)by;
 
             var col = AccentSnapshot();
-            byte r = col.R, g = col.G, b = col.B;
+            byte r = (byte)(col.R * lit), g = (byte)(col.G * lit), b = (byte)(col.B * lit);
+            byte wr = (byte)(255 * lit);
             SP(kx, ky - 3, r, g, b);
-            SP(kx - 1, ky - 2, r, g, b); SP(kx, ky - 2, 255, 255, 255); SP(kx + 1, ky - 2, r, g, b);
-            SP(kx - 2, ky, r, g, b); SP(kx - 1, ky, 255, 255, 255); SP(kx, ky, 255, 255, 255); SP(kx + 1, ky, r, g, b); SP(kx + 2, ky, r, g, b);
+            SP(kx - 1, ky - 2, r, g, b); SP(kx, ky - 2, wr, wr, wr); SP(kx + 1, ky - 2, r, g, b);
+            SP(kx - 2, ky, r, g, b); SP(kx - 1, ky, wr, wr, wr); SP(kx, ky, wr, wr, wr); SP(kx + 1, ky, r, g, b); SP(kx + 2, ky, r, g, b);
             SP(kx - 1, ky + 2, r, g, b); SP(kx, ky + 2, r, g, b); SP(kx + 1, ky + 2, r, g, b);
             SP(kx, ky + 3, r, g, b);
 
@@ -1122,16 +1138,16 @@ namespace CustomLauncher
             {
                 int tx = kx + (int)(Math.Sin(_frame * 0.1 + i * 0.7) * (1 + wind));
                 int ty = ky + 3 + i * 2;
-                SP(tx, ty, 240, 200, 220);
+                SP(tx, ty, (byte)(240 * lit), (byte)(200 * lit), (byte)(220 * lit));
             }
         }
 
-        private void DrawUmbrellaPerson(bool night)
+        private void DrawUmbrellaPerson(bool night, double bright)
         {
             int px = (int)(SCN_W * 0.40);
             int gy = _forest[px] - 1;
             if (gy < HORIZON) gy = HORIZON;
-            double nf = night ? 0.62 : 1.0;
+            double nf = night ? 0.62 : ParticleLight(bright);
             byte cr = (byte)(48 * nf), cg = (byte)(44 * nf), cb = (byte)(62 * nf);
             byte lr = (byte)(70 * nf), lg = (byte)(64 * nf), lb = (byte)(88 * nf);
             byte kr = (byte)(212 * nf), kg = (byte)(168 * nf), kb = (byte)(138 * nf);
@@ -1161,11 +1177,12 @@ namespace CustomLauncher
             SP(px - 3, gy - 8, ar, ag, ab); SP(px + 3, gy - 8, ar, ag, ab);
         }
 
-        private void UpdateRain()
+        private void UpdateRain(double bright)
         {
             double inten = _wxIntensity;
             int count = (int)Math.Ceiling(_pX.Length * inten);
             double afade = Math.Min(1, inten * 1.4);
+            double lit = ParticleLight(bright);
 
             for (int i = 0; i < count; i++)
             {
@@ -1188,17 +1205,17 @@ namespace CustomLauncher
                 for (int k = 1; k <= len; k++)
                 {
                     double f = 1.0 - (double)k / len;
-                    BPx(_pX[i] - slant * k, y - k, 158, 196, 236, (0.12 + 0.5 * f) * da);
+                    BPx(_pX[i] - slant * k, y - k, (byte)(158 * lit), (byte)(196 * lit), (byte)(236 * lit), (0.12 + 0.5 * f) * da);
                 }
-                BPx(_pX[i], y, 206, 228, 255, 0.85 * da);
+                BPx(_pX[i], y, (byte)(206 * lit), (byte)(228 * lit), (byte)(255 * lit), 0.85 * da);
             }
 
-            UpdateSplashes(afade);
+            UpdateSplashes(afade, lit);
 
             if (inten > 0.55 && _flash <= 0 && _sceneRng.NextDouble() < 0.014) TriggerLightning();
             if (_flash > 0) { DrawLightning(); _flash--; }
 
-            DrawFog(0.09 * inten);
+            DrawFog(0.09 * inten, bright);
         }
 
         private void SpawnSplash(int x, int y)
@@ -1215,7 +1232,7 @@ namespace CustomLauncher
             }
         }
 
-        private void UpdateSplashes(double afade)
+        private void UpdateSplashes(double afade, double lit)
         {
             for (int i = 0; i < _splLife.Length; i++)
             {
@@ -1223,9 +1240,9 @@ namespace CustomLauncher
                 int sx = (int)_splX[i], sy = (int)_splY[i];
                 int spread = 5 - _splLife[i];
                 double a = (_splLife[i] / 5.0) * 0.6 * afade;
-                BP(sx - spread, sy, 170, 200, 240, a);
-                BP(sx + spread, sy, 170, 200, 240, a);
-                BP(sx, sy - 1, 180, 210, 245, a * 0.6);
+                BP(sx - spread, sy, (byte)(170 * lit), (byte)(200 * lit), (byte)(240 * lit), a);
+                BP(sx + spread, sy, (byte)(170 * lit), (byte)(200 * lit), (byte)(240 * lit), a);
+                BP(sx, sy - 1, (byte)(180 * lit), (byte)(210 * lit), (byte)(245 * lit), a * 0.6);
                 _splLife[i]--;
             }
         }
@@ -1272,17 +1289,30 @@ namespace CustomLauncher
             }
         }
 
-        private void UpdateSnow()
+        private void UpdateSnow(double bright)
         {
             double inten = _wxIntensity;
             int count = (int)Math.Ceiling(_pX.Length * inten);
             double afade = Math.Min(1, inten * 1.4);
             double gust = Math.Sin(_frame * 0.02) * 0.5;
+            double lit = ParticleLight(bright);
+            byte fr = (byte)(245 * lit), fg = (byte)(248 * lit), fb = (byte)(255 * lit);
+            byte br = (byte)(235 * lit), bg = (byte)(240 * lit), bb = (byte)(252 * lit);
 
             for (int i = 0; i < count; i++)
             {
                 double z = _pZ[i];
                 double dep = 0.45 + 0.55 * (1 - z);
+                double da = afade * (0.4 + 0.6 * (1 - z));
+
+                if (_pRest[i] > 0)
+                {
+                    int rx = (((int)_pX[i]) % SCN_W + SCN_W) % SCN_W;
+                    BP(rx, (int)_pY[i], fr, fg, fb, 0.8 * da * (_pRest[i] / (double)SnowRestFrames));
+                    if (--_pRest[i] <= 0) { _pY[i] = -1; _pX[i] = _sceneRng.NextDouble() * SCN_W; _pZ[i] = _sceneRng.NextDouble(); }
+                    continue;
+                }
+
                 _pY[i] += (0.8 + _pV[i] * 0.8) * dep;
                 _pX[i] += (Math.Sin(_pY[i] * 0.12 + _pP[i]) * 0.6 + gust) * dep;
                 int col = (((int)_pX[i]) % SCN_W + SCN_W) % SCN_W;
@@ -1290,23 +1320,23 @@ namespace CustomLauncher
                 if (_pY[i] >= land)
                 {
                     _snowPile[col] = Math.Min(7.0, _snowPile[col] + 0.05 * inten);
-                    _pY[i] = -1; _pX[i] = _sceneRng.NextDouble() * SCN_W; _pZ[i] = _sceneRng.NextDouble();
+                    _pY[i] = land; _pRest[i] = SnowRestFrames;
                     continue;
                 }
                 int x = col, y = (int)_pY[i];
-                double da = afade * (0.4 + 0.6 * (1 - z));
                 bool big = _pV[i] > 1.05 && z < 0.5;
-                BP(x, y, 245, 248, 255, 0.92 * da);
+                BP(x, y, fr, fg, fb, 0.92 * da);
                 if (big)
                 {
-                    BP(x + 1, y, 235, 240, 252, 0.6 * da);
-                    BP(x, y + 1, 235, 240, 252, 0.6 * da);
+                    BP(x + 1, y, br, bg, bb, 0.6 * da);
+                    BP(x, y + 1, br, bg, bb, 0.6 * da);
                 }
             }
         }
 
-        private void UpdateWind()
+        private void UpdateWind(double bright)
         {
+            double lit = ParticleLight(bright);
             const int gusts = 6;
             for (int g = 0; g < gusts; g++)
             {
@@ -1321,19 +1351,20 @@ namespace CustomLauncher
                     double yy = baseY + Math.Sin(xx * 0.22 + phase) * amp
                                       + Math.Sin(xx * 0.07 - _frame * 0.05) * 1.2;
                     double edge = Math.Sin((double)k / len * Math.PI) * _wxIntensity;
-                    BP((int)xx, (int)yy, 225, 226, 240, 0.5 * edge);
-                    BP((int)xx, (int)yy + 1, 210, 212, 230, 0.22 * edge);
+                    BP((int)xx, (int)yy, (byte)(225 * lit), (byte)(226 * lit), (byte)(240 * lit), 0.5 * edge);
+                    BP((int)xx, (int)yy + 1, (byte)(210 * lit), (byte)(212 * lit), (byte)(230 * lit), 0.22 * edge);
                 }
             }
         }
 
-        private void DrawFog(double strength)
+        private void DrawFog(double strength, double bright)
         {
             if (strength <= 0) return;
+            double lit = ParticleLight(bright);
             for (int y = 0; y < SCN_H; y++)
             {
                 double a = strength * (0.45 + 0.8 * y / SCN_H);
-                for (int x = 0; x < SCN_W; x++) BP(x, y, 206, 208, 220, Math.Min(0.85, a));
+                for (int x = 0; x < SCN_W; x++) BP(x, y, (byte)(206 * lit), (byte)(208 * lit), (byte)(220 * lit), Math.Min(0.85, a));
             }
             for (int bi = 0; bi < 3; bi++)
             {
@@ -1344,13 +1375,14 @@ namespace CustomLauncher
                     double wv = 0.5 + 0.5 * Math.Sin(x * 0.06 + drift * 0.04 + bi * 1.7);
                     double thick = 2 + 3 * wv;
                     double ca = strength * 1.7 * wv;
-                    for (int dy = 0; dy < thick; dy++) BP(x, (int)by + dy, 216, 218, 228, Math.Min(0.6, ca * (1 - dy / thick)));
+                    for (int dy = 0; dy < thick; dy++) BP(x, (int)by + dy, (byte)(216 * lit), (byte)(218 * lit), (byte)(228 * lit), Math.Min(0.6, ca * (1 - dy / thick)));
                 }
             }
         }
 
-        private void UpdateComets()
+        private void UpdateComets(double bright)
         {
+            double lit = ParticleLight(bright);
             if (_cometLife <= 0 && _sceneRng.NextDouble() < 0.06)
             {
                 _cometX = _sceneRng.Next(SCN_W / 2, SCN_W); _cometY = _sceneRng.Next(HORIZON - 26); _cometLife = 16;
@@ -1359,10 +1391,11 @@ namespace CustomLauncher
             {
                 _cometX -= 6; _cometY += 3; _cometLife--;
                 int x = (int)_cometX, y = (int)_cometY;
-                CometPixel(x, y, 255, 255, 255, _wxIntensity);
-                CometPixel(x + 1, y, 255, 255, 255, 0.7 * _wxIntensity);
-                CometPixel(x, y + 1, 238, 244, 255, 0.5 * _wxIntensity);
-                for (int i = 1; i <= 8; i++) CometPixel(x + i * 2, y - i, 200, 215, 255, Math.Max(0, 0.8 - i * 0.1) * _wxIntensity);
+                byte hr = (byte)(255 * lit);
+                CometPixel(x, y, hr, hr, hr, _wxIntensity);
+                CometPixel(x + 1, y, hr, hr, hr, 0.7 * _wxIntensity);
+                CometPixel(x, y + 1, (byte)(238 * lit), (byte)(244 * lit), (byte)(255 * lit), 0.5 * _wxIntensity);
+                for (int i = 1; i <= 8; i++) CometPixel(x + i * 2, y - i, (byte)(200 * lit), (byte)(215 * lit), (byte)(255 * lit), Math.Max(0, 0.8 - i * 0.1) * _wxIntensity);
             }
         }
 
@@ -1530,30 +1563,79 @@ namespace CustomLauncher
             _fallY[i] = _canY[t] + _sceneRng.Next(-r, 1);
             _fallP[i] = _sceneRng.NextDouble() * 6.28;
             _fallK[i] = _sceneRng.Next(3);
+            _fallSak[i] = _canSak[t];
+            _fallZ[i] = 0.55 + _sceneRng.NextDouble() * 0.45;
+            _fallRest[i] = 0;
         }
 
-        private void UpdateFalling(bool spring)
+        private double LandingY(int column, double depth) => _ground[column] + (SCN_H - _ground[column]) * depth;
+
+        private (byte r, byte g, byte b) FallColor(int i, bool spring)
+        {
+            if (!spring)
+                return _fallK[i] == 0 ? ((byte)214, (byte)120, (byte)42)
+                     : _fallK[i] == 1 ? ((byte)190, (byte)70, (byte)48)
+                     :                  ((byte)206, (byte)160, (byte)60);
+
+            if (_fallSak[i])
+                return _fallK[i] == 0 ? ((byte)248, (byte)188, (byte)216)
+                     : _fallK[i] == 1 ? ((byte)252, (byte)222, (byte)236)
+                     :                  ((byte)242, (byte)166, (byte)204);
+
+            return _fallK[i] == 0 ? ((byte)246, (byte)240, (byte)250)
+                 : _fallK[i] == 1 ? ((byte)234, (byte)240, (byte)226)
+                 :                  ((byte)252, (byte)250, (byte)238);
+        }
+
+        private void DrawSettledFall(bool spring, double bright)
+        {
+            double gust = _weather == (spring ? Weather.Sakura : Weather.Leaves) ? _wxIntensity : 0;
+            for (int i = 0; i < _fallRest.Length; i++)
+            {
+                if (_fallRest[i] <= 0) continue;
+                double fade = i < FallAmbient ? 1 : gust;
+                double rest = Math.Min(1.0, _fallRest[i] / (double)FallFadeFrames);
+                var c = FallColor(i, spring);
+                byte cr = (byte)(c.r * bright), cg = (byte)(c.g * bright), cb = (byte)(c.b * bright);
+                int x = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
+                int y = (int)_fallY[i];
+                BP(x, y, cr, cg, cb, 0.88 * fade * rest);
+                BP(x + 1, y, cr, cg, cb, 0.5 * fade * rest);
+            }
+        }
+
+        private void UpdateFalling(bool spring, double bright)
         {
             double gust = _weather == (spring ? Weather.Sakura : Weather.Leaves) ? _wxIntensity : 0;
             double wind = Math.Sin(_frame * 0.03) * (spring ? 0.6 : 0.9) * (1 + gust);
             for (int i = 0; i < _fallX.Length; i++)
             {
-                _fallY[i] += (spring ? 0.45 : 0.6) + 0.25 * (0.5 + 0.5 * Math.Sin(_fallP[i] + _frame * 0.1));
-                _fallX[i] += Math.Sin(_fallY[i] * (spring ? 0.12 : 0.09) + _fallP[i]) * (spring ? 0.9 : 1.4) + wind;
-                int col = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
-                if (_fallY[i] >= _ground[col] + (SCN_H - _ground[col]) * 0.85 || _fallX[i] < -2 || _fallX[i] > SCN_W + 2)
+                if (_fallRest[i] > 0)
                 {
-                    RespawnFall(i, spring);
+                    if (--_fallRest[i] <= 0) RespawnFall(i, spring);
                     continue;
                 }
-                int x = col, y = (int)_fallY[i];
-                (byte r, byte g, byte b) c = spring
-                    ? (_fallK[i] == 0 ? ((byte)248, (byte)188, (byte)216) : _fallK[i] == 1 ? ((byte)252, (byte)222, (byte)236) : ((byte)242, (byte)166, (byte)204))
-                    : (_fallK[i] == 0 ? ((byte)214, (byte)120, (byte)42) : _fallK[i] == 1 ? ((byte)190, (byte)70, (byte)48) : ((byte)206, (byte)160, (byte)60));
+
+                _fallY[i] += (spring ? 0.45 : 0.6) + 0.25 * (0.5 + 0.5 * Math.Sin(_fallP[i] + _frame * 0.1));
+                _fallX[i] += Math.Sin(_fallY[i] * (spring ? 0.12 : 0.09) + _fallP[i]) * (spring ? 0.9 : 1.4) + wind;
+                if (_fallX[i] < -2 || _fallX[i] > SCN_W + 2) { RespawnFall(i, spring); continue; }
+
+                int col = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
+                double landing = LandingY(col, _fallZ[i]);
+                if (_fallY[i] >= landing)
+                {
+                    _fallY[i] = landing;
+                    _fallRest[i] = FallRestFrames + _sceneRng.Next(FallRestFrames);
+                    continue;
+                }
+
                 double fade = i < FallAmbient ? 1 : gust;
+                var c = FallColor(i, spring);
+                byte cr = (byte)(c.r * bright), cg = (byte)(c.g * bright), cb = (byte)(c.b * bright);
+                int x = col, y = (int)_fallY[i];
                 bool flip = ((int)(_fallY[i] * 0.3 + _fallP[i] * 3) & 1) == 0;
-                BP(x, y, c.r, c.g, c.b, 0.92 * fade);
-                BP(flip ? x + 1 : x - 1, y, c.r, c.g, c.b, 0.6 * fade);
+                BP(x, y, cr, cg, cb, 0.92 * fade);
+                BP(flip ? x + 1 : x - 1, y, cr, cg, cb, 0.6 * fade);
             }
         }
 
@@ -1597,6 +1679,7 @@ namespace CustomLauncher
             int m = _tickMonth;
             bool winter = m == 12 || m <= 2;
             bool autumn = m >= 9 && m <= 11;
+            bool spring = m >= 3 && m <= 5;
             bool snowing = _weather == Weather.Snow;
             bool raining = _weather == Weather.Rain;
             bool leafing = _weather == Weather.Leaves;
@@ -1619,6 +1702,12 @@ namespace CustomLauncher
             double leafTarget = leafing ? 1.0 : (autumn ? 0.3 : 0.0);
             double leafRate = leafing ? 0.004 * wx : 0.006;
             _leafCover += Math.Sign(leafTarget - _leafCover) * Math.Min(leafRate, Math.Abs(leafTarget - _leafCover));
+
+            bool petalling = _weather == Weather.Sakura;
+            bool sakuraStands = spring && _sakIdx.Length > 0;
+            double petalTarget = sakuraStands ? (petalling ? 1.0 : 0.35) : 0.0;
+            double petalRate = petalling ? 0.004 * wx : 0.006;
+            _petalCover += Math.Sign(petalTarget - _petalCover) * Math.Min(petalRate, Math.Abs(petalTarget - _petalCover));
 
             double wetTarget = raining ? 1.0 : 0.0;
             double wetRate = raining ? 0.02 * wx : 0.01;
@@ -1669,6 +1758,25 @@ namespace CustomLauncher
                                                         :               ((byte)200, (byte)152, (byte)54);
                             BP(x, y, (byte)(cr * bright), (byte)(cg * bright), (byte)(cb * bright), 0.9);
                         }
+                    }
+                }
+            }
+
+            if (_petalCover > 0.01)
+            {
+                for (int y = HORIZON - 4; y < SCN_H; y++)
+                {
+                    double front = (double)(y - HORIZON) / gh;
+                    double dens = _petalCover * (0.04 + 0.15 * Math.Max(0, front));
+                    for (int x = 0; x < SCN_W; x++)
+                    {
+                        if (y < _ground[x]) continue;
+                        if (Hash2(x + 47, y + 23) >= dens) continue;
+                        double pick = Hash2(x + 13, y + 29);
+                        (byte cr, byte cg, byte cb) = pick < 0.34 ? ((byte)248, (byte)188, (byte)216)
+                                                    : pick < 0.67 ? ((byte)242, (byte)166, (byte)204)
+                                                    :               ((byte)252, (byte)222, (byte)236);
+                        BP(x, y, (byte)(cr * bright), (byte)(cg * bright), (byte)(cb * bright), 0.85);
                     }
                 }
             }
@@ -3559,7 +3667,12 @@ namespace CustomLauncher
             try
             {
                 string modsDir = Path.Combine(_settings.GamePath, "mods");
-                return Directory.Exists(modsDir) && Directory.GetFiles(modsDir, "battlecraft*.jar").Length > 0;
+                if (!Directory.Exists(modsDir)) return false;
+
+                foreach (string jar in Directory.GetFiles(modsDir, "battlecraft*.jar"))
+                    if (new FileInfo(jar).Length > 0) return true;
+
+                return false;
             }
             catch { return false; }
         }
