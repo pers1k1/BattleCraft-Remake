@@ -223,6 +223,8 @@ namespace CustomLauncher.Core
             ["Дымка"] = "Haze",
             ["Индиго"] = "Indigo",
             ["Медь"] = "Copper",
+            ["[SYS] Моды сервера уже актуальны, качается только мод BattleCraft."] = "[SYS] Server mods are already up to date, downloading only the BattleCraft mod.",
+            ["[SYS] Моды сервера на месте, мод BattleCraft не скачан. Докачайте его кнопкой обновления модов."] = "[SYS] Server mods are in place, the BattleCraft mod was not downloaded. Fetch it with the mods update button.",
             ["Имя своего пресета"] = "Name of your preset",
             ["Свой пресет запоминает текущие цвета под именем."] = "A custom preset stores the current colours under a name.",
             ["Введите имя пресета."] = "Enter a preset name.",

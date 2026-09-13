@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -32,6 +32,23 @@ namespace CustomLauncher.Core
             bool hasForgeJar = Directory.GetFiles(serverDirectory, "forge-*.jar", SearchOption.AllDirectories).Length > 0;
 
             return hasArgsFile || hasForgeJar;
+        }
+
+        public static bool ServerModsPresent(string serverDirectory)
+        {
+            string modsDirectory = Path.Combine(serverDirectory, "mods");
+            return Directory.Exists(modsDirectory) && Directory.GetFiles(modsDirectory, "*.jar").Length > 0;
+        }
+
+        public static bool BattleCraftModPresent(string serverDirectory)
+        {
+            string modsDirectory = Path.Combine(serverDirectory, "mods");
+            if (!Directory.Exists(modsDirectory)) return false;
+
+            foreach (string jar in Directory.GetFiles(modsDirectory, "battlecraft*.jar"))
+                if (new FileInfo(jar).Length > 0) return true;
+
+            return false;
         }
 
         public async Task UpdateServerMods(string serverDirectory, Action<double>? onProgress = null)
@@ -70,6 +87,10 @@ namespace CustomLauncher.Core
 
             ReportStatus("Скачивание модов сервера...");
             await DownloadFile(downloadUrl, destinationPath, onProgress);
+
+            var downloaded = new FileInfo(destinationPath);
+            if (!downloaded.Exists || downloaded.Length == 0)
+                throw new IOException(Lang.F("Мод BattleCraft не сохранился: {0}. Скорее всего файл удалил антивирус.", destinationPath));
         }
 
         public async Task InstallForgeRuntime(string serverDirectory, string javaPath, Action<double>? onProgress)

@@ -92,6 +92,7 @@ namespace CustomLauncher
         private bool _needsBattleCraftModUpdate = false;
         private bool _needsServerModpackUpdate = false;
         private bool _needsServerMapUpdate = false;
+        private const int BattleCraftStage = 3;
         private bool _waitingForPortKillConfirmation = false;
         private int _portKillPort = 25565;
         private readonly HashSet<string> _mapUpdateDeclined = new();
@@ -5549,9 +5550,12 @@ namespace CustomLauncher
             var cfg = _activeServerConfig;
             if (cfg == null || !cfg.IsInstalled) return;
 
+            string serverDir = Path.Combine(cfg.ServerPath, "server");
             if (ReleaseVersion.IsNewer(_onlineServerModpackVer, cfg.ModpackVersion))
                 _needsServerModpackUpdate = true;
             if (ReleaseVersion.IsNewer(_onlineBattleCraftModVer, cfg.BattleCraftModVersion))
+                _needsServerModpackUpdate = true;
+            if (_onlineBattleCraftModVer != "0.0" && !ServerInstaller.BattleCraftModPresent(serverDir))
                 _needsServerModpackUpdate = true;
             if (ReleaseVersion.IsNewer(_onlineServerMapVer, cfg.MapVersion))
                 _needsServerMapUpdate = true;
@@ -5745,17 +5749,25 @@ namespace CustomLauncher
                     if (currentStage == 1)
                     {
                         await installer.DownloadAndApplyServerData(serverDir, backupDir, OnServerProgress);
+                        _activeServerConfig.MapVersion = _onlineServerMapVer;
+                        AppSettings.Save(_settings);
                         currentStage++;
                     }
                     if (currentStage == 2)
                     {
                         await installer.UpdateServerMods(serverDir, OnServerProgress);
+                        _activeServerConfig.ModpackVersion = _onlineServerModpackVer;
+                        AppSettings.Save(_settings);
                         currentStage++;
                     }
-                    if (currentStage == 3)
+                    if (currentStage == BattleCraftStage)
                     {
                         if (_onlineBattleCraftModVer != "0.0" && ReleaseVersion.IsValid(_onlineBattleCraftModVer))
+                        {
                             await installer.InstallBattleCraftMod(serverDir, BattleCraftJarUrl(_onlineBattleCraftModVer), OnServerProgress);
+                            _activeServerConfig.BattleCraftModVersion = _onlineBattleCraftModVer;
+                            AppSettings.Save(_settings);
+                        }
                         currentStage++;
                     }
                     success = true;
@@ -5769,6 +5781,12 @@ namespace CustomLauncher
 
                     if (!retry)
                     {
+                        if (currentStage == BattleCraftStage && ServerInstaller.ServerModsPresent(serverDir))
+                        {
+                            AppendConsoleOutput(Lang.T("[SYS] Моды сервера на месте, мод BattleCraft не скачан. Докачайте его кнопкой обновления модов."));
+                            FinishServerInstall();
+                            return;
+                        }
                         AppendConsoleOutput(Lang.T("[SYS] Установка отменена. Удаление файлов..."));
                         try { Directory.Delete(serverDir, true); } catch { }
                         try { Directory.Delete(backupDir, true); } catch { }
@@ -5778,10 +5796,14 @@ namespace CustomLauncher
                 }
             }
 
+            FinishServerInstall();
+        }
+
+        private void FinishServerInstall()
+        {
+            if (_activeServerConfig == null) return;
+
             _activeServerConfig.IsInstalled = true;
-            _activeServerConfig.ModpackVersion = _onlineServerModpackVer;
-            _activeServerConfig.BattleCraftModVersion = _onlineBattleCraftModVer;
-            _activeServerConfig.MapVersion = _onlineServerMapVer;
             RecomputeServerUpdateFlags();
             AppSettings.Save(_settings);
 
@@ -5811,13 +5833,23 @@ namespace CustomLauncher
                 var installer = new ServerInstaller();
                 installer.StatusChanged += OnInstallerStatusChanged;
                 string serverModsDir = Path.Combine(_activeServerConfig.ServerPath, "server");
-                await installer.UpdateServerMods(serverModsDir, OnServerProgress);
+
+                if (ServerModsNeedDownload(serverModsDir))
+                {
+                    await installer.UpdateServerMods(serverModsDir, OnServerProgress);
+                    _activeServerConfig.ModpackVersion = _onlineServerModpackVer;
+                    AppSettings.Save(_settings);
+                }
+                else AppendConsoleOutput(Lang.T("[SYS] Моды сервера уже актуальны, качается только мод BattleCraft."));
+
                 if (_onlineBattleCraftModVer != "0.0" && ReleaseVersion.IsValid(_onlineBattleCraftModVer))
+                {
                     await installer.InstallBattleCraftMod(serverModsDir, BattleCraftJarUrl(_onlineBattleCraftModVer), OnServerProgress);
-                _activeServerConfig.ModpackVersion = _onlineServerModpackVer;
-                _activeServerConfig.BattleCraftModVersion = _onlineBattleCraftModVer;
+                    _activeServerConfig.BattleCraftModVersion = _onlineBattleCraftModVer;
+                    AppSettings.Save(_settings);
+                }
+
                 RecomputeServerUpdateFlags();
-                AppSettings.Save(_settings);
                 AppendConsoleOutput(Lang.T("[SYS] Моды сервера обновлены."));
             }
             catch (Exception ex)
@@ -5829,6 +5861,13 @@ namespace CustomLauncher
             {
                 SetServerBusy(false);
             }
+        }
+
+        private bool ServerModsNeedDownload(string serverDirectory)
+        {
+            if (_activeServerConfig == null) return true;
+            if (!ServerInstaller.ServerModsPresent(serverDirectory)) return true;
+            return ReleaseVersion.IsNewer(_onlineServerModpackVer, _activeServerConfig.ModpackVersion);
         }
 
         private void EnsureServerManagerInitialized()
