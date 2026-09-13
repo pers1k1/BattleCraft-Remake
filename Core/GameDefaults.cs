@@ -13,6 +13,11 @@ namespace CustomLauncher.Core
         public const string MaxEntityDistance = "5.0";
         private const string DataVersionKey = "version";
 
+        // WHY: мод сборки расширяет интервал строк чата и сохраняет options.txt сразу, до того как
+        // WHY: Forge перечитает файл ради клавиш модов; сохранение уносит их привязки на дефолты,
+        // WHY: поэтому значение ставим сами - мод видит его уже широким и файл не трогает
+        private const string ChatLineSpacing = "0.55";
+
         // WHY: Minecraft держит поле обзора не в градусах, а как (градусы - 70) / 40
         private const double FovNeutralDegrees = 70;
         private const double FovDegreesPerUnit = 40;
@@ -37,7 +42,8 @@ namespace CustomLauncher.Core
             ["bobView"] = "true",
             ["autoJump"] = "false",
             ["darkMojangStudiosBackground"] = "true",
-            ["onboardAccessibility"] = "false"
+            ["onboardAccessibility"] = "false",
+            ["chatLineSpacing"] = ChatLineSpacing
         };
 
         public static readonly Dictionary<string, string> RecommendedSound = new()
