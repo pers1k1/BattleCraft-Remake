@@ -63,7 +63,7 @@ namespace CustomLauncher
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.13v9";
+        private const string VER = "2026.09.13v10";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
