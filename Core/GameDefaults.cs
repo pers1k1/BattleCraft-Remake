@@ -24,7 +24,7 @@ namespace CustomLauncher.Core
 
         public static readonly Dictionary<string, string> RecommendedGraphics = new()
         {
-            ["fullscreen"] = "false",
+            ["fullscreen"] = "true",
             ["guiScale"] = "2",
             ["renderDistance"] = "8",
             ["simulationDistance"] = "6",
