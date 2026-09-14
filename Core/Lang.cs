@@ -82,6 +82,7 @@ namespace CustomLauncher.Core
             ["Осмотр оружия"] = "Inspect weapon",
             ["Карта"] = "Map",
             ["Точки в интерфейсе"] = "Points in HUD",
+            ["Выход в эфир"] = "Radio transmit",
             ["Рация"] = "Walkie-talkie",
             ["Очки: ночное зрение"] = "Goggles: night vision",
             ["Очки: смена режима"] = "Goggles: switch mode",
