@@ -108,6 +108,7 @@ namespace CustomLauncher.Core
             new(Weapons, "Осмотр оружия", "key_key.tacz.inspect.desc"),
             new(Weapons, "Модификация оружия", "key_key.tacz.refit.desc", "key_key.superbwarfare.edit_mode"),
             new(Weapons, "Ближний бой", "key_key.tacz.melee.desc", "key_key.superbwarfare.melee"),
+            new(Weapons, "Взаимодействие с оружием в руках", "key_key.tacz.interact.desc"),
             new(Weapons, "Приближение прицела", "key_key.tacz.zoom.desc"),
 
             new(Vehicles, "Взаимодействие с техникой", "key_key.superbwarfare.interact"),
