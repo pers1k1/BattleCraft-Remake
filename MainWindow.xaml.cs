@@ -974,7 +974,10 @@ namespace CustomLauncher
                 bool gWinter = gmonth == 12 || gmonth <= 2;
                 bool gAutumn = gmonth >= 9 && gmonth <= 11;
                 bool gSpring = gmonth >= 3 && gmonth <= 5;
+                bool falling = gSpring || gAutumn;
                 double snowAmount = _snowCover;
+
+                if (falling) StepFalling(gSpring);
 
                 DrawMountains(gWinter, gAutumn, gSpring, bright, snowAmount);
 
@@ -1003,11 +1006,9 @@ namespace CustomLauncher
 
                 DrawGroundDetail(gWinter, gAutumn, gSpring, bright);
                 DrawAccumulation(bright);
-                if (gSpring) DrawSettledFall(true, bright);
-                else if (gAutumn) DrawSettledFall(false, bright);
+                if (falling) DrawSettledFall(gSpring, bright);
                 DrawTrees(gWinter, gAutumn, gSpring, bright, snowAmount);
-                if (gSpring) UpdateFalling(true, bright);
-                else if (gAutumn) UpdateFalling(false, bright);
+                if (falling) DrawFlyingFall(gSpring, bright);
 
                 bool badWeather = _weather == Weather.Rain || _weather == Weather.Snow;
                 if (!badWeather) DrawKite(bright);
@@ -1321,7 +1322,6 @@ namespace CustomLauncher
                 {
                     _snowPile[col] = Math.Min(7.0, _snowPile[col] + 0.05 * inten);
                     _pY[i] = land; _pRest[i] = SnowRestFrames;
-                    continue;
                 }
                 int x = col, y = (int)_pY[i];
                 bool big = _pV[i] > 1.05 && z < 0.5;
@@ -1587,26 +1587,12 @@ namespace CustomLauncher
                  :                  ((byte)252, (byte)250, (byte)238);
         }
 
-        private void DrawSettledFall(bool spring, double bright)
-        {
-            double gust = _weather == (spring ? Weather.Sakura : Weather.Leaves) ? _wxIntensity : 0;
-            for (int i = 0; i < _fallRest.Length; i++)
-            {
-                if (_fallRest[i] <= 0) continue;
-                double fade = i < FallAmbient ? 1 : gust;
-                double rest = Math.Min(1.0, _fallRest[i] / (double)FallFadeFrames);
-                var c = FallColor(i, spring);
-                byte cr = (byte)(c.r * bright), cg = (byte)(c.g * bright), cb = (byte)(c.b * bright);
-                int x = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
-                int y = (int)_fallY[i];
-                BP(x, y, cr, cg, cb, 0.88 * fade * rest);
-                BP(x + 1, y, cr, cg, cb, 0.5 * fade * rest);
-            }
-        }
+        private double FallGustLevel(bool spring)
+            => _weather == (spring ? Weather.Sakura : Weather.Leaves) ? _wxIntensity : 0;
 
-        private void UpdateFalling(bool spring, double bright)
+        private void StepFalling(bool spring)
         {
-            double gust = _weather == (spring ? Weather.Sakura : Weather.Leaves) ? _wxIntensity : 0;
+            double gust = FallGustLevel(spring);
             double wind = Math.Sin(_frame * 0.03) * (spring ? 0.6 : 0.9) * (1 + gust);
             for (int i = 0; i < _fallX.Length; i++)
             {
@@ -1622,17 +1608,41 @@ namespace CustomLauncher
 
                 int col = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
                 double landing = LandingY(col, _fallZ[i]);
-                if (_fallY[i] >= landing)
-                {
-                    _fallY[i] = landing;
-                    _fallRest[i] = FallRestFrames + _sceneRng.Next(FallRestFrames);
-                    continue;
-                }
+                if (_fallY[i] < landing) continue;
 
+                _fallY[i] = landing;
+                _fallRest[i] = FallRestFrames + _sceneRng.Next(FallRestFrames);
+            }
+        }
+
+        private void DrawSettledFall(bool spring, double bright)
+        {
+            double gust = FallGustLevel(spring);
+            for (int i = 0; i < _fallRest.Length; i++)
+            {
+                if (_fallRest[i] <= 0) continue;
+                double fade = i < FallAmbient ? 1 : gust;
+                double rest = Math.Min(1.0, _fallRest[i] / (double)FallFadeFrames);
+                var c = FallColor(i, spring);
+                byte cr = (byte)(c.r * bright), cg = (byte)(c.g * bright), cb = (byte)(c.b * bright);
+                int x = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
+                int y = (int)_fallY[i];
+                BP(x, y, cr, cg, cb, 0.88 * fade * rest);
+                BP(x + 1, y, cr, cg, cb, 0.5 * fade * rest);
+            }
+        }
+
+        private void DrawFlyingFall(bool spring, double bright)
+        {
+            double gust = FallGustLevel(spring);
+            for (int i = 0; i < _fallX.Length; i++)
+            {
+                if (_fallRest[i] > 0) continue;
                 double fade = i < FallAmbient ? 1 : gust;
                 var c = FallColor(i, spring);
                 byte cr = (byte)(c.r * bright), cg = (byte)(c.g * bright), cb = (byte)(c.b * bright);
-                int x = col, y = (int)_fallY[i];
+                int x = (((int)_fallX[i]) % SCN_W + SCN_W) % SCN_W;
+                int y = (int)_fallY[i];
                 bool flip = ((int)(_fallY[i] * 0.3 + _fallP[i] * 3) & 1) == 0;
                 BP(x, y, cr, cg, cb, 0.92 * fade);
                 BP(flip ? x + 1 : x - 1, y, cr, cg, cb, 0.6 * fade);
