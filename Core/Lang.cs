@@ -81,6 +81,7 @@ namespace CustomLauncher.Core
             ["Режим огня"] = "Fire mode",
             ["Осмотр оружия"] = "Inspect weapon",
             ["Карта"] = "Map",
+            ["Точки в интерфейсе"] = "Points in HUD",
             ["Рация"] = "Walkie-talkie",
             ["Очки: ночное зрение"] = "Goggles: night vision",
             ["Очки: смена режима"] = "Goggles: switch mode",

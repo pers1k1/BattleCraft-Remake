@@ -117,6 +117,7 @@ namespace CustomLauncher.Core
             new(Battle, "Действия BattleCraft", "key_key.capturepoints.capture", "key_key.knockdown.revive"),
             new(Battle, "Сдаться", "key_key.knockdown.surrender"),
             new(Battle, "Карта", "key_key.minimap.open_map"),
+            new(Battle, "Точки в интерфейсе", "key_key.battlecraft.points_hud"),
 
             new(Communication, "Голосовой чат", "key_key.push_to_talk"),
             new(Communication, "Метка на местности", "key_key.pingwheel.ping_location", "key_key.superbwarfare.mark"),
