@@ -292,6 +292,7 @@ namespace CustomLauncher
 
         private double _snowCover, _leafCover, _rainWet, _petalCover;
         private readonly double[] _snowPile = new double[SCN_W];
+        private readonly double[] _petalBias = new double[SCN_W];
         private readonly double[] _pileTmp = new double[SCN_W];
         private int[] _puddleX = Array.Empty<int>();
         private double[] _puddleR = Array.Empty<double>();
@@ -366,6 +367,7 @@ namespace CustomLauncher
                     if (_canSak[i]) sakIdx.Add(i);
                 }
                 _sakIdx = sakIdx.ToArray();
+                BuildPetalBias();
 
                 int im = DateTime.Now.Month;
 
@@ -1554,6 +1556,22 @@ namespace CustomLauncher
                 }
         }
 
+        private void BuildPetalBias()
+        {
+            Array.Clear(_petalBias, 0, SCN_W);
+            foreach (int tree in _sakIdx)
+            {
+                int reach = _canR[tree] * 3 + 5;
+                for (int dx = -reach; dx <= reach; dx++)
+                {
+                    int x = _canX[tree] + dx;
+                    if ((uint)x >= SCN_W) continue;
+                    double falloff = 1.0 - Math.Abs(dx) / (double)reach;
+                    _petalBias[x] = Math.Min(1.0, _petalBias[x] + falloff * falloff);
+                }
+            }
+        }
+
         private void RespawnFall(int i, bool sakuraOnly)
         {
             if (_canX.Length == 0) return;
@@ -1777,11 +1795,11 @@ namespace CustomLauncher
                 for (int y = HORIZON - 4; y < SCN_H; y++)
                 {
                     double front = (double)(y - HORIZON) / gh;
-                    double dens = _petalCover * (0.04 + 0.15 * Math.Max(0, front));
+                    double dens = _petalCover * (0.05 + 0.20 * Math.Max(0, front));
                     for (int x = 0; x < SCN_W; x++)
                     {
                         if (y < _ground[x]) continue;
-                        if (Hash2(x + 47, y + 23) >= dens) continue;
+                        if (Hash2(x + 47, y + 23) >= dens * _petalBias[x]) continue;
                         double pick = Hash2(x + 13, y + 29);
                         (byte cr, byte cg, byte cb) = pick < 0.34 ? ((byte)248, (byte)188, (byte)216)
                                                     : pick < 0.67 ? ((byte)242, (byte)166, (byte)204)
