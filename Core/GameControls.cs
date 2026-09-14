@@ -108,11 +108,13 @@ namespace CustomLauncher.Core
             new(Weapons, "Осмотр оружия", "key_key.tacz.inspect.desc"),
             new(Weapons, "Модификация оружия", "key_key.tacz.refit.desc", "key_key.superbwarfare.edit_mode"),
             new(Weapons, "Ближний бой", "key_key.tacz.melee.desc", "key_key.superbwarfare.melee"),
+            new(Weapons, "Приближение прицела", "key_key.tacz.zoom.desc"),
 
             new(Vehicles, "Взаимодействие с техникой", "key_key.superbwarfare.interact"),
             new(Vehicles, "Выйти из техники", "key_key.superbwarfare.dismount"),
             new(Vehicles, "Захват цели", "key_key.superbwarfare.vehicle_seek"),
             new(Vehicles, "Тепловизор", "key_key.superbwarfare.active_thermal_imaging"),
+            new(Vehicles, "Тепловые ловушки", "key_key.superbwarfare.release_decoy"),
 
             new(Battle, "Действия BattleCraft", "key_key.capturepoints.capture", "key_key.knockdown.revive"),
             new(Battle, "Сдаться", "key_key.knockdown.surrender"),

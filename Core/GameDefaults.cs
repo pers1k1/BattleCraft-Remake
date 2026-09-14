@@ -63,7 +63,7 @@ namespace CustomLauncher.Core
             ["key_key.pingwheel.ping_location"] = "key.mouse.middle",
             ["key_key.superbwarfare.mark"] = "key.mouse.middle",
             ["key_key.pickItem"] = "key.mouse.4",
-            ["key_key.push_to_talk"] = "key.mouse.5",
+            ["key_key.push_to_talk"] = "key.keyboard.v",
             ["key_key.capturepoints.capture"] = "key.keyboard.left.alt",
             ["key_key.knockdown.revive"] = "key.keyboard.left.alt",
             ["key_key.parcool.ClingToCliff"] = "key.mouse.right",
@@ -107,7 +107,11 @@ namespace CustomLauncher.Core
             ["key_key.securitycraft.cameraZoomOut"] = MinecraftKeys.Unbound,
             ["key_key.vision_goggles.toggle"] = MinecraftKeys.Unbound,
             ["key_key.vision_goggles.switch"] = MinecraftKeys.Unbound,
-            ["key_key.vision_goggles.zoom"] = MinecraftKeys.Unbound
+            ["key_key.vision_goggles.zoom"] = MinecraftKeys.Unbound,
+            ["key_key.tacz.melee.desc"] = "key.mouse.5",
+            ["key_key.superbwarfare.melee"] = "key.mouse.5",
+            ["key_key.tacz.zoom.desc"] = "key.keyboard.minus",
+            ["key_key.superbwarfare.release_decoy"] = "key.keyboard.minus"
         };
 
         public static readonly Dictionary<string, bool> DisabledParkourActions = new()
