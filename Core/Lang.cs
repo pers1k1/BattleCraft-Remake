@@ -301,6 +301,7 @@ namespace CustomLauncher.Core
             ["Ошибка авторизации"] = "Sign-in error",
             ["Введите никнейм!"] = "Enter a nickname!",
             ["Никнейм: от 3 до 16 символов, только латиница, цифры и _"] = "Nickname: 3 to 16 characters, Latin letters, digits and _ only",
+            ["Никнейм из настроек не подходит: только латиница, цифры и _ от 3 до 16 символов. Введите новый."] = "The nickname in your settings is not allowed: Latin letters, digits and _ only, 3 to 16 characters. Enter a new one.",
             ["Загрузка…"] = "Loading…",
             ["Не удалось загрузить changelog.\nПроверьте подключение к интернету."] = "Failed to load the changelog.\nCheck your internet connection.",
             ["Здесь пока пусто."] = "Nothing here yet.",

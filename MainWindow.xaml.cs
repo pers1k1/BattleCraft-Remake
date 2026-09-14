@@ -2028,6 +2028,19 @@ namespace CustomLauncher
             catch { }
 
             await CheckPrerequisitesAsync();
+            await WarnAboutRejectedNickname();
+        }
+
+        private bool _nicknameNeedsRepair;
+
+        private bool NicknameAccepted() => _settings.UserType == "msa" || Nickname.IsValid(_settings.Username);
+
+        private async Task WarnAboutRejectedNickname()
+        {
+            if (!_nicknameNeedsRepair) return;
+
+            _nicknameNeedsRepair = false;
+            await ShowCustomDialog(Lang.T(Nickname.RejectedMessage));
         }
 
         private async Task CheckPrerequisitesAsync()
@@ -2253,6 +2266,7 @@ namespace CustomLauncher
 
         private void InitializeLauncherCore()
         {
+            RestrictNicknameFields();
             _settings = AppSettings.Load();
             if (string.IsNullOrWhiteSpace(_settings.Language))
                 _settings.Language = _settings.IsFirstRun && System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "ru" ? "en" : "ru";
@@ -2274,7 +2288,8 @@ namespace CustomLauncher
                 RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
                 PathBox.Text = _settings.GamePath;
                 if (!ReleaseVersion.IsValid(_settings.ModpackVersion)) _settings.ModpackVersion = "0.0";
-                SwitchToMain();
+                if (NicknameAccepted()) SwitchToMain();
+                else { _nicknameNeedsRepair = true; LoginGridState(); }
             }
         }
 
@@ -2345,7 +2360,7 @@ namespace CustomLauncher
         {
             string nick = SetupUsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog(Lang.T("Авторизуйтесь через Microsoft или введите никнейм!")); return; }
-            if (_settings.UserType != "msa" && !IsValidNickname(nick)) { await ShowCustomDialog(Lang.T(NicknameRuleMessage)); return; }
+            if (_settings.UserType != "msa" && !Nickname.IsValid(nick)) { await ShowCustomDialog(Lang.T(Nickname.RuleMessage)); return; }
             string path = ResolveGamePath(SetupPathBox.Text);
             if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog(Lang.T("Выберите папку для игры!")); return; }
             if (!await EnsureFreeSpace(path, DiskSpace.ClientRequiredBytes)) return;
@@ -2940,6 +2955,7 @@ namespace CustomLauncher
                 return;
             }
             if (!_settings.HasGamePath) { await ShowCustomDialog(Lang.T("Выберите папку для игры в настройках!")); return; }
+            if (!NicknameAccepted()) { await ShowCustomDialog(Lang.T(Nickname.RejectedMessage)); LoginGridState(); return; }
 
             BtnPlay.IsEnabled = false; SetBusy(true);
             bool didInstall = false;
@@ -4161,17 +4177,19 @@ namespace CustomLauncher
         {
             var n = UsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog(Lang.T("Введите никнейм!")); return; }
-            if (!IsValidNickname(n)) { await ShowCustomDialog(Lang.T(NicknameRuleMessage)); return; }
+            if (!Nickname.IsValid(n)) { await ShowCustomDialog(Lang.T(Nickname.RuleMessage)); return; }
             _settings.Username = n;
             _settings.UserType = "offline";
             AppSettings.Save(_settings);
             SwitchToMain();
         }
 
-        private const string NicknameRuleMessage = "Никнейм: от 3 до 16 символов, только латиница, цифры и _";
-
-        private static bool IsValidNickname(string nick) =>
-            nick.Length >= 3 && nick.Length <= 16 && nick.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
+        private void RestrictNicknameFields()
+        {
+            Nickname.Restrict(UsernameBox);
+            Nickname.Restrict(SetupUsernameBox);
+            Nickname.Restrict(WhitelistPlayerNameBox);
+        }
 
         private void BtnGitHub_Click(object s, RoutedEventArgs e)
         {
@@ -6421,6 +6439,7 @@ namespace CustomLauncher
         {
             string playerName = WhitelistPlayerNameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(playerName) || _activeServerConfig == null) return;
+            if (!Nickname.IsValid(playerName)) { await ShowCustomDialog(Lang.T(Nickname.RuleMessage)); return; }
 
             bool alreadyExists = _activeServerConfig.WhitelistedPlayers
                 .Any(p => p.Equals(playerName, StringComparison.OrdinalIgnoreCase));
