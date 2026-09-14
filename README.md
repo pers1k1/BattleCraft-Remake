@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 14.09.26hotfix |
+| Launcher | 14.09.26v3 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -17,7 +17,9 @@ Releases are dated, not numbered. A version is the release date in `dd.MM.yy`
 form - `03.08.26` is the build published on 3 August 2026. When a day needs a
 second release, the date carries a revision suffix: `03.08.26hotfix` for a fix
 shipped the same day, or `03.08.26v2`, `03.08.26v3` for further rebuilds
-(`hotfix` and `v2` rank the same, so use one or the other per day).
+(`hotfix` and `v2` rank the same, so use one or the other per day). A hotfix
+that needs a fix of its own continues as `03.08.26hotfixv2`, `03.08.26hotfixv3`
+- those rank above `hotfix` and below `v3`.
 
 The remote config files store the same version in sortable `yyyy.MM.dd` form
 (`2026.08.03`, `2026.08.03hotfix`), which is what the launcher compares; the
@@ -30,6 +32,7 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 - Automatic Java detection and provisioning (Adoptium Temurin 17) when no suitable runtime is present.
 - Self-updating launcher and modpack with resilient downloads: automatic retries with exponential backoff, a stall guard that fails hung connections fast, and HTTP range resume that continues interrupted files instead of restarting them.
 - Microsoft authentication without WebView2, plus offline accounts.
+- Offline nicknames follow the Minecraft rule - Latin letters, digits and `_`, 3 to 16 characters. The nickname fields refuse anything else while it is typed, pasted or dropped in, and a nickname edited into `launcher_config.json` by hand is caught on start and before every launch: the launcher returns to the login screen and asks for a valid one instead of starting the game under a name the server will not accept. Server whitelist entries are held to the same rule.
 - Customizable interface: 41 color theme presets (Sakura by default), sixteen of them a beige and muted-neutral family built around dusty rose, taupe, cocoa, clay, terracotta, caramel, latte, sand, marzipan, cashmere, powder and ivory, each paired with a primary mixed towards its own accent plus manual HEX colors, custom icon, neon bloom, adjustable terminal transparency, and a glass-style UI that lets the scene show through the panels.
 - Custom presets: name the colors you tuned by hand and they join the preset list, saved with the rest of the configuration and removable from the same row.
 - Theme handoff to the game: the chosen primary and accent colors are written to `launcher_theme/theme.json` in the game folder whenever they change and again before every launch, so the BattleCraft mod dresses its own interface in the palette picked here instead of a fixed one.
