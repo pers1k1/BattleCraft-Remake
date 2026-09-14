@@ -29,6 +29,7 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 ## Client Features
 
 - One-click installation and launch of Minecraft and Forge.
+- A missing or unreadable Forge profile installs itself. The launch path no longer trusts the presence of the `versions` folder: the profile manifest has to parse and list libraries, and when it does not - a half-finished install, a deleted file, an aborted first run - the launcher wipes the stale Forge profiles of the same Minecraft version, downloads the installer and runs it instead of stopping at a "Forge not found" dialog. The same repair runs again if the version list still comes back without the profile right before launch, and only a second failure reaches the player as an error.
 - Automatic Java detection and provisioning (Adoptium Temurin 17) when no suitable runtime is present.
 - Self-updating launcher and modpack with resilient downloads: automatic retries with exponential backoff, a stall guard that fails hung connections fast, and HTTP range resume that continues interrupted files instead of restarting them.
 - Microsoft authentication without WebView2, plus offline accounts.

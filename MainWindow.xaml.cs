@@ -2971,22 +2971,9 @@ namespace CustomLauncher
 
                 InitializeLauncher();
 
-                string vDir = Path.Combine(_settings.GamePath, "versions");
-                bool hasForge = Directory.Exists(vDir) && Directory.Exists(Path.Combine(vDir, FULL_ID));
-
-                if (!hasForge)
+                if (!ForgeInstall.Present(_settings.GamePath))
                 {
-                    if (Directory.Exists(vDir))
-                    {
-                        foreach (var d in Directory.GetDirectories(vDir))
-                        {
-                            string dName = Path.GetFileName(d);
-                            if (dName.Contains(MC) && dName.ToLower().Contains("forge") && dName != FULL_ID)
-                            {
-                                try { Directory.Delete(d, true); } catch { }
-                            }
-                        }
-                    }
+                    ForgeInstall.RemoveOtherProfiles(_settings.GamePath);
                     didInstall = true;
                     await InstallForgeSilent();
                 }
@@ -3004,9 +2991,19 @@ namespace CustomLauncher
                 if (didInstall) { Log(Lang.T("Готово!")); StatusText.Text = Lang.T("Установка завершена! Нажмите ИГРАТЬ."); SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false); return; }
 
                 StatusText.Text = Lang.T("Запуск..."); SetProgress(100);
-                var vers = await _launcher.GetAllVersionsAsync();
-                var ver = vers.FirstOrDefault(v => v.Name == FULL_ID) ?? vers.FirstOrDefault(v => v.Name.Contains(MC) && v.Name.ToLower().Contains("forge"));
-                if (ver == null) { await ShowCustomDialog(Lang.T("Forge не найден!")); return; }
+                string? forgeProfile = await FindForgeProfile();
+                if (forgeProfile == null)
+                {
+                    Log(Lang.T("Профиль Forge не найден, лаунчер ставит его заново."));
+                    await InstallForgeSilent();
+                    forgeProfile = await FindForgeProfile();
+                }
+                if (forgeProfile == null)
+                {
+                    await ShowCustomDialog(Lang.T("Не удалось установить Forge. Проверьте подключение к сети и попробуйте ещё раз."));
+                    StatusText.Text = Lang.T("Готов");
+                    return;
+                }
 
                 MSession? mSession = null;
                 if (_settings.UserType == "msa")
@@ -3069,7 +3066,7 @@ namespace CustomLauncher
                 }
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = java };
-                Process game = await KeepDownloading(() => _launcher.CreateProcessAsync(ver.Name, opt).AsTask());
+                Process game = await KeepDownloading(() => _launcher.CreateProcessAsync(forgeProfile, opt).AsTask());
                 _gameProcess = game;
                 InjectJvmArgs(game);
 
@@ -3408,6 +3405,14 @@ namespace CustomLauncher
         }
 
         private bool _downloadLanesChanged;
+
+        private async Task<string?> FindForgeProfile()
+        {
+            var known = await _launcher.GetAllVersionsAsync();
+            var profile = known.FirstOrDefault(v => v.Name == FULL_ID)
+                ?? known.FirstOrDefault(v => v.Name.Contains(MC) && v.Name.ToLower().Contains("forge"));
+            return profile?.Name;
+        }
 
         private async Task InstallForgeSilent()
         {
