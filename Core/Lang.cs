@@ -20,6 +20,8 @@ namespace CustomLauncher.Core
 
         private static readonly Dictionary<string, string> _en = new()
         {
+            ["Спрятать интерфейс"] = "Hide interface",
+            ["Вернуть интерфейс"] = "Show interface",
             ["Лицензия (Microsoft):"] = "License (Microsoft):",
             ["Войти через Microsoft"] = "Sign in with Microsoft",
             ["ИЛИ Пиратка (Никнейм):"] = "OR Offline (Nickname):",

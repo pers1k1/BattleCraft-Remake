@@ -8,8 +8,13 @@ namespace CustomLauncher.Core
     {
         public const string SystemJava = "java";
 
+        // WHY: CmlLib раскладывает рантайм как runtime/windows-x64/<компонент>, а официальный
+        // WHY: лаунчер Mojang - как runtime/<компонент>/windows-x64/<компонент>; встречаются обе
         public static string BundledFolder(string gamePath) =>
-            Path.Combine(gamePath, "runtime", "java-runtime-gamma", "windows-x64", "java-runtime-gamma");
+            Path.Combine(gamePath, "runtime", "windows-x64", GameVersions.JavaRuntimeComponent);
+
+        private static string MojangFolder(string gamePath) =>
+            Path.Combine(gamePath, "runtime", GameVersions.JavaRuntimeComponent, "windows-x64", GameVersions.JavaRuntimeComponent);
 
         public static bool IsBundled(string javaPath) =>
             !string.Equals(javaPath, SystemJava, StringComparison.OrdinalIgnoreCase) && File.Exists(javaPath);
@@ -18,8 +23,11 @@ namespace CustomLauncher.Core
         {
             if (string.IsNullOrWhiteSpace(gamePath)) return SystemJava;
 
-            string bundled = Path.Combine(BundledFolder(gamePath), "bin", "java.exe");
-            if (File.Exists(bundled)) return bundled;
+            foreach (string folder in new[] { BundledFolder(gamePath), MojangFolder(gamePath) })
+            {
+                string candidate = Path.Combine(folder, "bin", "java.exe");
+                if (File.Exists(candidate)) return candidate;
+            }
 
             string runtime = Path.Combine(gamePath, "runtime");
             if (!Directory.Exists(runtime)) return SystemJava;

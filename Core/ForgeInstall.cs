@@ -22,7 +22,7 @@ namespace CustomLauncher.Core
             }
             catch (Exception error)
             {
-                LauncherLog.Write($"[SYS] Профиль Forge непригоден, ставим заново: {error.Message}");
+                LauncherLog.Write($"[LOADER] Профиль Forge непригоден, ставим заново: {error.Message}");
                 return false;
             }
         }
@@ -39,7 +39,7 @@ namespace CustomLauncher.Core
                 if (!name.Contains(GameVersions.Minecraft) || !name.ToLower().Contains("forge")) continue;
 
                 try { Directory.Delete(profile, true); }
-                catch (Exception error) { LauncherLog.Write($"[SYS] Профиль {name} не удалён: {error.Message}"); }
+                catch (Exception error) { LauncherLog.Write($"[LOADER] Профиль {name} не удалён: {error.Message}"); }
             }
         }
     }

@@ -26,7 +26,7 @@ namespace CustomLauncher.Core
 
                 lock (_lock)
                 {
-                    File.WriteAllText(_logFile, $"[{Stamp()}] [SYS] Лаунчер запущен{Environment.NewLine}");
+                    File.WriteAllText(_logFile, $"[{Stamp()}] [SYS] Лаунчер запущен, {Environment.OSVersion.VersionString}, папка настроек {dir}{Environment.NewLine}");
                 }
 
                 if (!string.IsNullOrEmpty(AppSettings.ConfigDirNotice))

@@ -8,7 +8,7 @@ A custom Minecraft launcher and server manager for the BattleCraft modpack, buil
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.22 |
-| Launcher | 15.09.26 |
+| Launcher | 19.09.26 |
 | Runtime | .NET 8 (WPF, Windows 10/11) |
 
 ## Versioning
@@ -64,8 +64,10 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 - The loader's own splash is started dark rather than red. Forge reads `FML_EARLY_WINDOW_DARK` from the game process environment before it looks at `options.txt`, so the launcher sets it on every launch and the mod-loading window matches the pack instead of flashing red first.
 - Free disk space is checked before the game folder is chosen and before the modpack or a server is installed, so an install cannot die halfway through a full disk.
 - The client collector is chosen by heap size. From 8 GB up the launcher switches to Shenandoah, whose pauses stay in single-digit milliseconds and no longer land on Distant Horizons building far terrain; below that it keeps G1, because on a small heap G1 pauses are short anyway and Shenandoah's read barriers would only cost throughput. Switching to Shenandoah also strips the G1 flags CmlLib puts on the command line by default, since a JVM given two collectors at once refuses to start. The server always keeps G1, where pause length does not affect what the player sees.
-- Discord Rich Presence integration.
+- Discord Rich Presence integration. Connection, every presence line the launcher sends and every failure are written to the log, so what Discord received can be read without opening Discord.
 - Unified install/launch log with rolling crash reports retained in the launcher's configuration directory; the detected OS (e.g. Windows 11) is reported on the boot screen and in the terminal.
+- Every step of a session is tagged in the log: `[SYS]` for the launcher itself, `[SETUP]` for the first-run wizard, `[AUTH]` for sign-in, `[UPD]` for version checks and self-update, `[PACK]` for the modpack and the BattleCraft mod, `[LOADER]` for Forge and Java, `[PLAY]` for launching the game and everything that follows its exit, `[SERVER]` for the server tab, `[NET]` for downloads, `[UI]` for what was changed in the interface, plus `[WARN]` and `[ERR]`. Reading a player's log now shows the order of events instead of a wall of identical lines: the names of the files being downloaded stay in the terminal panel and no longer reach the file, while folder changes, chosen colors, background, language, key sets, server commands and state changes do.
+- The interface hides on demand: the eye button in the title bar fades the panels out and leaves the animated scene alone on screen, and a second press brings them back.
 - Forge library installation notice with installer output captured to the log.
 - Automatic cleanup of stale Distant Horizons server data on launch.
 

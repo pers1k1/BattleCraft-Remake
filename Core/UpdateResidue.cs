@@ -41,7 +41,10 @@ namespace CustomLauncher.Core
             await WaitForReplacedInstanceAsync(startupArguments);
 
             foreach (string residue in FindResidue(LauncherDirectory()))
+            {
                 await EraseAsync(residue);
+                LauncherLog.Write($"[UPD] Остаток обновления убран: {Path.GetFileName(residue)}");
+            }
         }
 
         private static string LauncherDirectory()

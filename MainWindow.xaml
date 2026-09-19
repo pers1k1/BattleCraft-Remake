@@ -49,6 +49,8 @@
         <Geometry x:Key="IconRestart">F0 M8,1.6 A6.4,6.4 0 1 0 8,14.4 A6.4,6.4 0 1 0 8,1.6 Z M8,4 A4,4 0 1 0 8,12 A4,4 0 1 0 8,4 Z M10.9,0.2 L15.4,3.6 L10.7,6.2 Z</Geometry>
         <Geometry x:Key="IconGlobe">F0 M8,1 A7,7 0 1 0 8,15 A7,7 0 1 0 8,1 Z M8,2.6 A5.4,5.4 0 1 0 8,13.4 A5.4,5.4 0 1 0 8,2.6 Z M1.6,7.3 H14.4 V8.7 H1.6 Z M8,2.6 A3.1,5.4 0 1 0 8,13.4 A3.1,5.4 0 1 0 8,2.6 Z</Geometry>
         <Geometry x:Key="IconGear">F0 M6.6,1 H9.4 L9.8,3.2 L12,2 L14,4 L12.8,6.2 L15,6.6 V9.4 L12.8,9.8 L14,12 L12,14 L9.8,12.8 L9.4,15 H6.6 L6.2,12.8 L4,14 L2,12 L3.2,9.8 L1,9.4 V6.6 L3.2,6.2 L2,4 L4,2 L6.2,3.2 Z M8,5.4 A2.6,2.6 0 1 0 8,10.6 A2.6,2.6 0 1 0 8,5.4 Z</Geometry>
+        <Geometry x:Key="IconEye">F1 M1,8 H3 V6 H5 V4 H11 V6 H13 V8 H15 V10 H13 V12 H11 V14 H5 V12 H3 V10 H1 Z M6,7 H10 V11 H6 Z</Geometry>
+        <Geometry x:Key="IconEyeOff">F1 M1,8 H3 V6 H5 V8 H11 V6 H13 V8 H15 V10 H13 V12 H11 V10 H5 V12 H3 V10 H1 Z</Geometry>
         <Geometry x:Key="IconCheck">F1 M6.2,12.6 L1.8,8.2 L3.4,6.6 L6.2,9.4 L12.6,3 L14.2,4.6 Z</Geometry>
         <Geometry x:Key="IconList">F1 M1.2,2.4 H3.6 V4.8 H1.2 Z M5.4,2.9 H14.8 V4.3 H5.4 Z M1.2,6.8 H3.6 V9.2 H1.2 Z M5.4,7.3 H14.8 V8.7 H5.4 Z M1.2,11.2 H3.6 V13.6 H1.2 Z M5.4,11.7 H14.8 V13.1 H5.4 Z</Geometry>
 
@@ -1185,6 +1187,9 @@
                 <TextBlock x:Name="TopLeftTitleText" Text="BattleCraft Remake Launcher" FontFamily="Consolas, Courier New" Foreground="#88FFFFFF" FontSize="12" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BtnHideUi" Style="{StaticResource SystemButton}" Click="BtnHideUi_Click" ToolTip="Спрятать интерфейс" AutomationProperties.Name="Спрятать интерфейс">
+                    <Path x:Name="HideUiIcon" Data="{StaticResource IconEye}" Fill="#AAAAAA" Width="13" Height="13" Stretch="Uniform" SnapsToDevicePixels="True"/>
+                </Button>
                 <Button Style="{StaticResource SystemButton}" Click="BtnMinimize_Click">
                     <Path Data="M0,8 L8,8 8,9 0,9 z" Width="10" Height="1" Stretch="Uniform" Fill="#AAAAAA" SnapsToDevicePixels="True"/>
                 </Button>

@@ -33,7 +33,10 @@ namespace CustomLauncher.Core
                 }
             };
 
+            _client.OnConnectionFailed += (sender, e) => LauncherLog.Write($"[DISCORD] Подключение не удалось: труба {e.FailedPipe}");
+
             _client.Initialize();
+            LauncherLog.Write("[DISCORD] Статус подключается");
 
             _isInitialized = true;
             SetMenuState();
@@ -65,6 +68,7 @@ namespace CustomLauncher.Core
                 }
             };
             _client.SetPresence(presence);
+            LauncherLog.Write($"[DISCORD] Статус: {presence.Details} / {presence.State}");
         }
 
         public void ReleaseForGame()
@@ -73,11 +77,13 @@ namespace CustomLauncher.Core
 
             if (_client != null)
             {
-                try { _client.ClearPresence(); } catch { }
+                try { _client.ClearPresence(); }
+                catch (Exception error) { LauncherLog.Write($"[DISCORD] Очистка статуса не прошла: {error.Message}"); }
                 _client.Dispose();
                 _client = null;
             }
             _isInitialized = false;
+            LauncherLog.Write("[DISCORD] Статус отдан игре");
         }
 
         public void Dispose()

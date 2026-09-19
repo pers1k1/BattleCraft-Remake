@@ -46,6 +46,7 @@ namespace CustomLauncher.Core
             if (config.WhitelistEnabled)
                 GenerateWhitelistJson(config);
 
+            LauncherLog.Write($"[SERVER] Старт процесса: {javaPath}, папка {serverDir}, память {config.ServerRamMb} МБ");
             LaunchServerProcess(javaPath, serverDir);
             return Task.CompletedTask;
         }
@@ -112,7 +113,7 @@ namespace CustomLauncher.Core
                 input.WriteLine(command);
                 input.Flush();
             }
-            catch { }
+            catch (Exception error) { LauncherLog.Write($"[SERVER] Команда не дошла до сервера: {error.Message}"); }
         }
 
         public static string SanitizePathSegment(string name)
@@ -427,6 +428,7 @@ namespace CustomLauncher.Core
 
         private void SetState(ServerState newState)
         {
+            if (CurrentState != newState) LauncherLog.Write($"[SERVER] Состояние: {newState}");
             CurrentState = newState;
             StateChanged?.Invoke(newState);
         }

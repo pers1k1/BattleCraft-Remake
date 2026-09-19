@@ -7,6 +7,7 @@ namespace CustomLauncher.Core
         // WHY: с нуля, спотыкается на строковой клавише и теряет весь файл целиком
         public const string MinecraftDataVersion = "3465";
         public const string Forge = "47.4.22";
+        public const string JavaRuntimeComponent = "java-runtime-gamma";
         public const string ForgeProfileId = Minecraft + "-forge-" + Forge;
         public const string Display = Minecraft + " · Forge " + Forge;
         public const string ForgeInstallerUrl =

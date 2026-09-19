@@ -57,13 +57,13 @@ namespace CustomLauncher
         {
             private MainWindow _w;
             public StatusTextDummy(MainWindow w) { _w = w; }
-            public string Text { set { _w.Log(value); } get { return ""; } }
+            public string Text { set { _w.Status(value); } get { return ""; } }
         }
         private StatusTextDummy StatusText => new StatusTextDummy(this);
 
         private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-        private const string VER = "2026.09.15";
+        private const string VER = "2026.09.19";
         private static string VerDisplay => ReleaseVersion.Display(VER);
         private const string MC = GameVersions.Minecraft;
         private const string FORGE = GameVersions.Forge;
@@ -200,6 +200,7 @@ namespace CustomLauncher
         public MainWindow()
         {
             LauncherLog.Init();
+            LauncherLog.Write($"[SYS] Версия лаунчера {VerDisplay}, игра {GameVersions.Display}");
             RefreshDisplayRate(true);
             InitializeComponent();
             _consoleFlushTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
@@ -497,6 +498,7 @@ namespace CustomLauncher
             if (mode == _settings.BackgroundMode) return;
             _settings.BackgroundMode = mode;
             AppSettings.Save(_settings);
+            LauncherLog.Write($"[UI] Фон окна: {mode}");
             ApplyBackgroundMode(mode, true);
         }
 
@@ -2066,7 +2068,7 @@ namespace CustomLauncher
             }
             catch (Exception error)
             {
-                LauncherLog.Write($"[ERROR] Проверка WebView2 сорвалась: {error.Message}");
+                LauncherLog.Write($"[WARN] Проверка WebView2 сорвалась: {error.Message}");
             }
         }
 
@@ -2195,10 +2197,28 @@ namespace CustomLauncher
 
         private void LogError(string message) => LogTagged("[ERR]", message);
 
-        private void LogTagged(string prefix, string message)
+        private void LogUpdate(string message) => LogTagged("[UPD]", message);
+
+        private void LogPack(string message) => LogTagged("[PACK]", message);
+
+        private void LogLoader(string message) => LogTagged("[LOADER]", message);
+
+        private void LogPlay(string message) => LogTagged("[PLAY]", message);
+
+        private void LogAuth(string message) => LogTagged("[AUTH]", message);
+
+        private void LogSetup(string message) => LogTagged("[SETUP]", message);
+
+        private void LogServer(string message) => LogTagged("[SERVER]", message);
+
+        // WHY: установщик называет файлы десятками в секунду - в окне они уместны,
+        // WHY: а в файле забивают всё, и событий лаунчера в логе игрока уже не видно
+        private void Status(string message) => LogTagged("[SYS]", message, toFile: false);
+
+        private void LogTagged(string prefix, string message, bool toFile = true)
         {
-            if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => LogTagged(prefix, message)); return; }
-            LauncherLog.Write($"{prefix} {message}");
+            if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => LogTagged(prefix, message, toFile)); return; }
+            if (toFile) LauncherLog.Write($"{prefix} {message}");
             _logLines.Add($"{prefix} {message}");
             if (_logLines.Count > 200) _logLines.RemoveAt(0);
             LogTerminalText.Text = string.Join("\n", _logLines);
@@ -2281,15 +2301,27 @@ namespace CustomLauncher
             _discordManager.ModpackVersion = _settings.ModpackVersion;
             _discordManager.Initialize();
 
-            if (_settings.IsFirstRun) { _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher"); ShowSetupPanel(); RunStartupChecks(); }
+            if (_settings.IsFirstRun)
+            {
+                LauncherLog.Write("[SETUP] Первый запуск, открыт мастер настройки");
+                _ = AnimateTerminalText(TopLeftTitleText, "BattleCraft Remake Launcher");
+                ShowSetupPanel();
+                RunStartupChecks();
+            }
             else
             {
                 UsernameBox.Text = _settings.Username;
                 RamSlider.Value = _settings.RamMb > 0 ? _settings.RamMb : 4096;
                 PathBox.Text = _settings.GamePath;
                 if (!ReleaseVersion.IsValid(_settings.ModpackVersion)) _settings.ModpackVersion = "0.0";
+                LauncherLog.Write($"[SYS] Папка игры {_settings.GamePath}, сборка v{_settings.ModpackVersion}, мод v{_settings.BattleCraftModVersion}, аккаунт {_settings.UserType}, память {_settings.RamMb} МБ");
                 if (NicknameAccepted()) SwitchToMain();
-                else { _nicknameNeedsRepair = true; LoginGridState(); }
+                else
+                {
+                    LauncherLog.Write($"[AUTH] Никнейм из конфига отклонён: {_settings.Username}");
+                    _nicknameNeedsRepair = true;
+                    LoginGridState();
+                }
             }
         }
 
@@ -2328,6 +2360,7 @@ namespace CustomLauncher
                     if (Directory.Exists(path)) Directory.Delete(path, true);
                     Directory.CreateDirectory(path);
                 });
+                LogSetup(Lang.F("Папка игры подготовлена: {0}", path));
             }
             catch (Exception ex) { LogError(Lang.F("Ошибка подготовки папки игры: {0}", ex.Message)); }
         }
@@ -2339,11 +2372,16 @@ namespace CustomLauncher
                 var handler = JELoginHandlerBuilder.BuildDefault();
                 var sessionObj = await handler.AuthenticateInteractively();
 
-                if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username)) return;
+                if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username))
+                {
+                    LauncherLog.Write("[AUTH] Вход Microsoft в мастере прерван");
+                    return;
+                }
 
                 _settings.Username = sessionObj.Username;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
+                LauncherLog.Write($"[AUTH] Мастер: вход Microsoft как {sessionObj.Username}");
 
                 SetupUsernameBox.Text = sessionObj.Username;
                 SetupUsernameBox.IsEnabled = false;
@@ -2352,6 +2390,7 @@ namespace CustomLauncher
             }
             catch (Exception ex)
             {
+                LauncherLog.Write($"[AUTH] Вход Microsoft в мастере не прошёл: {ex.Message}");
                 await ShowCustomDialog(Lang.F("Ошибка авторизации: {0}", ex.Message));
             }
         }
@@ -2381,6 +2420,7 @@ namespace CustomLauncher
             }
 
             AppSettings.Save(_settings);
+            LogSetup(Lang.F("Мастер завершён: папка {0}, аккаунт {1}, ник {2}", path, _settings.UserType, nick));
 
             TopButtons.Visibility = Visibility.Visible;
             UsernameBox.Text = nick; RamSlider.Value = 4096; SetupPathBox.Text = path; PathBox.Text = path;
@@ -2563,6 +2603,7 @@ namespace CustomLauncher
             Lang.Current = code;
             _settings.Language = code;
             AppSettings.Save(_settings);
+            LauncherLog.Write($"[UI] Язык интерфейса: {code}");
             if (_gameProcess == null)
                 GameDefaults.ApplyLanguage(_settings.GamePath, _settings.Language);
             FillColorPresets();
@@ -2728,7 +2769,7 @@ namespace CustomLauncher
         {
             try { var c = (Color)ColorConverter.ConvertFromString(hex);
                 AnimateColorResource("PrimaryColor", c, onStep: cur => { _bgPrimary = cur; UpdateBackdropTheme(); }); AnimateBrushResource("PrimaryBrush", c);
-                if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); PublishGameTheme(); }
+                if (save) { _settings.PrimaryColor = hex; AppSettings.Save(_settings); PublishGameTheme(); LauncherLog.Write($"[UI] Основной цвет: {hex}"); }
             } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyPrimaryColor: " + ex.Message); }
         }
 
@@ -2801,7 +2842,7 @@ namespace CustomLauncher
                 double lum = (0.299 * c.R + 0.587 * c.G + 0.114 * c.B) / 255.0;
                 var onAccent = lum > 0.6 ? Color.FromRgb(0x10, 0x0C, 0x18) : Colors.White;
                 AnimateBrushResource("OnAccentBrush", onAccent);
-                if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); PublishGameTheme(); }
+                if (save) { _settings.AccentColor = hex; AppSettings.Save(_settings); PublishGameTheme(); LauncherLog.Write($"[UI] Акцентный цвет: {hex}"); }
             } catch (Exception ex) { LauncherLog.Write("[ERR] ApplyAccentColor: " + ex.Message); }
         }
 
@@ -2821,7 +2862,13 @@ namespace CustomLauncher
             this.Resources["TitleBloomBlurRadius"] = 20 + 40 * k;
             this.Resources["TitleBloomOpacity"] = on ? 0.2 + 0.3 * k : 0.0;
 
-            if (save) { _settings.BloomEnabled = on; _settings.BloomStrength = str; AppSettings.Save(_settings); }
+            if (save)
+            {
+                _settings.BloomEnabled = on;
+                _settings.BloomStrength = str;
+                AppSettings.Save(_settings);
+                LauncherLog.Write($"[UI] Свечение: {(on ? "включено" : "выключено")}, сила {str:F0}");
+            }
             if (BloomStrengthSlider != null)
             {
                 BloomStrengthSlider.IsEnabled = on;
@@ -2858,8 +2905,10 @@ namespace CustomLauncher
         private async void BtnResetAllSettings_Click(object s, RoutedEventArgs e)
         {
             if (await ShowCustomDialog(Lang.T("Сбросить все?"), "Сброс", true) != true) return;
+            LauncherLog.Write("[UI] Сброс всех настроек лаунчера");
             _settings = new AppSettings(); AppSettings.Save(_settings);
-            try { string d = GetThemeDir(); if (Directory.Exists(d)) Directory.Delete(d, true); } catch { }
+            try { string d = GetThemeDir(); if (Directory.Exists(d)) Directory.Delete(d, true); }
+            catch (Exception error) { LauncherLog.Write($"[WARN] Папка темы не удалена: {error.Message}"); }
             MainWnd.Background = null; MainWnd.SetResourceReference(Control.BackgroundProperty, "PrimaryBrush"); Icon = null;
             CloseSettingsPanel();
             InitializeLauncherCore();
@@ -2946,7 +2995,9 @@ namespace CustomLauncher
         {
             if (_gameProcess != null)
             {
-                try { _gameProcess.Kill(entireProcessTree: true); } catch { }
+                LogPlay(Lang.T("Игра закрыта из лаунчера"));
+                try { _gameProcess.Kill(entireProcessTree: true); }
+                catch (Exception error) { LauncherLog.Write($"[WARN] Процесс игры не снят: {error.Message}"); }
                 _gameProcess = null;
                 SetPlayState("idle");
                 StatusText.Text = Lang.T("Готов");
@@ -2966,19 +3017,21 @@ namespace CustomLauncher
                 string dhServerDataPath = Path.Combine(_settings.GamePath, "Distant_Horizons_server_data");
                 if (Directory.Exists(dhServerDataPath))
                 {
-                    try { Directory.Delete(dhServerDataPath, true); } catch { }
+                    try { Directory.Delete(dhServerDataPath, true); }
+                    catch (Exception error) { LauncherLog.Write($"[WARN] Данные Distant Horizons не удалены: {error.Message}"); }
                 }
 
                 InitializeLauncher();
 
                 if (!ForgeInstall.Present(_settings.GamePath))
                 {
+                    LogLoader(Lang.T("Forge не установлен, ставлю заново"));
                     ForgeInstall.RemoveOtherProfiles(_settings.GamePath);
                     didInstall = true;
                     await InstallForgeSilent();
                 }
-                if (!_settings.IsModpackInstalled) { didInstall = true; await InstallModpack(true); }
-                else if (_needsModpackUpdate) { didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
+                if (!_settings.IsModpackInstalled) { LogPack(Lang.T("Сборка ставится с нуля")); didInstall = true; await InstallModpack(true); }
+                else if (_needsModpackUpdate) { LogPack(Lang.F("Сборка обновляется до {0}", _onlineModpackVer)); didInstall = true; await InstallModpack(true); _needsModpackUpdate = false; }
 
                 bool battlecraftAvailable = _onlineBattleCraftModVer != "0.0" && ReleaseVersion.IsValid(_onlineBattleCraftModVer);
                 if (battlecraftAvailable && (didInstall || _needsBattleCraftModUpdate || !BattleCraftModInstalled()))
@@ -2994,12 +3047,13 @@ namespace CustomLauncher
                 string? forgeProfile = await FindForgeProfile();
                 if (forgeProfile == null)
                 {
-                    Log(Lang.T("Профиль Forge не найден, лаунчер ставит его заново."));
+                    LogLoader(Lang.T("Профиль Forge не найден, лаунчер ставит его заново."));
                     await InstallForgeSilent();
                     forgeProfile = await FindForgeProfile();
                 }
                 if (forgeProfile == null)
                 {
+                    LauncherLog.Write("[ERR] Профиль Forge не появился и после установки");
                     await ShowCustomDialog(Lang.T("Не удалось установить Forge. Проверьте подключение к сети и попробуйте ещё раз."));
                     StatusText.Text = Lang.T("Готов");
                     return;
@@ -3014,7 +3068,7 @@ namespace CustomLauncher
                     try { sessionObj = await handler.AuthenticateSilently(); }
                     catch (Exception error)
                     {
-                        LauncherLog.Write($"[WARN] Тихий вход Microsoft не прошёл: {error.Message}");
+                        LauncherLog.Write($"[AUTH] Тихий вход Microsoft не прошёл: {error.Message}");
                     }
 
                     string? msaName = sessionObj is null ? null : (string?)sessionObj.Username;
@@ -3025,10 +3079,12 @@ namespace CustomLauncher
                         mSession.AccessToken = sessionObj.AccessToken;
                         mSession.UUID = sessionObj.UUID;
                         mSession.UserType = "msa";
+                        LauncherLog.Write($"[AUTH] Тихий вход Microsoft: {msaName}");
                         HideUpdateOverlay();
                     }
                     else
                     {
+                        LogAuth(Lang.T("Сессия Microsoft истекла, нужен вход заново"));
                         HideUpdateOverlay();
                         await ShowCustomDialog(Lang.T("Срок действия сессии истек. Пожалуйста, авторизуйтесь заново."));
                         SetProgress(0); SetPlayState("idle"); BtnPlay.IsEnabled = true; SetBusy(false);
@@ -3047,16 +3103,17 @@ namespace CustomLauncher
 
                 int managed = await ManagedConfig.ApplyAsync(_settings.GamePath, _httpClient);
                 if (managed > 0)
-                    Log(Lang.T("Настройки модов приведены к общим значениям:") + " " + managed);
+                    LogPack(Lang.T("Настройки модов приведены к общим значениям:") + " " + managed);
 
                 string java = FindJava();
                 if (!JavaRuntime.IsBundled(java))
                 {
-                    Log(Lang.T("Java сборки не найдена, лаунчер ставит её заново"));
+                    LogLoader(Lang.T("Java сборки не найдена, лаунчер ставит её заново"));
                     await DownloadAndInstallJava();
                     java = FindJava();
                     if (!JavaRuntime.IsBundled(java))
                     {
+                        LauncherLog.Write("[ERR] Java сборки не установилась, запуск отменён");
                         await ShowCustomDialog(
                             Lang.T("Java для игры не установилась, запуск невозможен. Откройте «Проверка системы» и посмотрите, что мешает."),
                             Lang.T("Ошибка запуска"));
@@ -3064,6 +3121,9 @@ namespace CustomLauncher
                         return;
                     }
                 }
+
+                LogPlay(Lang.F("Запуск: профиль {0}, память {1} МБ", forgeProfile, _settings.RamMb));
+                LauncherLog.Write($"[PLAY] Java {java}, аккаунт {_settings.UserType}, безопасные настройки Java: {(_settings.SafeJvm ? "да" : "нет")}");
 
                 var opt = new MLaunchOption { MaximumRamMb = _settings.RamMb, Session = mSession, JavaPath = java };
                 Process game = await KeepDownloading(() => _launcher.CreateProcessAsync(forgeProfile, opt).AsTask());
@@ -3080,6 +3140,7 @@ namespace CustomLauncher
                 game.Start();
                 game.BeginOutputReadLine();
                 game.BeginErrorReadLine();
+                LauncherLog.Write($"[PLAY] Процесс игры запущен, идентификатор {game.Id}");
                 DateTime started = DateTime.Now;
                 _logLines.Clear(); LogTerminalText.Text = "";
                 SetPlayState("running"); BtnPlay.IsEnabled = true; SetBusy(false);
@@ -3154,8 +3215,8 @@ namespace CustomLauncher
             if (optionsRefused) _settings.SafeJvm = true;
 
             AppSettings.Save(_settings);
-            LauncherLog.Write($"[SYS] Java отказалась стартовать, повтор с другими настройками: память {_settings.RamMb} МБ, безопасный режим {_settings.SafeJvm}");
-            Log(heapTooBig
+            LauncherLog.Write($"[PLAY] Java отказалась стартовать, повтор с другими настройками: память {_settings.RamMb} МБ, безопасный режим {_settings.SafeJvm}");
+            LogPlay(heapTooBig
                 ? Lang.F("Java не смогла занять {0} МБ под игру. Пробую ещё раз с меньшим объёмом.", _settings.RamMb)
                 : Lang.T("Java не приняла настройки запуска сборки. Пробую ещё раз с безопасными настройками."));
 
@@ -3198,7 +3259,7 @@ namespace CustomLauncher
             _settings.RepairGameFiles = true;
             AppSettings.Save(_settings);
 
-            Log(Lang.F("Повреждённых файлов после обрыва загрузки: {0}. Перекачиваю их и запускаю снова.", broken.Count));
+            LogPlay(Lang.F("Повреждённых файлов после обрыва загрузки: {0}. Перекачиваю их и запускаю снова.", broken.Count));
             BrokenJars.Remove(broken);
             SetBusy(true);
 
@@ -3234,7 +3295,7 @@ namespace CustomLauncher
 
             _settings.RepairGameFiles = false;
             AppSettings.Save(_settings);
-            LauncherLog.Write("[SYS] Файлы игры в порядке, сверка контрольных сумм снова выключена");
+            LauncherLog.Write("[PLAY] Файлы игры в порядке, сверка контрольных сумм снова выключена");
         }
 
         private static readonly TimeSpan SuspiciouslyShortSession = TimeSpan.FromSeconds(40);
@@ -3247,7 +3308,7 @@ namespace CustomLauncher
             bool diedOnLoading = !crashed && ran < SuspiciouslyShortSession
                 && !GameLogTail.ReachedMenu(_settings.GamePath);
 
-            LauncherLog.Write($"[SYS] Игра завершилась с кодом {exitCode} через {ran.TotalSeconds:F0} с");
+            LauncherLog.Write($"[PLAY] Игра завершилась с кодом {exitCode} через {ran.TotalSeconds:F0} с");
             if (!crashed && !diedOnLoading) return;
 
             string report = GameLogTail.NewestCrashReport(_settings.GamePath, TimeSpan.FromMinutes(5));
@@ -3268,7 +3329,7 @@ namespace CustomLauncher
             if (File.Exists(GameLogTail.LatestLogPath(_settings.GamePath)))
                 message += "\n" + Lang.F("Полный лог: {0}", GameLogTail.LatestLogPath(_settings.GamePath));
 
-            Log(message.Replace("\n", " "));
+            LogPlay(message.Replace("\n", " "));
             await ShowCustomDialog(message, Lang.T("Игра завершилась с ошибкой"));
         }
 
@@ -3282,7 +3343,7 @@ namespace CustomLauncher
             if (!GameDefaults.HasOptions(_settings.GamePath))
             {
                 GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
-                Log(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
+                LogPlay(Lang.T("Настройки игры приведены к рекомендованным сборкой"));
             }
 
             GameDefaults.ApplyLanguage(_settings.GamePath, _settings.Language);
@@ -3322,14 +3383,14 @@ namespace CustomLauncher
             if (string.IsNullOrEmpty(p.StartInfo.Arguments)) return;
             if (_settings.SafeJvm)
             {
-                Log(Lang.T("Сборщик мусора: по умолчанию (безопасный режим Java)"));
+                LogPlay(Lang.T("Сборщик мусора: по умолчанию (безопасный режим Java)"));
                 return;
             }
 
             bool preferShenandoah = _settings.RamMb >= ShenandoahHeapThresholdMb;
             string a = preferShenandoah ? StripDefaultCollectorArgs(p.StartInfo.Arguments) : p.StartInfo.Arguments;
             string jvm = string.Join(" ", preferShenandoah ? _shenandoahArgs.Concat(_jvmArgs) : _jvmArgs);
-            Log(Lang.T(preferShenandoah ? "Сборщик мусора: Shenandoah" : "Сборщик мусора: G1"));
+            LogPlay(Lang.T(preferShenandoah ? "Сборщик мусора: Shenandoah" : "Сборщик мусора: G1"));
             int i = a.IndexOf(" -cp "); if (i < 0) i = a.IndexOf(" -classpath ");
             p.StartInfo.Arguments = i > 0 ? a.Insert(i, " " + jvm) : jvm + " " + a;
         }
@@ -3377,7 +3438,7 @@ namespace CustomLauncher
                 }
                 catch (Exception error) when (attempt < DownloadAttempts && NetworkTrouble.Looks(error))
                 {
-                    LauncherLog.Write($"[WARN] Загрузка оборвалась на попытке {attempt}: {NetworkTrouble.Deepest(error).Message}");
+                    LauncherLog.Write($"[NET] Загрузка оборвалась на попытке {attempt}: {NetworkTrouble.Deepest(error).Message}");
                     NarrowDownloadLanes();
                     Log(Lang.F("Соединение оборвалось, продолжаю с места обрыва: попытка {0} из {1}, потоков загрузки {2}",
                         attempt + 1, DownloadAttempts, _settings.DownloadLanes));
@@ -3401,7 +3462,7 @@ namespace CustomLauncher
 
             _downloadLanesChanged = false;
             AppSettings.Save(_settings);
-            LauncherLog.Write($"[SYS] Число потоков загрузки закреплено: {_settings.DownloadLanes}");
+            LauncherLog.Write($"[NET] Число потоков загрузки закреплено: {_settings.DownloadLanes}");
         }
 
         private bool _downloadLanesChanged;
@@ -3420,10 +3481,12 @@ namespace CustomLauncher
             {
                 SetProgress(0);
                 StatusText.Text = Lang.T("Загрузка файлов Minecraft...");
+                LogLoader(Lang.F("Загрузка файлов Minecraft {0}", MC));
                 await KeepDownloading(() => _launcher.InstallAsync(MC).AsTask());
                 EnsureProfiles();
 
                 StatusText.Text = Lang.T("Загрузка установщика Forge...");
+                LogLoader(Lang.F("Установка Forge {0}", FORGE));
                 string jar = Path.Combine(Path.GetTempPath(), "forge_installer.jar");
                 if (File.Exists(jar)) File.Delete(jar);
                 var forgeDl = new FileDownloader();
@@ -3432,7 +3495,7 @@ namespace CustomLauncher
                 await forgeDl.DownloadFileAsync(FORGE_JAR_URL, jar);
 
                 StatusText.Text = Lang.T("Установка библиотек Forge...");
-                Log(Lang.T("Этот этап займёт от 1 до 5 минут, не закрывайте лаунчер."));
+                LogLoader(Lang.T("Этот этап займёт от 1 до 5 минут, не закрывайте лаунчер."));
                 ShowForgeWarning(true);
                 await RunForgeInstaller(jar);
                 ShowForgeWarning(false);
@@ -3440,7 +3503,7 @@ namespace CustomLauncher
                 await _launcher.GetAllVersionsAsync();
                 try { File.Delete(jar); } catch { }
                 CleanForgeLog();
-                Log(Lang.T("Forge установлен."));
+                LogLoader(Lang.T("Forge установлен."));
             }
             finally { ShowForgeWarning(false); GameProgressBar.IsIndeterminate = false; }
         }
@@ -3622,7 +3685,7 @@ namespace CustomLauncher
                 try { if (File.Exists(path)) saved[name] = File.ReadAllBytes(path); }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 {
-                    LauncherLog.Write($"[WARN] Настройки {name} не сняты перед обновлением: {error.Message}");
+                    LauncherLog.Write($"[PACK] Настройки {name} не сняты перед обновлением: {error.Message}");
                 }
             }
 
@@ -3641,7 +3704,7 @@ namespace CustomLauncher
                 }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 {
-                    LauncherLog.Write($"[ERROR] Настройки {name} не вернулись после обновления: {error.Message}");
+                    LauncherLog.Write($"[ERR] Настройки {name} не вернулись после обновления: {error.Message}");
                     Log(Lang.F("Настройки {0} не удалось вернуть после обновления: {1}", name, error.Message));
                 }
             }
@@ -3655,13 +3718,14 @@ namespace CustomLauncher
             if (clean)
             {
                 StatusText.Text = Lang.T("Очистка старых файлов...");
+                LauncherLog.Write("[PACK] Очистка папок сборки перед установкой");
                 foreach (var dir in ModpackDirs)
                 {
                     string p = Path.Combine(_settings.GamePath, dir);
                     try { if (Directory.Exists(p)) Directory.Delete(p, true); }
                     catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                     {
-                        LauncherLog.Write($"[ERROR] Папка {dir} не очищена перед установкой: {error.Message}");
+                        LauncherLog.Write($"[ERR] Папка {dir} не очищена перед установкой: {error.Message}");
                         Log(Lang.F("Не удалось очистить папку {0}: {1}. Закройте игру и попробуйте снова.", dir, error.Message));
                     }
                 }
@@ -3682,9 +3746,10 @@ namespace CustomLauncher
                     await Task.Run(() => { ZipFile.ExtractToDirectory(zip, _settings.GamePath, true); try { File.Delete(zip); } catch { } });
                     RestorePlayerOptions(playerOptions);
                     VerifyExtractedModpack();
-                    Log(Lang.T("Распаковка завершена!"));
+                    LogPack(Lang.T("Распаковка завершена!"));
                     _settings.IsModpackInstalled = true;
                     _settings.ModpackVersion = _onlineModpackVer != "0.0" ? _onlineModpackVer : "1.0";
+                    LauncherLog.Write($"[PACK] Сборка установлена, версия {_settings.ModpackVersion}");
                     _discordManager.ModpackVersion = _settings.ModpackVersion;
                     if (_gameProcess == null) _discordManager.SetMenuState();
                     AppSettings.Save(_settings);
@@ -3692,6 +3757,7 @@ namespace CustomLauncher
                 }
                 catch (Exception ex)
                 {
+                    LauncherLog.Write($"[PACK] Загрузка сборки оборвалась: {ex.Message}");
                     try { if (File.Exists(zip)) File.Delete(zip); } catch { }
                     bool retry = await ShowCustomDialog(
                         Lang.F("Загрузка клиента оборвалась.\nОшибка: {0}\nПродолжить скачивание?", ex.Message),
@@ -3699,7 +3765,7 @@ namespace CustomLauncher
 
                     if (!retry)
                     {
-                        Log(Lang.T("Установка отменена. Очистка файлов..."));
+                        LogPack(Lang.T("Установка отменена. Очистка файлов..."));
                         foreach (var dir in ModpackDirs)
                         {
                             string p = Path.Combine(_settings.GamePath, dir);
@@ -3736,7 +3802,7 @@ namespace CustomLauncher
             if (jars == 0)
                 throw new IOException(Lang.T("После распаковки в папке mods нет ни одного мода. Проверьте антивирус и свободное место."));
 
-            LauncherLog.Write($"[SYS] После распаковки модов в папке: {jars}");
+            LauncherLog.Write($"[PACK] После распаковки модов в папке: {jars}");
         }
 
         private void VerifyBattleCraftJar(string path)
@@ -3746,7 +3812,7 @@ namespace CustomLauncher
             if (!file.Exists || file.Length == 0)
                 throw new IOException(Lang.F("Мод BattleCraft не сохранился: {0}. Скорее всего файл удалил антивирус.", path));
 
-            LauncherLog.Write($"[SYS] Мод BattleCraft установлен: {file.Name}, {file.Length} байт");
+            LauncherLog.Write($"[PACK] Мод BattleCraft установлен: {file.Name}, {file.Length} байт");
         }
 
         private async Task InstallBattleCraftMod()
@@ -3764,7 +3830,7 @@ namespace CustomLauncher
                     try { File.Delete(f); }
                     catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                     {
-                        LauncherLog.Write($"[ERROR] Старый мод {Path.GetFileName(f)} не удалён: {error.Message}");
+                        LauncherLog.Write($"[ERR] Старый мод {Path.GetFileName(f)} не удалён: {error.Message}");
                         Log(Lang.F("Старый мод {0} занят и не удалён: {1}. Две версии мода вместе игру не запустят.", Path.GetFileName(f), error.Message));
                     }
                 }
@@ -3776,6 +3842,7 @@ namespace CustomLauncher
 
             string url = BattleCraftJarUrl(ver);
             string dest = Path.Combine(modsDir, Path.GetFileName(new Uri(url).AbsolutePath));
+            LogPack(Lang.F("Мод BattleCraft {0}", ReleaseVersion.Display(ver)));
 
             bool success = false;
             while (!success)
@@ -4128,6 +4195,7 @@ namespace CustomLauncher
             TweenOpacity(BtnPlay, 0, 1, 600, OutQuart, 500);
             TweenOpacity(BtnGitHub, 0, 0.7, 600, OutQuart, 400);
 
+            LauncherLog.Write($"[SYS] Главный экран, игрок {_settings.Username}");
             InitializeLauncher();
             EnsureGameDefaults();
             RunStartupChecks();
@@ -4162,6 +4230,7 @@ namespace CustomLauncher
 
                 if (sessionObj == null || string.IsNullOrEmpty(sessionObj.Username))
                 {
+                    LogAuth(Lang.T("Вход через Microsoft не выполнен"));
                     await AuthOverlayFail(Lang.T("Вход не выполнен"), Lang.T("Попробуйте ещё раз"));
                     return;
                 }
@@ -4169,11 +4238,13 @@ namespace CustomLauncher
                 _settings.Username = sessionObj.Username;
                 _settings.UserType = "msa";
                 AppSettings.Save(_settings);
+                LogAuth(Lang.F("Вход через Microsoft: {0}", sessionObj.Username));
                 HideUpdateOverlay();
                 SwitchToMain();
             }
-            catch
+            catch (Exception error)
             {
+                LauncherLog.Write($"[AUTH] Вход через Microsoft сорвался: {error.Message}");
                 await AuthOverlayFail(Lang.T("Ошибка авторизации"), Lang.T("Попробуйте ещё раз"));
             }
         }
@@ -4182,10 +4253,11 @@ namespace CustomLauncher
         {
             var n = UsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(n)) { await ShowCustomDialog(Lang.T("Введите никнейм!")); return; }
-            if (!Nickname.IsValid(n)) { await ShowCustomDialog(Lang.T(Nickname.RuleMessage)); return; }
+            if (!Nickname.IsValid(n)) { LauncherLog.Write($"[AUTH] Никнейм отклонён правилами: {n}"); await ShowCustomDialog(Lang.T(Nickname.RuleMessage)); return; }
             _settings.Username = n;
             _settings.UserType = "offline";
             AppSettings.Save(_settings);
+            LogAuth(Lang.F("Вход без лицензии: {0}", n));
             SwitchToMain();
         }
 
@@ -4208,6 +4280,29 @@ namespace CustomLauncher
         }
         private void BtnMinimize_Click(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+        private bool _uiHidden;
+
+        private void BtnHideUi_Click(object s, RoutedEventArgs e)
+        {
+            _uiHidden = !_uiHidden;
+            LauncherLog.Write(_uiHidden ? "[UI] Интерфейс спрятан, виден только фон" : "[UI] Интерфейс возвращён");
+
+            FrameworkElement[] layers = { MainPanel, LoginPanel, SetupPanel };
+            foreach (FrameworkElement layer in layers)
+            {
+                if (layer.Visibility != Visibility.Visible) continue;
+                TweenOpacity(layer, layer.Opacity, _uiHidden ? 0 : 1, 320, OutCubic);
+            }
+
+            foreach (FrameworkElement layer in layers) layer.IsHitTestVisible = !_uiHidden;
+
+            HideUiIcon.Data = (Geometry)FindResource(_uiHidden ? "IconEyeOff" : "IconEye");
+            string hint = Lang.T(_uiHidden ? "Вернуть интерфейс" : "Спрятать интерфейс");
+            BtnHideUi.ToolTip = hint;
+            System.Windows.Automation.AutomationProperties.SetName(BtnHideUi, hint);
+            TopLeftTitleText.Opacity = _uiHidden ? 0.35 : 1;
+        }
+
         private void SetProgress(double v)
         {
             if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => SetProgress(v)); return; }
@@ -4229,6 +4324,7 @@ namespace CustomLauncher
 
         private void BtnSettings_Click(object s, RoutedEventArgs e)
         {
+            LauncherLog.Write("[UI] Открыты настройки лаунчера");
             SettingsPanel.Visibility = Visibility.Visible; _scrollTarget = -1;
             if (_scrolling) { _scrolling = false; CompositionTarget.Rendering -= ScrollTick; }
             SettingsScrollViewer?.ScrollToVerticalOffset(0);
@@ -4276,8 +4372,10 @@ namespace CustomLauncher
                 _settings.ModpackVersion = "0.0";
                 _settings.GamePath = np;
                 PathBox.Text = np;
+                LauncherLog.Write($"[SETUP] Папка игры сменилась на {np}, содержимое {(wipe ? "стёрто" : "оставлено")}");
             }
             AppSettings.Save(_settings);
+            LauncherLog.Write($"[UI] Настройки закрыты: память {_settings.RamMb} МБ, папка {_settings.GamePath}");
             if (_settings.HasGamePath)
             {
                 InitializeLauncher();
@@ -4317,6 +4415,7 @@ namespace CustomLauncher
                 return;
             }
 
+            LauncherLog.Write("[UI] Открыты настройки игры");
             GamePanel.Visibility = Visibility.Visible;
             GameScrollViewer?.ScrollToVerticalOffset(0);
 
@@ -4534,6 +4633,7 @@ namespace CustomLauncher
             if (s is not FrameworkElement element || element.DataContext is not CheckRow row) return;
 
             _checkActionRunning = true;
+            LauncherLog.Write($"[SYS] Проверка системы, действие {row.Source.Fix} по пункту «{row.Title}»");
             try
             {
                 switch (row.Source.Fix)
@@ -4746,11 +4846,13 @@ namespace CustomLauncher
             }
 
             GameDefaults.Write(_settings.GamePath, values);
+            LauncherLog.Write($"[UI] Настройки игры сохранены: {values.Count} значений");
         }
 
         private void BtnRecommendedSettings_Click(object s, RoutedEventArgs e)
         {
             StopListening();
+            LauncherLog.Write("[UI] Настройки игры возвращены к рекомендованным сборкой");
             GameDefaults.ApplyAll(_settings.GamePath, _refreshHz);
             LoadGameSettings();
         }
@@ -4947,11 +5049,13 @@ namespace CustomLauncher
                 string serverModpackVerStr = results[2].Trim();
                 string serverMapVerStr = results[3].Trim();
 
+                LauncherLog.Write($"[UPD] Версии в сети: лаунчер {launcherVerStr}, сборка {modpackVerStr}, моды сервера {serverModpackVerStr}, карта {serverMapVerStr}");
+
                 if (ReleaseVersion.IsValid(modpackVerStr))
                 {
                     _onlineModpackVer = modpackVerStr;
-                    if (!_settings.IsModpackInstalled) { BtnPlay.Content = Lang.T("УСТАНОВИТЬ"); SetButtonIcon(BtnPlay, "IconDownload"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
-                    else if (ReleaseVersion.IsNewer(modpackVerStr, _settings.ModpackVersion)) { _needsModpackUpdate = true; BtnPlay.Content = Lang.T("ОБНОВИТЬ"); SetButtonIcon(BtnPlay, "IconDownload"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    if (!_settings.IsModpackInstalled) { LogUpdate(Lang.T("Сборка не установлена")); BtnPlay.Content = Lang.T("УСТАНОВИТЬ"); SetButtonIcon(BtnPlay, "IconDownload"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
+                    else if (ReleaseVersion.IsNewer(modpackVerStr, _settings.ModpackVersion)) { _needsModpackUpdate = true; LogUpdate(Lang.F("Сборка обновилась: {0} против установленной {1}", modpackVerStr, _settings.ModpackVersion)); BtnPlay.Content = Lang.T("ОБНОВИТЬ"); SetButtonIcon(BtnPlay, "IconDownload"); BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30)); }
                     else { _needsModpackUpdate = false; SetPlayState("idle"); }
                 }
 
@@ -4969,25 +5073,31 @@ namespace CustomLauncher
                         _onlineBattleCraftModVer = bcVerStr;
                         _needsBattleCraftModUpdate = _settings.IsModpackInstalled
                             && ReleaseVersion.IsNewer(bcVerStr, _settings.BattleCraftModVersion);
+                        LauncherLog.Write($"[UPD] Мод BattleCraft в сети {bcVerStr}, установлен {_settings.BattleCraftModVersion}");
                         if (_settings.IsModpackInstalled && _needsBattleCraftModUpdate && !_needsModpackUpdate)
                         {
+                            LogUpdate(Lang.F("Мод BattleCraft обновился до {0}", ReleaseVersion.Display(bcVerStr)));
                             BtnPlay.Content = Lang.T("ОБНОВИТЬ");
                             SetButtonIcon(BtnPlay, "IconDownload");
                             BtnPlay.Background = new SolidColorBrush(Color.FromRgb(220, 150, 30));
                         }
                     }
                 }
-                catch { }
+                catch (Exception error) { LauncherLog.Write($"[WARN] Версия мода BattleCraft не проверена: {error.Message}"); }
 
                 RecomputeServerUpdateFlags();
                 UpdateServerButtons();
                 StatusText.Text = Lang.F("Модпак v{0}", _settings.ModpackVersion);
-                if (ReleaseVersion.IsNewer(launcherVerStr, VER)
-                    && await ShowCustomDialog(Lang.F("Обновить лаунчер до {0}?", ReleaseVersion.Display(launcherVerStr)), "Обновление", true)) await UpdateLauncher();
+                if (ReleaseVersion.IsNewer(launcherVerStr, VER))
+                {
+                    LogUpdate(Lang.F("Доступна версия лаунчера {0}", ReleaseVersion.Display(launcherVerStr)));
+                    if (await ShowCustomDialog(Lang.F("Обновить лаунчер до {0}?", ReleaseVersion.Display(launcherVerStr)), "Обновление", true)) await UpdateLauncher();
+                    else LogUpdate(Lang.T("Обновление лаунчера отложено игроком"));
+                }
             }
             catch (Exception error)
             {
-                LauncherLog.Write($"[ERROR] Проверка версий не прошла: {error}");
+                LauncherLog.Write($"[UPD] Проверка версий не прошла: {error}");
                 LogError(NetworkTrouble.Looks(error)
                     ? Lang.F("Сеть недоступна: {0}", NetworkTrouble.Deepest(error).Message)
                     : Lang.F("Ошибка сети: {0}", error.Message));
@@ -5003,6 +5113,7 @@ namespace CustomLauncher
                 string dir = Path.GetDirectoryName(cur) ?? AppDomain.CurrentDomain.BaseDirectory;
                 string tmp = Path.Combine(dir, UpdateResidue.StagedUpdateName);
 
+                LogUpdate(Lang.T("Скачивание новой версии лаунчера"));
                 var dl = new FileDownloader();
                 dl.LogMessage += LogNet;
                 dl.ProgressChanged += p => Dispatcher.BeginInvoke(() => SetUpdateProgress(p));
@@ -5018,12 +5129,14 @@ namespace CustomLauncher
                 {
                     File.Move(tmp, cur);
                 }
-                catch
+                catch (Exception error)
                 {
+                    LauncherLog.Write($"[UPD] Подмена файла не прошла, возвращаю прежний: {error.Message}");
                     File.Move(old, cur);
                     throw;
                 }
 
+                LogUpdate(Lang.T("Новая версия установлена, перезапуск"));
                 Process.Start(new ProcessStartInfo(cur)
                 {
                     UseShellExecute = true,
@@ -5031,7 +5144,12 @@ namespace CustomLauncher
                 });
                 Application.Current.Shutdown();
             }
-            catch { HideUpdateOverlay(); LogError(Lang.T("Ошибка обновления")); }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[UPD] Обновление лаунчера не прошло: {error}");
+                HideUpdateOverlay();
+                LogError(Lang.T("Ошибка обновления"));
+            }
         }
 
         private void ShowUpdateOverlay() => ShowSpinnerOverlay(Lang.T("Обновление лаунчера"), Lang.T("Скачивание новой версии…"), true);
@@ -5093,7 +5211,17 @@ namespace CustomLauncher
         }
 
         private void BtnChangeIcon_Click(object s, RoutedEventArgs e)
-        { var d = new OpenFileDialog { Filter = "Icon|*.ico" }; if (d.ShowDialog() == true) { try { File.Copy(d.FileName, Path.Combine(GetThemeDir(), "icon.ico"), true); ApplyCustomTheme(); } catch { } } }
+        {
+            var d = new OpenFileDialog { Filter = "Icon|*.ico" };
+            if (d.ShowDialog() != true) return;
+            try
+            {
+                File.Copy(d.FileName, Path.Combine(GetThemeDir(), "icon.ico"), true);
+                ApplyCustomTheme();
+                LauncherLog.Write($"[UI] Иконка заменена: {d.FileName}");
+            }
+            catch (Exception error) { LogError(Lang.F("Иконка не заменена: {0}", error.Message)); }
+        }
 
         private void BloomEnabledCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) ApplyBloom(BloomEnabledCheck.IsChecked == true, BloomStrengthSlider.Value); }
         private void BloomStrengthSlider_ValueChanged(object s, RoutedPropertyChangedEventArgs<double> e) { if (IsLoaded) ApplyBloom(BloomEnabledCheck.IsChecked == true, e.NewValue); }
@@ -5832,6 +5960,7 @@ namespace CustomLauncher
             _settings.Servers.Add(newConfig);
             _settings.LastActiveServerName = serverName;
             AppSettings.Save(_settings);
+            LogServer(Lang.F("Создан сервер «{0}» в {1}", serverName, defaultServerBasePath));
 
             LoadServerList();
         }
@@ -5861,7 +5990,8 @@ namespace CustomLauncher
 
             if (!string.IsNullOrWhiteSpace(serverBasePath) && Directory.Exists(serverBasePath))
             {
-                try { Directory.Delete(serverBasePath, true); } catch { }
+                try { Directory.Delete(serverBasePath, true); LogServer(Lang.F("Сервер удалён вместе с папкой {0}", serverBasePath)); }
+                catch (Exception error) { LogError(Lang.F("Папка сервера {0} не удалена: {1}", serverBasePath, error.Message)); }
             }
 
             LoadServerList();
@@ -5888,6 +6018,7 @@ namespace CustomLauncher
             if (!await EnsureFreeSpace(_activeServerConfig.ServerPath, DiskSpace.ServerRequiredBytes)) return;
 
             SetServerBusy(true, Lang.T("Установка сервера..."));
+            LogServer(Lang.F("Установка сервера «{0}» в {1}", _activeServerConfig.Name, _activeServerConfig.ServerPath));
             string javaPath = FindJava();
             var installer = new ServerInstaller();
             installer.StatusChanged += OnInstallerStatusChanged;
@@ -5938,6 +6069,7 @@ namespace CustomLauncher
                 }
                 catch (Exception ex)
                 {
+                    LauncherLog.Write($"[SERVER] Установка оборвалась на этапе {currentStage + 1}: {ex.Message}");
                     AppendConsoleOutput(Lang.F("[ERR] Ошибка на этапе {0}: {1}", currentStage + 1, ex.Message));
                     bool retry = await ShowCustomDialog(
                         Lang.F("Загрузка оборвалась на этапе {0}.\nОшибка: {1}\nПродолжить скачивание этого этапа?", currentStage + 1, ex.Message),
@@ -5951,9 +6083,12 @@ namespace CustomLauncher
                             FinishServerInstall();
                             return;
                         }
+                        LogServer(Lang.T("Установка сервера отменена, файлы удаляются"));
                         AppendConsoleOutput(Lang.T("[SYS] Установка отменена. Удаление файлов..."));
-                        try { Directory.Delete(serverDir, true); } catch { }
-                        try { Directory.Delete(backupDir, true); } catch { }
+                        try { Directory.Delete(serverDir, true); }
+                        catch (Exception error) { LauncherLog.Write($"[SERVER] Папка server не удалена: {error.Message}"); }
+                        try { Directory.Delete(backupDir, true); }
+                        catch (Exception error) { LauncherLog.Write($"[SERVER] Папка backup не удалена: {error.Message}"); }
                         SetServerBusy(false);
                         return;
                     }
@@ -5972,6 +6107,7 @@ namespace CustomLauncher
             AppSettings.Save(_settings);
 
             UpdateServerButtons();
+            LogServer(Lang.F("Сервер установлен: моды {0}, карта {1}, мод BattleCraft {2}", _activeServerConfig.ModpackVersion, _activeServerConfig.MapVersion, _activeServerConfig.BattleCraftModVersion));
             AppendConsoleOutput(Lang.T("[SYS] Сервер установлен."));
             SetServerBusy(false);
         }
@@ -5985,6 +6121,7 @@ namespace CustomLauncher
             }
 
             ServerStatusText.Text = statusMessage;
+            LauncherLog.Write($"[SERVER] {statusMessage}");
             AppendConsoleOutput($"[SYS] {statusMessage}");
         }
 
@@ -6014,10 +6151,12 @@ namespace CustomLauncher
                 }
 
                 RecomputeServerUpdateFlags();
+                LogServer(Lang.F("Моды сервера обновлены до {0}", _activeServerConfig.ModpackVersion));
                 AppendConsoleOutput(Lang.T("[SYS] Моды сервера обновлены."));
             }
             catch (Exception ex)
             {
+                LauncherLog.Write($"[SERVER] Моды сервера не обновлены: {ex.Message}");
                 AppendConsoleOutput($"[ERR] {ex.Message}");
                 await ShowCustomDialog(Lang.F("Ошибка обновления модов: {0}", ex.Message));
             }
@@ -6069,10 +6208,12 @@ namespace CustomLauncher
                         _activeServerConfig.MapVersion = _onlineServerMapVer;
                         RecomputeServerUpdateFlags();
                         AppSettings.Save(_settings);
+                        LogServer(Lang.F("Карта сервера обновлена до {0}", _onlineServerMapVer));
                         AppendConsoleOutput(Lang.T("[SYS] Карта сервера обновлена."));
                     }
                     catch (Exception ex)
                     {
+                        LauncherLog.Write($"[SERVER] Карта сервера не обновлена: {ex.Message}");
                         AppendConsoleOutput(Lang.F("[ERR] Ошибка обновления карты: {0}", ex.Message));
                         SetServerBusy(false);
                         return;
@@ -6095,6 +6236,7 @@ namespace CustomLauncher
                 EnsureServerManagerInitialized();
 
                 ServerConsoleOutput.Text = "";
+                LogServer(Lang.F("Запуск сервера «{0}», порт {1}, память {2} МБ", _activeServerConfig.Name, _activeServerConfig.ServerPort, _activeServerConfig.ServerRamMb));
                 AppendConsoleOutput(Lang.T("[SYS] Запуск сервера..."));
                 UpdateServerButtons();
 
@@ -6103,6 +6245,7 @@ namespace CustomLauncher
             }
             catch (Exception ex)
             {
+                LauncherLog.Write($"[SERVER] Сервер не запустился: {ex.Message}");
                 AppendConsoleOutput($"[ERR] {ex.Message}");
             }
             finally
@@ -6116,11 +6259,13 @@ namespace CustomLauncher
             if (_serverManager == null) return;
             try
             {
+                LogServer(Lang.T("Остановка сервера"));
                 AppendConsoleOutput(Lang.T("[SYS] Остановка сервера..."));
                 await _serverManager.StopAsync();
             }
             catch (Exception ex)
             {
+                LauncherLog.Write($"[SERVER] Остановка не прошла: {ex.Message}");
                 AppendConsoleOutput(Lang.F("[ERR] Ошибка при остановке: {0}", ex.Message));
             }
         }
@@ -6130,12 +6275,14 @@ namespace CustomLauncher
             if (_serverManager == null || _activeServerConfig == null) return;
             try
             {
+                LogServer(Lang.T("Перезапуск сервера"));
                 AppendConsoleOutput(Lang.T("[SYS] Перезапуск сервера..."));
                 string javaPath = FindJava();
                 await _serverManager.RestartAsync(_activeServerConfig, javaPath);
             }
             catch (Exception ex)
             {
+                LauncherLog.Write($"[SERVER] Перезапуск не прошёл: {ex.Message}");
                 AppendConsoleOutput(Lang.F("[ERR] Ошибка при перезапуске: {0}", ex.Message));
             }
         }
@@ -6186,10 +6333,12 @@ namespace CustomLauncher
                     }
                     ServerInstaller.CopyDirectoryContents(backupDir, serverDir);
                 });
+                LogServer(Lang.F("Мир восстановлен из бэкапа {0}", backupDir));
                 AppendConsoleOutput(Lang.T("[SYS] Мир восстановлен из локального бэкапа."));
             }
             catch (Exception ex)
             {
+                LauncherLog.Write($"[SERVER] Мир не восстановлен: {ex.Message}");
                 await ShowCustomDialog(Lang.F("Ошибка восстановления: {0}", ex.Message));
             }
             finally
@@ -6244,6 +6393,7 @@ namespace CustomLauncher
             }
 
             if (_serverManager == null) return;
+            LauncherLog.Write($"[SERVER] Команда в консоль: {command}");
             _serverManager.SendCommand(command);
         }
 
