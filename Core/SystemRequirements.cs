@@ -7,7 +7,7 @@ namespace CustomLauncher.Core
 {
     public enum RequirementState { Ok, Warning, Missing }
 
-    public enum RequirementFix { None, InstallVcRedist, InstallWebView2, OpenUrl, InstallJava, ReinstallModpack, OpenGameFolder }
+    public enum RequirementFix { None, InstallVcRedist, InstallWebView2, OpenUrl, InstallJava, ReinstallModpack, OpenGameFolder, RelocateGameFolder }
 
     public sealed class RequirementCheck
     {
@@ -34,7 +34,6 @@ namespace CustomLauncher.Core
         public const long MinimalWindowsBuild = 14393;
         public const long TempSpaceBytes = 2L * 1024 * 1024 * 1024;
         public const long MinimalMemoryBytes = 6L * 1024 * 1024 * 1024;
-        public const int LongPathLimit = 90;
 
         public static List<RequirementCheck> Inspect(RequirementContext context)
         {
@@ -253,18 +252,19 @@ namespace CustomLauncher.Core
         private static RequirementCheck CheckGamePathShape(string gamePath)
         {
             string title = Lang.T("Путь к сборке");
-            var complaints = new List<string>();
+            List<string> problems = GamePathRules.Problems(gamePath);
 
-            if (gamePath.Any(symbol => symbol > 127))
-                complaints.Add(Lang.T("в пути есть буквы не латиницей - часть модов и Java спотыкаются об это"));
+            if (problems.Count == 0) return Ok(title, "game-path", gamePath);
 
-            if (gamePath.Length > LongPathLimit)
-                complaints.Add(Lang.F("путь длиннее {0} символов - распаковка модов обрывается на длинных именах", LongPathLimit));
-
-            if (complaints.Count == 0) return Ok(title, "game-path", gamePath);
-
-            return Warning(title, "game-path",
-                gamePath + "\n" + Lang.T("Лучше перенести сборку, например в C:\\BattleCraft.") + "\n" + string.Join("; ", complaints));
+            return new RequirementCheck
+            {
+                Id = "game-path",
+                Title = title,
+                Detail = gamePath + "\n" + string.Join("; ", problems) + "\n" + Lang.T(GamePathRules.AllowedMessage),
+                State = RequirementState.Missing,
+                Fix = RequirementFix.RelocateGameFolder,
+                FixLabel = Lang.T("Перенести")
+            };
         }
 
         private static RequirementCheck CheckTempSpace()

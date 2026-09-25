@@ -2338,8 +2338,106 @@ namespace CustomLauncher
             TweenOpacity(SetupPanel, 0, 1, 800, OutQuart, 200);
         }
 
-        private void BtnSetupSelectFolder_Click(object s, RoutedEventArgs e)
-        { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) SetupPathBox.Text = ResolveGamePath(d.FolderName); }
+        private async void BtnSetupSelectFolder_Click(object s, RoutedEventArgs e)
+        {
+            var d = new OpenFolderDialog();
+            if (d.ShowDialog() != true) return;
+            string chosen = ResolveGamePath(d.FolderName);
+            SetupPathBox.Text = await ChooseSafeGamePath(chosen) ?? chosen;
+        }
+
+        private async Task<string?> ChooseSafeGamePath(string candidate)
+        {
+            List<string> problems = GamePathRules.Problems(candidate);
+            if (problems.Count == 0) return candidate;
+
+            LogSetup(Lang.F("Путь {0} отклонён: {1}", candidate, string.Join("; ", problems)));
+            string? suggestion = GamePathRules.SuggestFolder(candidate);
+            if (suggestion == null)
+            {
+                await ShowCustomDialog(DescribePathProblems(candidate, problems) + "\n\n" + Lang.T("Подходящий диск не найден. Выберите папку вида C:\\BattleCraft вручную."), "Путь к игре");
+                return null;
+            }
+
+            bool accepted = await ShowCustomDialog(DescribePathProblems(candidate, problems) + "\n\n" + Lang.F("Поставить игру в {0}?", suggestion), "Путь к игре", true);
+            LogSetup(accepted ? Lang.F("Вместо него выбрана папка {0}", suggestion) : Lang.T("Замена пути отклонена, нужен другой путь"));
+            return accepted ? suggestion : null;
+        }
+
+        private static string DescribePathProblems(string path, List<string> problems) =>
+            Lang.F("Путь {0} не подходит для игры:", path) + "\n- " + string.Join("\n- ", problems) + "\n\n" + Lang.T(GamePathRules.AllowedMessage);
+
+        private async Task<bool> EnsureSafeGamePath()
+        {
+            string current = _settings.GamePath;
+            List<string> problems = GamePathRules.Problems(current);
+            if (problems.Count == 0) return true;
+
+            LogSetup(Lang.F("Путь {0} отклонён: {1}", current, string.Join("; ", problems)));
+            string? target = GamePathRules.SuggestFolder(current);
+            if (target == null)
+            {
+                await ShowCustomDialog(DescribePathProblems(current, problems) + "\n\n" + Lang.T("Подходящий диск не найден. Выберите папку вида C:\\BattleCraft в настройках."), "Путь к игре");
+                return false;
+            }
+
+            bool holdsInstall = GamePathRules.HoldsFiles(current);
+            bool move = holdsInstall && GamePathRules.SameDrive(current, target);
+            if (!await ShowCustomDialog(DescribePathProblems(current, problems) + "\n\n" + RelocationOffer(target, holdsInstall, move), "Путь к игре", true))
+            {
+                LogSetup(Lang.T("Перенос папки игры отклонён, запуск остановлен"));
+                return false;
+            }
+
+            return await RelocateGameFolder(current, target, move);
+        }
+
+        private static string RelocationOffer(string target, bool holdsInstall, bool move)
+        {
+            if (move) return Lang.F("Перенести игру в {0}? Файлы переедут без повторной загрузки.", target);
+            if (holdsInstall) return Lang.F("Поставить игру заново в {0}? Сборка скачается ещё раз, старую папку удалите сами.", target);
+            return Lang.F("Поставить игру в {0}?", target);
+        }
+
+        private async Task<bool> RelocateGameFolder(string from, string to, bool move)
+        {
+            if (_gameProcess != null || AnyServerRunning())
+            {
+                await ShowCustomDialog(Lang.T("Закройте игру и остановите серверы, потом перенесите папку."), "Путь к игре");
+                return false;
+            }
+
+            try { await Task.Run(() => { if (move) GamePathRules.MoveInstall(from, to); else Directory.CreateDirectory(to); }); }
+            catch (Exception error)
+            {
+                LogError(Lang.F("Папка игры не перенесена в {0}: {1}", to, error.Message));
+                await ShowCustomDialog(Lang.F("Не получилось перенести игру в {0}: {1}\nЗакройте программы, которые держат файлы игры, и попробуйте снова.", to, error.Message), "Путь к игре");
+                return false;
+            }
+
+            AdoptRelocatedFolder(from, to, move);
+            return true;
+        }
+
+        private void AdoptRelocatedFolder(string from, string to, bool move)
+        {
+            if (move)
+                foreach (ServerConfig server in _settings.Servers)
+                    server.ServerPath = GamePathRules.Rebase(server.ServerPath, from, to);
+            else
+            {
+                _settings.IsModpackInstalled = false;
+                _settings.ModpackVersion = "0.0";
+            }
+
+            _settings.GamePath = to;
+            AppSettings.Save(_settings);
+            PathBox.Text = to;
+            SetupPathBox.Text = to;
+            LogSetup(Lang.F("Папка игры {0}: {1} -> {2}", move ? Lang.T("перенесена") : Lang.T("заведена заново"), from, to));
+        }
+
+        private bool AnyServerRunning() => _serverManager != null && _serverManager.CurrentState != ServerState.Stopped;
 
         private static string ResolveGamePath(string chosen)
         {
@@ -2349,6 +2447,34 @@ namespace CustomLauncher
             if (string.Equals(Path.GetFileName(trimmed), "BattleCraft", StringComparison.OrdinalIgnoreCase))
                 return trimmed;
             return Path.Combine(chosen, "BattleCraft");
+        }
+
+        private async Task AdoptGameFolderAsync(string path)
+        {
+            bool wipe = !GamePathRules.HoldsFiles(path) || await AskToWipeGameFolder(path);
+            if (wipe) await PrepareGameFolderAsync(path);
+            else
+            {
+                try { Directory.CreateDirectory(path); }
+                catch (Exception error) { LogError(Lang.F("Ошибка подготовки папки игры: {0}", error.Message)); }
+            }
+
+            _settings.IsModpackInstalled = false;
+            _settings.ModpackVersion = "0.0";
+            LauncherLog.Write($"[SETUP] Папка игры сменилась на {path}, содержимое {(wipe ? "стёрто" : "оставлено")}");
+        }
+
+        private async Task<bool> AskToWipeGameFolder(string path)
+        {
+            if (GamePathRules.IsInside(AppContext.BaseDirectory, path) || GamePathRules.IsInside(AppSettings.GetConfigDir(), path))
+            {
+                LogSetup(Lang.F("В папке {0} лежит сам лаунчер или его настройки, содержимое не трогаю", path));
+                return false;
+            }
+
+            return await ShowCustomDialog(
+                Lang.F("Папка {0} не пуста.\nУдалить её содержимое для чистой установки? Желательно удалить, иначе старые файлы могут конфликтовать с модпаком.", path),
+                "Смена папки", true);
         }
 
         private async Task PrepareGameFolderAsync(string path)
@@ -2400,16 +2526,15 @@ namespace CustomLauncher
             string nick = SetupUsernameBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(nick)) { await ShowCustomDialog(Lang.T("Авторизуйтесь через Microsoft или введите никнейм!")); return; }
             if (_settings.UserType != "msa" && !Nickname.IsValid(nick)) { await ShowCustomDialog(Lang.T(Nickname.RuleMessage)); return; }
-            string path = ResolveGamePath(SetupPathBox.Text);
-            if (string.IsNullOrWhiteSpace(path)) { await ShowCustomDialog(Lang.T("Выберите папку для игры!")); return; }
+            string chosen = ResolveGamePath(SetupPathBox.Text);
+            if (string.IsNullOrWhiteSpace(chosen)) { await ShowCustomDialog(Lang.T("Выберите папку для игры!")); return; }
+            string? path = await ChooseSafeGamePath(chosen);
+            if (path == null) return;
+            SetupPathBox.Text = path;
             if (!await EnsureFreeSpace(path, DiskSpace.ClientRequiredBytes)) return;
 
             if (!string.Equals(path, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
-            {
-                await PrepareGameFolderAsync(path);
-                _settings.IsModpackInstalled = false;
-                _settings.ModpackVersion = "0.0";
-            }
+                await AdoptGameFolderAsync(path);
 
             _settings.GamePath = path; _settings.RamMb = 4096;
 
@@ -3007,6 +3132,8 @@ namespace CustomLauncher
             }
             if (!_settings.HasGamePath) { await ShowCustomDialog(Lang.T("Выберите папку для игры в настройках!")); return; }
             if (!NicknameAccepted()) { await ShowCustomDialog(Lang.T(Nickname.RejectedMessage)); LoginGridState(); return; }
+            if (_isBusy) return;
+            if (!await EnsureSafeGamePath()) return;
 
             BtnPlay.IsEnabled = false; SetBusy(true);
             bool didInstall = false;
@@ -4357,22 +4484,12 @@ namespace CustomLauncher
             string np = ResolveGamePath(PathBox.Text);
             if (!string.IsNullOrWhiteSpace(np) && !string.Equals(np, _settings.GamePath, StringComparison.OrdinalIgnoreCase))
             {
-                bool wipe = true;
-                bool hasFiles = false;
-                try { hasFiles = Directory.Exists(np) && Directory.EnumerateFileSystemEntries(np).Any(); } catch { }
-                if (hasFiles)
-                    wipe = await ShowCustomDialog(
-                        Lang.F("Папка {0} не пуста.\nУдалить её содержимое для чистой установки? Желательно удалить, иначе старые файлы могут конфликтовать с модпаком.", np),
-                        "Смена папки", true);
+                string? safe = await ChooseSafeGamePath(np);
+                if (safe == null) return;
 
-                if (wipe) await PrepareGameFolderAsync(np);
-                else { try { Directory.CreateDirectory(np); } catch { } }
-
-                _settings.IsModpackInstalled = false;
-                _settings.ModpackVersion = "0.0";
-                _settings.GamePath = np;
-                PathBox.Text = np;
-                LauncherLog.Write($"[SETUP] Папка игры сменилась на {np}, содержимое {(wipe ? "стёрто" : "оставлено")}");
+                await AdoptGameFolderAsync(safe);
+                _settings.GamePath = safe;
+                PathBox.Text = safe;
             }
             AppSettings.Save(_settings);
             LauncherLog.Write($"[UI] Настройки закрыты: память {_settings.RamMb} МБ, папка {_settings.GamePath}");
@@ -4658,6 +4775,9 @@ namespace CustomLauncher
                         BtnCloseChecks_Click(s, e);
                         BtnReinstall_Click(s, e);
                         break;
+                    case RequirementFix.RelocateGameFolder:
+                        await RelocateFromChecks();
+                        break;
                 }
             }
             finally
@@ -4665,6 +4785,19 @@ namespace CustomLauncher
                 _checkActionRunning = false;
                 BtnRecheck_Click(s, e);
             }
+        }
+
+        private async Task RelocateFromChecks()
+        {
+            if (_isBusy)
+            {
+                await ShowCustomDialog(Lang.T("Дождитесь конца установки, потом перенесите папку."), "Путь к игре");
+                return;
+            }
+
+            if (!await EnsureSafeGamePath()) return;
+            InitializeLauncher();
+            EnsureGameDefaults();
         }
 
         private async Task InstallWebView2()
@@ -5016,7 +5149,13 @@ namespace CustomLauncher
             });
         }
         private void DebugCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) { _settings.DebugConsole = DebugCheck.IsChecked == true; AppSettings.Save(_settings); } }
-        private void BtnSelectFolder_Click(object s, RoutedEventArgs e) { var d = new OpenFolderDialog(); if (d.ShowDialog() == true) PathBox.Text = ResolveGamePath(d.FolderName); }
+        private async void BtnSelectFolder_Click(object s, RoutedEventArgs e)
+        {
+            var d = new OpenFolderDialog();
+            if (d.ShowDialog() != true) return;
+            string chosen = ResolveGamePath(d.FolderName);
+            PathBox.Text = await ChooseSafeGamePath(chosen) ?? chosen;
+        }
 
         private void RamSlider_ValueChanged(object s, RoutedPropertyChangedEventArgs<double> e)
         {
