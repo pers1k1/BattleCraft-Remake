@@ -9,14 +9,14 @@ namespace CustomLauncher.Core
     {
         public const int LongPathLimit = 90;
         public const string FolderName = "BattleCraft";
-        public const string AllowedMessage = "В пути допустимы только латинские буквы, цифры, пробел и знаки _ - .";
+        public const string AllowedMessage = "В пути допустимы только латинские буквы, цифры, пробел и знаки _ - . ( )";
 
         private const int SpareFolderCount = 9;
 
         private static readonly HashSet<string> ReservedNames = BuildReservedNames();
 
         public static bool Allows(char symbol) =>
-            char.IsAsciiLetterOrDigit(symbol) || symbol is ' ' or '_' or '-' or '.';
+            char.IsAsciiLetterOrDigit(symbol) || symbol is ' ' or '_' or '-' or '.' or '(' or ')';
 
         public static bool IsSafe(string? path) => Problems(path).Count == 0;
 
@@ -124,7 +124,7 @@ namespace CustomLauncher.Core
                 .ToList();
             if (special.Count == 0) return;
 
-            problems.Add(Lang.F("служебные знаки {0} - на них ломаются пути к jar, classpath Java и скрипты запуска",
+            problems.Add(Lang.F("недопустимые знаки {0} - часть из них (! # % ; +) Java читает как служебные в путях к jar и classpath",
                 string.Join(" ", special.Select(DescribeSymbol))));
         }
 
