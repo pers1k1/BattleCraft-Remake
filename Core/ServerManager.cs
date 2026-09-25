@@ -118,8 +118,8 @@ namespace CustomLauncher.Core
 
         public static string SanitizePathSegment(string name)
         {
-            string sanitized = Regex.Replace(name.Trim(), @"[^\w\-.]", "_");
-            return string.IsNullOrWhiteSpace(sanitized) ? "server" : sanitized;
+            string sanitized = Regex.Replace(name.Trim(), @"[^A-Za-z0-9_\-]", "_").Trim('_');
+            return sanitized.Length == 0 ? "server" : sanitized;
         }
 
 

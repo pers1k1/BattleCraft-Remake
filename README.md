@@ -74,7 +74,7 @@ interface always shows the `dd.MM.yy` form. Versions from before this scheme
 
 ## Server Features
 
-- Create and manage multiple Forge servers from a single interface.
+- Create and manage multiple Forge servers from a single interface. Server folders are named with Latin letters, digits, `_` and `-` only, and two servers never share a folder.
 - Staged installation that preserves progress and resumes after a dropped connection.
 - GUI configuration of `server.properties` (MOTD, port, view distance, RAM). Managed keys are merged into the existing file, so manual edits to any other key survive a restart.
 - Whitelist management with offline UUID generation.

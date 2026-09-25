@@ -6087,7 +6087,7 @@ namespace CustomLauncher
             string sanitizedName = ServerManager.SanitizePathSegment(serverName);
 
             string defaultServerBasePath = _settings.HasGamePath
-                ? Path.Combine(_settings.GamePath, "servers", sanitizedName)
+                ? UniqueServerFolder(sanitizedName)
                 : "";
 
             var newConfig = new ServerConfig
@@ -6103,6 +6103,20 @@ namespace CustomLauncher
 
             LoadServerList();
         }
+
+        private string UniqueServerFolder(string sanitizedName)
+        {
+            string root = Path.Combine(_settings.GamePath, "servers");
+            string candidate = Path.Combine(root, sanitizedName);
+            for (int index = 2; ServerFolderTaken(candidate); index++)
+                candidate = Path.Combine(root, sanitizedName + "-" + index);
+
+            return candidate;
+        }
+
+        private bool ServerFolderTaken(string folder) =>
+            _settings.Servers.Any(server => string.Equals(
+                Path.TrimEndingDirectorySeparator(server.ServerPath), folder, StringComparison.OrdinalIgnoreCase));
 
         private async void BtnDeleteServer_Click(object s, RoutedEventArgs e)
         {
