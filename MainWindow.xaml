@@ -2154,24 +2154,25 @@
 
         <Grid x:Name="ChangelogPanel" Background="#CC000000" Visibility="Hidden">
             <Border Background="Transparent" MouseDown="BtnCloseChangelog_Click"/>
-            <Border x:Name="ChangelogBox" Background="#8E080611"
-                    Width="640" MaxHeight="660" VerticalAlignment="Center" Margin="0,20,0,20"
-                    CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
-                    RenderTransformOrigin="0.5,0.5">
-                <Border.RenderTransform>
+            <Grid x:Name="ChangelogBox" Width="640" MaxHeight="660" VerticalAlignment="Center" Margin="0,20,0,20"
+                  RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="ChangelogScale" ScaleX="1" ScaleY="1"/>
                         <TranslateTransform x:Name="ChangelogTranslate" Y="0"/>
                     </TransformGroup>
-                </Border.RenderTransform>
-                <Border.Effect>
-                    <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="20" ShadowDepth="0" Opacity="{DynamicResource SettingsBloomOpacity}"/>
-                </Border.Effect>
-                <Grid>
+                </Grid.RenderTransform>
+                <Border Background="#8E080611" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="20" ShadowDepth="0" Opacity="{DynamicResource SettingsBloomOpacity}"/>
+                    </Border.Effect>
+                </Border>
+                <Grid Margin="1">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <Border Grid.Row="0" Background="#16FFFFFF" CornerRadius="7,7,0,0" Padding="12,7" BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1">
@@ -2190,11 +2191,37 @@
                         <Button x:Name="ChangelogTabModpack" Content="ModPack &amp; ServerMap Changelog" Tag="{StaticResource IconList}" Click="ChangelogTab_Modpack" Style="{StaticResource GlowButton}"/>
                     </StackPanel>
 
-                    <ScrollViewer x:Name="ChangelogScrollViewer" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="6,0,6,14">
-                        <TextBlock x:Name="ChangelogText" Margin="18,4,18,14" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap" LineHeight="20" Text="Загрузка…"/>
-                    </ScrollViewer>
+                    <Grid Grid.Row="2" Margin="6,0,6,6">
+                        <ItemsControl x:Name="ChangelogList" Focusable="False"
+                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                      VirtualizingPanel.ScrollUnit="Pixel" ScrollViewer.CanContentScroll="True">
+                            <ItemsControl.Template>
+                                <ControlTemplate TargetType="ItemsControl">
+                                    <ScrollViewer x:Name="ChangelogScroll" VerticalScrollBarVisibility="Auto" CanContentScroll="True" Focusable="False">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </ControlTemplate>
+                            </ItemsControl.Template>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="18,4,18,14">
+                                        <TextBlock Text="{Binding Title}" FontFamily="Consolas, Courier New" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding Body}" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap" LineHeight="20"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock x:Name="ChangelogStatus" Margin="24,4,24,14" FontFamily="Consolas, Courier New" FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap" LineHeight="20" Text="Загрузка…" IsHitTestVisible="False"/>
+                    </Grid>
+
+                    <Button x:Name="ChangelogMore" Grid.Row="3" Content="Показать ещё" Tag="{StaticResource IconDownload}" Click="ChangelogMore_Click" Style="{StaticResource GlowButton}" HorizontalAlignment="Center" Margin="0,0,0,14" Visibility="Collapsed"/>
                 </Grid>
-            </Border>
+            </Grid>
         </Grid>
 
         <Grid x:Name="CustomDialogOverlay" Visibility="Hidden" Background="#AA000000">

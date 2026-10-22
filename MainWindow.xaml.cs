@@ -77,10 +77,6 @@ namespace CustomLauncher
         private const string MODPACK_URL = "https://github.com/pers1k1/modpack/releases/download/main/release.zip";
         private const string BATTLECRAFT_MOD_VER_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/battlecraft_mod_version.txt";
         private const string LAUNCHER_EXE_URL = "https://github.com/pers1k1/BattleCraft-Remake/releases/download/main/BCR.exe";
-        private const string LAUNCHER_CHANGELOG_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/Launcher_changelog.txt";
-        private const string MODPACK_CHANGELOG_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/ModPack_ServerMap_Changelog.txt";
-        private const string LAUNCHER_CHANGELOG_EN_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/Launcher_changelog_en.txt";
-        private const string MODPACK_CHANGELOG_EN_URL = "https://raw.githubusercontent.com/pers1k1/vrsns/main/ModPack_ServerMap_Changelog_en.txt";
 
         private static string BattleCraftJarUrl(string ver) =>
             $"https://github.com/pers1k1/BattleCraft-mod/releases/download/v{ver}/battlecraft-{ver}-all.jar";
@@ -475,7 +471,7 @@ namespace CustomLauncher
 
         private void UpdateSceneAnimation()
         {
-            bool shouldRun = WindowState != WindowState.Minimized && IsActive;
+            bool shouldRun = WindowState != WindowState.Minimized && IsActive && ChangelogPanel?.Visibility != Visibility.Visible;
             if (shouldRun != _sceneRunning)
             {
                 _sceneRunning = shouldRun;
@@ -2872,6 +2868,7 @@ namespace CustomLauncher
             BtnSaveClose.Content = Lang.T("Сохранить и Закрыть");
             SettingsCloseDot.ToolTip = Lang.T("Закрыть");
             ChangelogCloseDot.ToolTip = Lang.T("Закрыть");
+            ChangelogMore.Content = Lang.T("Показать ещё");
             CustomDialogBtnCancel.Content = Lang.T("Отмена");
         }
 
@@ -5099,56 +5096,90 @@ namespace CustomLauncher
             ConflictText.Visibility = Visibility.Visible;
         }
 
-        private string _launcherChangelog = "";
-        private string _modpackChangelog = "";
-        private bool _changelogTabModpack;
+        private const int ChangelogPageSize = 6;
+        private readonly System.Collections.ObjectModel.ObservableCollection<ChangelogEntry> _changelogEntries = new();
+        private ChangelogFeed? _changelogFeed;
+        private System.Threading.CancellationTokenSource? _changelogLoad;
+        private bool _changelogLoading;
 
-        private async void BtnChangelogs_Click(object s, RoutedEventArgs e)
+        private void BtnChangelogs_Click(object s, RoutedEventArgs e)
         {
+            if (ChangelogPanel.Visibility == Visibility.Visible) return;
             ChangelogPanel.Visibility = Visibility.Visible;
+            UpdateSceneAnimation();
             CacheWhileMoving(ChangelogBox, true);
             TweenOpacity(ChangelogPanel, 0, 1, 180, Linear);
             TweenScale(ChangelogScale, 0.85, 1, 420, OutBackWide);
             TweenY(ChangelogTranslate, 30, 0, 420, OutCubic, 0, () => CacheWhileMoving(ChangelogBox, false));
-
-            _launcherChangelog = ""; _modpackChangelog = "";
+            ChangelogList.ItemsSource ??= _changelogEntries;
+            LauncherLog.Write("[UI] Открыт ченджлог");
             SetChangelogTab(false);
-            ChangelogText.Text = Lang.T("Загрузка…");
-
-            try
-            {
-                string ts = "?t=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                var tl = _httpClient.GetStringAsync((Lang.IsEn ? LAUNCHER_CHANGELOG_EN_URL : LAUNCHER_CHANGELOG_URL) + ts);
-                var tm = _httpClient.GetStringAsync((Lang.IsEn ? MODPACK_CHANGELOG_EN_URL : MODPACK_CHANGELOG_URL) + ts);
-                await Task.WhenAll(tl, tm);
-                _launcherChangelog = NormalizeChangelog(tl.Result);
-                _modpackChangelog = NormalizeChangelog(tm.Result);
-            }
-            catch
-            {
-                if (_launcherChangelog.Length == 0) _launcherChangelog = Lang.T("Не удалось загрузить changelog.\nПроверьте подключение к интернету.");
-                if (_modpackChangelog.Length == 0) _modpackChangelog = _launcherChangelog;
-            }
-
-            if (ChangelogPanel.Visibility == Visibility.Visible) SetChangelogTab(_changelogTabModpack);
-        }
-
-        private static string NormalizeChangelog(string text)
-        {
-            string t = (text ?? "").Replace("\r\n", "\n").Trim();
-            return t.Length == 0 ? Lang.T("Здесь пока пусто.") : t;
         }
 
         private void ChangelogTab_Launcher(object s, RoutedEventArgs e) => SetChangelogTab(false);
         private void ChangelogTab_Modpack(object s, RoutedEventArgs e) => SetChangelogTab(true);
+        private async void ChangelogMore_Click(object s, RoutedEventArgs e) => await LoadChangelogPageAsync();
 
         private void SetChangelogTab(bool modpack)
         {
-            _changelogTabModpack = modpack;
-            string txt = modpack ? _modpackChangelog : _launcherChangelog;
-            ChangelogText.Text = txt.Length > 0 ? txt : Lang.T("Загрузка…");
-            ChangelogScrollViewer?.ScrollToVerticalOffset(0);
+            StyleChangelogTabs(modpack);
+            StopChangelogLoad();
+            string feed = modpack ? ChangelogFeed.ModpackFeed : ChangelogFeed.LauncherFeed;
+            _changelogFeed = new ChangelogFeed(_httpClient, feed, Lang.IsEn ? "en" : ChangelogFeed.FallbackLanguage);
+            _changelogLoad = new System.Threading.CancellationTokenSource();
+            _changelogEntries.Clear();
+            (ChangelogList.Template.FindName("ChangelogScroll", ChangelogList) as ScrollViewer)?.ScrollToVerticalOffset(0);
+            _ = LoadChangelogPageAsync();
+        }
 
+        private void StopChangelogLoad()
+        {
+            _changelogLoad?.Cancel();
+            _changelogLoad?.Dispose();
+            _changelogLoad = null;
+            _changelogFeed = null;
+            _changelogLoading = false;
+        }
+
+        private async Task LoadChangelogPageAsync()
+        {
+            ChangelogFeed? feed = _changelogFeed;
+            System.Threading.CancellationTokenSource? load = _changelogLoad;
+            if (feed == null || load == null || _changelogLoading || !feed.HasMore) return;
+            _changelogLoading = true;
+            ShowChangelogState(Lang.T("Загрузка…"), false);
+            string? failure = null;
+            try
+            {
+                IReadOnlyList<ChangelogEntry> page = await feed.NextPageAsync(ChangelogPageSize, load.Token);
+                if (feed != _changelogFeed) return;
+                foreach (ChangelogEntry entry in page) _changelogEntries.Add(entry);
+            }
+            catch (Exception error) when (!load.IsCancellationRequested)
+            {
+                LauncherLog.Write($"[NET] Ченджлог не загрузился: {error.GetType().Name}: {error.Message}");
+                failure = Lang.T("Не удалось загрузить changelog.\nПроверьте подключение к интернету.");
+            }
+            catch (Exception)
+            {
+                return;
+            }
+            if (feed != _changelogFeed) return;
+            _changelogLoading = false;
+            string? emptyText = _changelogEntries.Count == 0 ? failure ?? Lang.T("Здесь пока пусто.") : null;
+            ShowChangelogState(emptyText, failure == null && feed.HasMore);
+        }
+
+        private void ShowChangelogState(string? statusText, bool canLoadMore)
+        {
+            bool showStatus = statusText != null && _changelogEntries.Count == 0;
+            ChangelogStatus.Text = statusText ?? "";
+            ChangelogStatus.Visibility = showStatus ? Visibility.Visible : Visibility.Collapsed;
+            ChangelogMore.Visibility = canLoadMore ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void StyleChangelogTabs(bool modpack)
+        {
             var accent = (Brush)FindResource("AccentBrush");
             var dim = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
             var underline = new Thickness(0, 0, 0, 2);
@@ -5162,6 +5193,7 @@ namespace CustomLauncher
 
         private void BtnCloseChangelog_Click(object s, RoutedEventArgs e)
         {
+            StopChangelogLoad();
             CacheWhileMoving(ChangelogBox, true);
             TweenScale(ChangelogScale, 1, 0.88, 200, InBackSoft);
             TweenY(ChangelogTranslate, 0, 18, 200, InCubic);
@@ -5172,6 +5204,8 @@ namespace CustomLauncher
                 ChangelogPanel.Opacity = 1;
                 ChangelogScale.ScaleX = 1; ChangelogScale.ScaleY = 1;
                 ChangelogTranslate.Y = 0;
+                _changelogEntries.Clear();
+                UpdateSceneAnimation();
             });
         }
         private void DebugCheck_Changed(object s, RoutedEventArgs e) { if (IsLoaded) { _settings.DebugConsole = DebugCheck.IsChecked == true; AppSettings.Save(_settings); } }

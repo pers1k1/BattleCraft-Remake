@@ -312,6 +312,8 @@ namespace CustomLauncher.Core
             ["Загрузка…"] = "Loading…",
             ["Не удалось загрузить changelog.\nПроверьте подключение к интернету."] = "Failed to load the changelog.\nCheck your internet connection.",
             ["Здесь пока пусто."] = "Nothing here yet.",
+            ["Показать ещё"] = "Show more",
+            ["Не удалось загрузить эту запись."] = "This entry failed to load.",
             ["Модпак v{0}"] = "Modpack v{0}",
             ["Обновить лаунчер до {0}?"] = "Update the launcher to {0}?",
             ["Обновление"] = "Update",
