@@ -30,12 +30,19 @@ namespace CustomLauncher.Core
             }
 
             string runtime = Path.Combine(gamePath, "runtime");
-            if (!Directory.Exists(runtime)) return SystemJava;
+            if (!Directory.Exists(runtime))
+            {
+                LauncherLog.Write($"[WARN] Папки {runtime} нет, берётся системная java");
+                return SystemJava;
+            }
 
             try
             {
                 string? found = Directory.GetFiles(runtime, "java.exe", SearchOption.AllDirectories)
                     .FirstOrDefault(path => path.Contains("bin") && !path.Contains("javaw"));
+                LauncherLog.Write(found == null
+                    ? $"[WARN] В {runtime} нет java.exe, берётся системная java"
+                    : $"[SYS] Java найдена вне стандартных папок: {found}");
                 return found ?? SystemJava;
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)

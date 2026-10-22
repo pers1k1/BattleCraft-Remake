@@ -67,6 +67,7 @@ namespace CustomLauncher.Core
 
                 ReportStatus("Распаковка модов сервера...");
                 await Task.Run(() => ZipFile.ExtractToDirectory(temporaryZipPath, serverDirectory, true));
+                LauncherLog.Write($"[SERVER] Моды сервера обновлены в {serverDirectory}");
             }
             finally
             {
@@ -91,6 +92,8 @@ namespace CustomLauncher.Core
             var downloaded = new FileInfo(destinationPath);
             if (!downloaded.Exists || downloaded.Length == 0)
                 throw new IOException(Lang.F("Мод BattleCraft не сохранился: {0}. Скорее всего файл удалил антивирус.", destinationPath));
+
+            LauncherLog.Write($"[SERVER] Мод BattleCraft {fileName} установлен, {FileDownloader.FormatSize(downloaded.Length)}");
         }
 
         public async Task InstallForgeRuntime(string serverDirectory, string javaPath, Action<double>? onProgress)
@@ -128,6 +131,7 @@ namespace CustomLauncher.Core
 
             using var process = Process.Start(processInfo)
                 ?? throw new InvalidOperationException("Java process failed to start.");
+            LauncherLog.Write($"[SERVER] Установщик Forge сервера запущен через {javaPath}, PID {process.Id}");
 
             process.OutputDataReceived += OnInstallerOutputReceived;
             process.ErrorDataReceived += OnInstallerOutputReceived;
@@ -136,6 +140,7 @@ namespace CustomLauncher.Core
             process.BeginErrorReadLine();
 
             await process.WaitForExitAsync();
+            LauncherLog.Write($"[SERVER] Установщик Forge сервера завершился с кодом {process.ExitCode}");
 
             if (process.ExitCode != 0)
                 throw new InvalidOperationException(
@@ -188,6 +193,7 @@ namespace CustomLauncher.Core
 
                 ReportStatus("Копирование в backup...");
                 await Task.Run(() => CopyDirectoryContents(temporaryExtractPath, backupDirectory));
+                LauncherLog.Write($"[SERVER] Данные сервера разложены в {serverDirectory} и {backupDirectory}");
             }
             finally
             {
@@ -230,6 +236,7 @@ namespace CustomLauncher.Core
 
         private void ReportStatus(string message)
         {
+            LauncherLog.Write($"[SERVER] Этап установки: {message}");
             StatusChanged?.Invoke(Lang.T(message));
         }
 
@@ -241,12 +248,14 @@ namespace CustomLauncher.Core
 
         private static void TryDeleteFile(string path)
         {
-            try { if (File.Exists(path)) File.Delete(path); } catch { }
+            try { if (File.Exists(path)) File.Delete(path); }
+            catch (Exception error) { LauncherLog.Write($"[WARN] Файл {path} не удалён: {error.Message}"); }
         }
 
         private static void TryDeleteDirectory(string path)
         {
-            try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { }
+            try { if (Directory.Exists(path)) Directory.Delete(path, true); }
+            catch (Exception error) { LauncherLog.Write($"[WARN] Папка {path} не удалена: {error.Message}"); }
         }
     }
 }

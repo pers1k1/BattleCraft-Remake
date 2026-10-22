@@ -21,20 +21,27 @@ namespace CustomLauncher.Core
 
                 var drive = new DriveInfo(root);
                 if (!drive.IsReady)
+                {
+                    LauncherLog.Write($"[WARN] Диск {root} не готов, свободное место не определено");
                     return false;
+                }
 
                 freeBytes = drive.AvailableFreeSpace;
                 return true;
             }
-            catch
+            catch (Exception error)
             {
+                LauncherLog.Write($"[WARN] Свободное место для {path} не определено: {error.Message}");
                 return false;
             }
         }
 
         public static bool HasEnough(string path, long requiredBytes, out long freeBytes)
         {
-            return !TryGetFreeBytes(path, out freeBytes) || freeBytes >= requiredBytes;
+            bool enough = !TryGetFreeBytes(path, out freeBytes) || freeBytes >= requiredBytes;
+            if (!enough)
+                LauncherLog.Write($"[WARN] Мало места для {path}: свободно {Describe(freeBytes)}, нужно {Describe(requiredBytes)}");
+            return enough;
         }
 
         public static string Describe(long bytes)

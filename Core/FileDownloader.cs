@@ -31,17 +31,20 @@ namespace CustomLauncher.Core
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    LauncherLog.Write($"[NET] Скачивание {LauncherLog.SafeUrl(url)} отменено");
                     throw;
                 }
                 catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
                 {
                     lastError = ex;
+                    LauncherLog.Write($"[NET] Обрыв скачивания {LauncherLog.SafeUrl(url)}, попытка {attempt}/{MaxAttempts}: {ex.GetType().Name}: {ex.Message}");
                     if (attempt == MaxAttempts) break;
                     LogMessage?.Invoke(Lang.F("Обрыв загрузки {0} — повтор {1}/{2}", fileName, attempt + 1, MaxAttempts));
                     await Task.Delay(TimeSpan.FromMilliseconds(Math.Min(3000, 400 * attempt)), cancellationToken);
                 }
             }
 
+            LauncherLog.Write($"[ERR] {LauncherLog.SafeUrl(url)} не скачан за {MaxAttempts} попыток: {lastError?.Message ?? ""}");
             LogMessage?.Invoke(Lang.F("Ошибка скачивания {0}: {1}", fileName, lastError?.Message ?? ""));
             throw new Exception(Lang.F("Не удалось скачать {0} за {1} попыток.", fileName, MaxAttempts), lastError);
         }
@@ -68,6 +71,7 @@ namespace CustomLauncher.Core
             {
                 if (response.Content.Headers.ContentRange?.Length == existing)
                 {
+                    LauncherLog.Write($"[NET] {LauncherLog.SafeUrl(url)} уже скачан целиком, {FormatSize(existing)}");
                     LogMessage?.Invoke(Lang.F("Уже скачан: {0}", fileName));
                     ProgressChanged?.Invoke(100);
                     return;
@@ -83,6 +87,7 @@ namespace CustomLauncher.Core
 
             long contentBytes = response.Content.Headers.ContentLength ?? -1L;
             long totalBytes = contentBytes > 0 ? existing + contentBytes : -1L;
+            LogDownloadStart(url, totalBytes, resumed ? existing : 0);
             LogMessage?.Invoke(resumed
                 ? Lang.F("Докачка: {0} с {1}", fileName, FormatSize(existing))
                 : totalBytes > 0
@@ -149,7 +154,14 @@ namespace CustomLauncher.Core
             ProgressChanged?.Invoke(100);
 
             double avg = total.Elapsed.TotalSeconds > 0 ? (totalRead - existing) / total.Elapsed.TotalSeconds : 0;
+            LauncherLog.Write($"[NET] Скачан {LauncherLog.SafeUrl(url)}: {FormatSize(totalRead)} за {total.Elapsed.TotalSeconds:F1} с, {FormatSpeed(avg)}");
             LogMessage?.Invoke(Lang.F("Готово: {0} — {1} за {2} ({3})", fileName, FormatSize(totalRead), FormatDuration(total.Elapsed), FormatSpeed(avg)));
+        }
+
+        private static void LogDownloadStart(string url, long totalBytes, long resumedFrom)
+        {
+            string resume = resumedFrom > 0 ? $", докачка с {FormatSize(resumedFrom)}" : "";
+            LauncherLog.Write($"[NET] Скачивание {LauncherLog.SafeUrl(url)}, размер {FormatSize(totalBytes)}{resume}");
         }
 
         private static string SafeName(string url)

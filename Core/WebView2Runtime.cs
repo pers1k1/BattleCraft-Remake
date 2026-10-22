@@ -48,6 +48,7 @@ namespace CustomLauncher.Core
                 var start = new ProcessStartInfo(installer, "/silent /install") { UseShellExecute = true };
                 using Process? process = Process.Start(start);
                 if (process != null) await process.WaitForExitAsync();
+                LauncherLog.Write(process == null ? "[WARN] Установщик WebView2 не запустился" : $"[SYS] Установщик WebView2 завершился с кодом {process.ExitCode}");
 
                 bool installed = Installed();
                 LauncherLog.Write($"[SYS] WebView2 после установки: {(installed ? Version() : "не найден")}");
@@ -55,7 +56,7 @@ namespace CustomLauncher.Core
             }
             catch (Exception error)
             {
-                LauncherLog.Write($"[ERROR] WebView2 не установлен: {error.Message}");
+                LauncherLog.Write($"[ERR] WebView2 не установлен: {error.Message}");
                 return false;
             }
         }

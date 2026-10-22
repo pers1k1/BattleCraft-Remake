@@ -39,7 +39,11 @@ namespace CustomLauncher.Core
             try
             {
                 using RegistryKey? adapters = Registry.LocalMachine.OpenSubKey(AdaptersKey);
-                if (adapters == null) return new GpuDriver();
+                if (adapters == null)
+                {
+                    LauncherLog.Write("[WARN] Ветка видеоадаптеров в реестре не найдена");
+                    return new GpuDriver();
+                }
 
                 foreach (string name in adapters.GetSubKeyNames())
                 {
@@ -55,6 +59,8 @@ namespace CustomLauncher.Core
                         Released = ParseDate(adapter.GetValue("DriverDate") as string)
                     };
                 }
+
+                LauncherLog.Write("[WARN] В реестре нет ни одного видеоадаптера с описанием драйвера");
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {

@@ -132,7 +132,7 @@ namespace CustomLauncher
                 }
                 catch (Exception error)
                 {
-                    LauncherLog.Write("[ERROR] Настройки лаунчера не сохранены в " + file + ": " + error.Message);
+                    LauncherLog.Write("[ERR] Настройки лаунчера не сохранены в " + file + ": " + error.Message);
                     return false;
                 }
             }
@@ -185,11 +185,11 @@ namespace CustomLauncher
                             return s;
                         }
 
-                        LauncherLog.Write("[ERROR] Настройки лаунчера пусты, файл " + file + " будет перезаписан");
+                        LauncherLog.Write("[ERR] Настройки лаунчера пусты, файл " + file + " будет перезаписан");
                     }
                     catch (Exception error)
                     {
-                        LauncherLog.Write("[ERROR] Настройки лаунчера не прочитаны из " + file + ": " + error.Message);
+                        LauncherLog.Write("[ERR] Настройки лаунчера не прочитаны из " + file + ": " + error.Message);
                         KeepBroken(file);
                     }
                 }

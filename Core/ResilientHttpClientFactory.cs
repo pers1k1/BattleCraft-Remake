@@ -32,6 +32,11 @@ namespace CustomLauncher.Core
             return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         }
 
+        private static void LogStall(Uri? uri, TimeSpan idleTimeout)
+        {
+            LauncherLog.Write($"[NET] Stall guard: {LauncherLog.SafeUrl(uri)} молчит дольше {idleTimeout.TotalSeconds:F0} с, соединение оборвано");
+        }
+
         private sealed class StallGuardHandler : DelegatingHandler
         {
             private const long MaxBufferBytes = 8L * 1024 * 1024;
@@ -62,13 +67,18 @@ namespace CustomLauncher.Core
                         if (IsRetryableStatus(response.StatusCode) && attempt < MaxAttempts)
                         {
                             response.Dispose();
+                            LogRetry(request, attempt, $"HTTP {(int)response.StatusCode}");
                             NotifyRetry(request, attempt, $"HTTP {(int)response.StatusCode}");
                             await DelayBeforeRetry(attempt, cancellationToken).ConfigureAwait(false);
                             continue;
                         }
 
                         if (!response.IsSuccessStatusCode)
+                        {
+                            if (IsRetryableStatus(response.StatusCode))
+                                LauncherLog.Write($"[ERR] {LauncherLog.SafeUrl(request.RequestUri)} отвечает HTTP {(int)response.StatusCode} после {MaxAttempts} попыток");
                             return response;
+                        }
 
                         long? length = response.Content.Headers.ContentLength;
                         if (length is null || length > MaxBufferBytes)
@@ -88,14 +98,16 @@ namespace CustomLauncher.Core
                         lastError = ex;
                         if (attempt < MaxAttempts)
                         {
+                            LogRetry(request, attempt, $"{ex.GetType().Name}: {ex.Message}");
                             NotifyRetry(request, attempt, Lang.T("обрыв соединения"));
                             await DelayBeforeRetry(attempt, cancellationToken).ConfigureAwait(false);
                         }
                     }
                 }
 
+                LauncherLog.Write($"[ERR] {LauncherLog.SafeUrl(request.RequestUri)} не получен за {MaxAttempts} попыток: {lastError?.Message ?? ""}");
                 throw new HttpRequestException(
-                    Lang.F("Не удалось скачать {0} за {1} попыток.", request.RequestUri?.ToString() ?? "", MaxAttempts), lastError);
+                    Lang.F("Не удалось скачать {0} за {1} попыток.", LauncherLog.SafeUrl(request.RequestUri), MaxAttempts), lastError);
             }
 
             private async Task<byte[]> ReadWithIdleTimeout(HttpResponseMessage response, CancellationToken ct)
@@ -120,6 +132,7 @@ namespace CustomLauncher.Core
                     }
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                     {
+                        LogStall(response.RequestMessage?.RequestUri, IdleReadTimeout);
                         throw new IOException(
                             Lang.F("Соединение зависло: нет данных дольше {0:F0} с.", IdleReadTimeout.TotalSeconds));
                     }
@@ -189,6 +202,11 @@ namespace CustomLauncher.Core
                 return buffered;
             }
 
+            private void LogRetry(HttpRequestMessage request, int attempt, string reason)
+            {
+                LauncherLog.Write($"[NET] Повтор {LauncherLog.SafeUrl(request.RequestUri)}: попытка {attempt + 1}/{MaxAttempts}, причина {reason}");
+            }
+
             private static void NotifyRetry(HttpRequestMessage request, int attempt, string reason)
             {
                 var subscribers = DownloadRetry;
@@ -255,6 +273,7 @@ namespace CustomLauncher.Core
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
+                    LogStall(_response.RequestMessage?.RequestUri, _idleTimeout);
                     throw new IOException(
                         Lang.F("Соединение зависло: нет данных дольше {0:F0} с.", _idleTimeout.TotalSeconds));
                 }

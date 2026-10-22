@@ -118,6 +118,14 @@ namespace CustomLauncher.Core
             catch { }
         }
 
+        public static string SafeUrl(string url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) ? SafeUrl(uri) : url.Split('?', '#')[0];
+
+        public static string SafeUrl(Uri? uri) =>
+            uri is { IsAbsoluteUri: true }
+                ? uri.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped)
+                : "?";
+
         private static string Stamp() => DateTime.Now.ToString("HH:mm:ss");
     }
 }

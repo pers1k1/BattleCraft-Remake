@@ -199,7 +199,6 @@ namespace CustomLauncher
 
         public MainWindow()
         {
-            LauncherLog.Init();
             LauncherLog.Write($"[SYS] Версия лаунчера {VerDisplay}, игра {GameVersions.Display}");
             RefreshDisplayRate(true);
             InitializeComponent();
@@ -403,7 +402,19 @@ namespace CustomLauncher
                 };
                 _sceneThread.Start();
             }
-            catch { }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[UI] Пиксельная сцена не запустилась: {error.GetType().Name}: {error.Message}");
+            }
+        }
+
+        private volatile bool _sceneFaultReported;
+
+        private void ReportSceneFault(string stage, Exception error)
+        {
+            if (_sceneFaultReported) return;
+            _sceneFaultReported = true;
+            LauncherLog.Write($"[UI] Сбой сцены в {stage}, дальше такие сбои не пишутся: {error.GetType().Name}: {error.Message}");
         }
 
         private void SceneLoop()
@@ -420,7 +431,7 @@ namespace CustomLauncher
                     WorldTick();
                     PresentFrame();
                 }
-                catch { }
+                catch (Exception error) { ReportSceneFault("кадре", error); }
                 long spent = sw.ElapsedMilliseconds - start;
                 int sleep = (int)Math.Clamp(80 - spent, 1, 80);
                 System.Threading.Thread.Sleep(sleep);
@@ -1028,7 +1039,7 @@ namespace CustomLauncher
 
                 if (badWeather) DrawUmbrellaPerson(night, bright);
             }
-            catch { }
+            catch (Exception error) { ReportSceneFault("погоде", error); }
         }
 
         private void FillRow(int y, byte r, byte g, byte b)
@@ -2027,7 +2038,10 @@ namespace CustomLauncher
                 await Task.Delay(250);
                 await FadeOutBootAsync();
             }
-            catch { }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[UI] Анимация загрузки прервана: {error.GetType().Name}: {error.Message}");
+            }
 
             await CheckPrerequisitesAsync();
             await WarnAboutRejectedNickname();
@@ -2131,7 +2145,10 @@ namespace CustomLauncher
                 if (BlobImage != null) BlobImage.Source = _blobBmp;
                 RenderBlob();
             }
-            catch { }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[UI] Пятно сцены не создано: {error.GetType().Name}: {error.Message}");
+            }
         }
 
         private void RenderBlob()
@@ -2174,7 +2191,7 @@ namespace CustomLauncher
                     }
                 }
             }
-            catch { }
+            catch (Exception error) { ReportSceneFault("пятне", error); }
         }
 
         private static Color LerpColor(Color a, Color b, double t)
@@ -2194,6 +2211,8 @@ namespace CustomLauncher
         }
 
         private void LogNet(string message) => LogTagged("[NET]", message);
+
+        private void ShowNet(string message) => LogTagged("[NET]", message, toFile: false);
 
         private void LogError(string message) => LogTagged("[ERR]", message);
 
@@ -3617,7 +3636,7 @@ namespace CustomLauncher
                 string jar = Path.Combine(Path.GetTempPath(), "forge_installer.jar");
                 if (File.Exists(jar)) File.Delete(jar);
                 var forgeDl = new FileDownloader();
-                forgeDl.LogMessage += LogNet;
+                forgeDl.LogMessage += ShowNet;
                 forgeDl.ProgressChanged += p => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(p); });
                 await forgeDl.DownloadFileAsync(FORGE_JAR_URL, jar);
 
@@ -3757,7 +3776,7 @@ namespace CustomLauncher
                 if (File.Exists(tempZip)) File.Delete(tempZip);
 
                 var downloader = new FileDownloader();
-                downloader.LogMessage += LogNet;
+                downloader.LogMessage += ShowNet;
                 downloader.ProgressChanged += (p) => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; GameProgressBar.Value = p; });
 
                 await downloader.DownloadFileAsync("https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse", tempZip);
@@ -3866,7 +3885,7 @@ namespace CustomLauncher
                 try
                 {
                     var dl = new FileDownloader();
-                    dl.LogMessage += LogNet;
+                    dl.LogMessage += ShowNet;
                     dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(v); });
                     await dl.DownloadFileAsync(MODPACK_URL, zip);
                     StatusText.Text = Lang.T("Распаковка...");
@@ -3896,7 +3915,8 @@ namespace CustomLauncher
                         foreach (var dir in ModpackDirs)
                         {
                             string p = Path.Combine(_settings.GamePath, dir);
-                            try { if (Directory.Exists(p)) Directory.Delete(p, true); } catch { }
+                            try { if (Directory.Exists(p)) Directory.Delete(p, true); }
+                            catch (Exception cleanupError) { LauncherLog.Write($"[PACK] Папка {dir} не удалена после отмены: {cleanupError.Message}"); }
                         }
                         throw new OperationCanceledException(Lang.T("Установка отменена пользователем."));
                     }
@@ -3916,7 +3936,11 @@ namespace CustomLauncher
 
                 return false;
             }
-            catch { return false; }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[PACK] Папка mods не читается, мод BattleCraft считается не установленным: {error.Message}");
+                return false;
+            }
         }
 
         // WHY: распаковка молча заканчивалась ничем, когда архив резал антивирус или
@@ -3977,7 +4001,7 @@ namespace CustomLauncher
                 try
                 {
                     var dl = new FileDownloader();
-                    dl.LogMessage += LogNet;
+                    dl.LogMessage += ShowNet;
                     dl.ProgressChanged += v => Dispatcher.BeginInvoke(() => { GameProgressBar.IsIndeterminate = false; SetProgress(v); });
                     await dl.DownloadFileAsync(url, dest);
                     VerifyBattleCraftJar(dest);
@@ -3987,7 +4011,8 @@ namespace CustomLauncher
                 }
                 catch (Exception ex)
                 {
-                    try { if (File.Exists(dest)) File.Delete(dest); } catch { }
+                    try { if (File.Exists(dest)) File.Delete(dest); }
+                    catch (Exception cleanupError) { LauncherLog.Write($"[PACK] Недокачанный jar мода не удалён: {cleanupError.Message}"); }
                     bool retry = await ShowCustomDialog(
                         Lang.F("Загрузка клиента оборвалась.\nОшибка: {0}\nПродолжить скачивание?", ex.Message),
                         "Ошибка скачивания", true);
@@ -4436,7 +4461,7 @@ namespace CustomLauncher
             TweenValue(GameProgressBar, v, 250, OutQuad);
         }
 
-        private string GetThemeDir() { string p = Path.Combine(_settings.GamePath, "launcher_theme"); if (_settings.HasGamePath && !Directory.Exists(p)) try { Directory.CreateDirectory(p); } catch { } return p; }
+        private string GetThemeDir() { string p = Path.Combine(_settings.GamePath, "launcher_theme"); if (_settings.HasGamePath && !Directory.Exists(p)) try { Directory.CreateDirectory(p); } catch (Exception error) { LauncherLog.Write($"[UI] Папка темы не создана: {error.Message}"); } return p; }
 
         private void ApplyCustomTheme()
         {
@@ -4446,7 +4471,8 @@ namespace CustomLauncher
             {
                 string dir = GetThemeDir(); string ico = Path.Combine(dir, "icon.ico");
                 if (File.Exists(ico)) { var bmp = new BitmapImage(); using (var st = File.OpenRead(ico)) { bmp.BeginInit(); bmp.CacheOption = BitmapCacheOption.OnLoad; bmp.StreamSource = st; bmp.EndInit(); } bmp.Freeze(); Icon = bmp; }
-            } catch { }
+            }
+            catch (Exception error) { LauncherLog.Write($"[UI] Своя иконка окна не загружена: {error.Message}"); }
         }
 
         private void BtnSettings_Click(object s, RoutedEventArgs e)
@@ -4820,7 +4846,7 @@ namespace CustomLauncher
             ShowSpinnerOverlay(Lang.T("Установка компонента"), Lang.T("Visual C++ 2015-2022…"), true);
 
             var downloader = new FileDownloader();
-            downloader.LogMessage += LogNet;
+            downloader.LogMessage += ShowNet;
             downloader.ProgressChanged += p => Dispatcher.BeginInvoke(() => SetUpdateProgress(p));
 
             bool installed = await VcRedist.InstallAsync(downloader);
@@ -5254,7 +5280,7 @@ namespace CustomLauncher
 
                 LogUpdate(Lang.T("Скачивание новой версии лаунчера"));
                 var dl = new FileDownloader();
-                dl.LogMessage += LogNet;
+                dl.LogMessage += ShowNet;
                 dl.ProgressChanged += p => Dispatcher.BeginInvoke(() => SetUpdateProgress(p));
                 await dl.DownloadFileAsync(LAUNCHER_EXE_URL, tmp);
 
@@ -5766,7 +5792,7 @@ namespace CustomLauncher
                 if (EnumDisplaySettingsW(device, ENUM_CURRENT_SETTINGS, ref mode) && mode.dmDisplayFrequency > 1)
                     hz = mode.dmDisplayFrequency;
             }
-            catch { }
+            catch (Exception error) { LauncherLog.Write($"[SYS] Частота монитора не прочитана: {error.Message}"); }
 
             _refreshHz = Math.Clamp(hz, 24, 480);
             _frameBudget = 1.0 / _refreshHz * 0.85;
@@ -6570,10 +6596,12 @@ namespace CustomLauncher
                     string name = proc.ProcessName;
                     proc.Kill(true);
                     AppendConsoleOutput(Lang.F("[SYS] Завершён процесс {0} (PID {1}), занимавший порт {2}.", name, pid, port));
+                    LauncherLog.Write($"[SERVER] Завершён процесс {name} (PID {pid}), занимавший порт {port}");
                 }
                 catch (Exception ex)
                 {
                     AppendConsoleOutput(Lang.F("[ERR] Не удалось завершить PID {0}: {1}", pid, ex.Message));
+                    LauncherLog.Write($"[SERVER] Не удалось завершить PID {pid} на порту {port}: {ex.Message}");
                 }
             }
             AppendConsoleOutput(Lang.T("[SYS] Попробуйте запустить сервер снова."));
@@ -6607,7 +6635,7 @@ namespace CustomLauncher
                     if (int.TryParse(parts[^1], out int pid) && pid > 0 && !pids.Contains(pid)) pids.Add(pid);
                 }
             }
-            catch { }
+            catch (Exception error) { LauncherLog.Write($"[SERVER] Не удалось узнать, кто держит порт {port}: {error.Message}"); }
             return pids;
         }
 

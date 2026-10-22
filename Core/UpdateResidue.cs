@@ -33,7 +33,9 @@ namespace CustomLauncher.Core
                 if (TryDelete(numbered)) return numbered;
             }
 
-            return $"{executablePath}.{Guid.NewGuid():N}{BackupExtension}";
+            string unique = $"{executablePath}.{Guid.NewGuid():N}{BackupExtension}";
+            LauncherLog.Write($"[WARN] Все {MaxNumberedBackups} имён резервной копии заняты, взято {Path.GetFileName(unique)}");
+            return unique;
         }
 
         public static async Task PurgeAsync(IReadOnlyList<string> startupArguments)
@@ -41,10 +43,7 @@ namespace CustomLauncher.Core
             await WaitForReplacedInstanceAsync(startupArguments);
 
             foreach (string residue in FindResidue(LauncherDirectory()))
-            {
                 await EraseAsync(residue);
-                LauncherLog.Write($"[UPD] Остаток обновления убран: {Path.GetFileName(residue)}");
-            }
         }
 
         private static string LauncherDirectory()
@@ -62,8 +61,20 @@ namespace CustomLauncher.Core
                 using var replaced = Process.GetProcessById(processId);
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(ReplacedInstanceWaitSeconds));
                 await replaced.WaitForExitAsync(timeout.Token);
+                LauncherLog.Write($"[UPD] Прежняя копия лаунчера (PID {processId}) завершилась");
             }
-            catch { }
+            catch (ArgumentException)
+            {
+                LauncherLog.Write($"[UPD] Прежняя копия лаунчера (PID {processId}) уже закрыта");
+            }
+            catch (OperationCanceledException)
+            {
+                LauncherLog.Write($"[WARN] Прежняя копия лаунчера (PID {processId}) не закрылась за {ReplacedInstanceWaitSeconds} с");
+            }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[WARN] Ожидание прежней копии лаунчера прервано: {error.Message}");
+            }
         }
 
         private static bool TryReadReplacedProcessId(IReadOnlyList<string> startupArguments, out int processId)
@@ -84,7 +95,10 @@ namespace CustomLauncher.Core
                 foreach (string file in Directory.EnumerateFiles(directory))
                     if (IsResidue(Path.GetFileName(file))) residue.Add(file);
             }
-            catch { }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[WARN] Папка лаунчера не просмотрена на остатки обновления: {error.Message}");
+            }
             return residue;
         }
 
@@ -101,7 +115,11 @@ namespace CustomLauncher.Core
         {
             for (int attempt = 0; attempt < DeleteAttempts; attempt++)
             {
-                if (TryDelete(path)) return;
+                if (TryDelete(path))
+                {
+                    LauncherLog.Write($"[UPD] Остаток обновления убран: {Path.GetFileName(path)}");
+                    return;
+                }
                 await Task.Delay(DeleteRetryDelayMs);
             }
 
@@ -110,14 +128,23 @@ namespace CustomLauncher.Core
 
         private static void Quarantine(string path)
         {
+            string name = Path.GetFileName(path);
             if (TryMove(path, Path.Combine(Path.GetTempPath(), StaleMarkerName()), out string moved))
             {
-                TryDelete(moved);
+                string outcome = TryDelete(moved) ? "и удалён" : "как " + Path.GetFileName(moved);
+                LauncherLog.Write($"[UPD] {name} занят, перенесён в temp {outcome}");
                 return;
             }
 
             string directory = Path.GetDirectoryName(path) ?? LauncherDirectory();
-            if (TryMove(path, Path.Combine(directory, StaleMarkerName()), out string hidden)) Hide(hidden);
+            if (TryMove(path, Path.Combine(directory, StaleMarkerName()), out string hidden))
+            {
+                Hide(hidden);
+                LauncherLog.Write($"[UPD] {name} занят, спрятан как {Path.GetFileName(hidden)}");
+                return;
+            }
+
+            LauncherLog.Write($"[WARN] Остаток обновления {name} не удалён и не перенесён");
         }
 
         private static string StaleMarkerName() => $"{StaleMarkerPrefix}{Guid.NewGuid():N}{StaleMarkerExtension}";

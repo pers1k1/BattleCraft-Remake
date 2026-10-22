@@ -11,6 +11,7 @@ namespace CustomLauncher
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            LauncherLog.Init();
             _ = UpdateResidue.PurgeAsync(e.Args);
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
@@ -22,6 +23,12 @@ namespace CustomLauncher
                 LauncherLog.WriteCrash("Необработанная ошибка фоновой задачи", args.Exception);
                 args.SetObserved();
             };
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            LauncherLog.Write($"[SYS] Лаунчер закрыт, код выхода {e.ApplicationExitCode}");
+            base.OnExit(e);
         }
 
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

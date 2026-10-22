@@ -62,7 +62,16 @@ namespace CustomLauncher.Core
                 checks.Add(CheckModpackFiles(context.GamePath));
             }
 
+            LogSummary(checks);
             return checks;
+        }
+
+        private static void LogSummary(List<RequirementCheck> checks)
+        {
+            List<RequirementCheck> trouble = checks.Where(check => check.State != RequirementState.Ok).ToList();
+            int missing = trouble.Count(check => check.State == RequirementState.Missing);
+            string ids = trouble.Count == 0 ? "" : ": " + string.Join(", ", trouble.Select(check => check.Id));
+            LauncherLog.Write($"[SYS] Проверка системы: пунктов {checks.Count}, мешает {missing}, под вопросом {trouble.Count - missing}{ids}");
         }
 
         public static bool AllGood(IEnumerable<RequirementCheck> checks) =>

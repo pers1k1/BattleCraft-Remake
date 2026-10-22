@@ -10,7 +10,11 @@ namespace CustomLauncher.Core
         {
             string profile = Path.Combine(gamePath, "versions", GameVersions.ForgeProfileId);
             string manifest = Path.Combine(profile, GameVersions.ForgeProfileId + ".json");
-            if (!File.Exists(manifest)) return false;
+            if (!File.Exists(manifest))
+            {
+                LauncherLog.Write($"[LOADER] Профиля Forge {GameVersions.ForgeProfileId} нет, нужна установка");
+                return false;
+            }
 
             try
             {
@@ -38,7 +42,11 @@ namespace CustomLauncher.Core
                 if (name == GameVersions.ForgeProfileId) continue;
                 if (!name.Contains(GameVersions.Minecraft) || !name.ToLower().Contains("forge")) continue;
 
-                try { Directory.Delete(profile, true); }
+                try
+                {
+                    Directory.Delete(profile, true);
+                    LauncherLog.Write($"[LOADER] Удалён лишний профиль Forge {name}");
+                }
                 catch (Exception error) { LauncherLog.Write($"[LOADER] Профиль {name} не удалён: {error.Message}"); }
             }
         }

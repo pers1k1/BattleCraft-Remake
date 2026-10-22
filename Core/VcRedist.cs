@@ -49,7 +49,7 @@ namespace CustomLauncher.Core
             }
             catch (Exception error)
             {
-                LauncherLog.Write($"[ERROR] Visual C++ не скачан: {error.Message}");
+                LauncherLog.Write($"[ERR] Visual C++ не скачан: {error.Message}");
                 return false;
             }
 
@@ -64,7 +64,7 @@ namespace CustomLauncher.Core
                 using Process? process = Process.Start(start);
                 if (process == null)
                 {
-                    LauncherLog.Write("[ERROR] Установщик Visual C++ не запустился");
+                    LauncherLog.Write("[ERR] Установщик Visual C++ не запустился");
                     return false;
                 }
 
@@ -75,7 +75,7 @@ namespace CustomLauncher.Core
             }
             catch (Exception error)
             {
-                LauncherLog.Write($"[ERROR] Установка Visual C++ прервана: {error.Message}");
+                LauncherLog.Write($"[ERR] Установка Visual C++ прервана: {error.Message}");
                 return false;
             }
             finally
