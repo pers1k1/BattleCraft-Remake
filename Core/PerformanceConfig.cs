@@ -60,12 +60,23 @@ namespace CustomLauncher.Core
 
             Directory.CreateDirectory(sparkDirectory);
 
-            JObject settings = File.Exists(path)
-                ? JObject.Parse(File.ReadAllText(path))
-                : new JObject();
-
+            JObject settings = ReadSparkSettings(path);
             settings["backgroundProfiler"] = false;
             File.WriteAllText(path, settings.ToString());
+        }
+
+        private static JObject ReadSparkSettings(string path)
+        {
+            if (!File.Exists(path)) return new JObject();
+            try
+            {
+                return JObject.Parse(File.ReadAllText(path));
+            }
+            catch (Newtonsoft.Json.JsonReaderException error)
+            {
+                LauncherLog.Write($"[WARN] config/spark/config.json не читается и будет пересоздан: {error.Message}");
+                return new JObject();
+            }
         }
     }
 }

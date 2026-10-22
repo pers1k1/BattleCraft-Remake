@@ -62,10 +62,12 @@ namespace CustomLauncher.Core
 
             if (!wasRunning)
             {
+                LauncherLog.Write("[SERVER] Сервер ещё не дозапустился, процесс снимается без команды stop");
                 ForceKillProcess();
                 return;
             }
 
+            LauncherLog.Write("[SERVER] Остановка: отправлена команда stop, ожидание до 30 с");
             WriteToServer("stop");
 
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
@@ -73,9 +75,12 @@ namespace CustomLauncher.Core
             {
                 var exitTask = process.WaitForExitAsync();
                 if (await Task.WhenAny(exitTask, timeoutTask) == timeoutTask)
+                {
+                    LauncherLog.Write("[WARN] Сервер не остановился за 30 с, процесс снимается принудительно");
                     ForceKillProcess();
+                }
             }
-            catch { }
+            catch (Exception error) { LauncherLog.Write($"[WARN] Ожидание остановки сервера прервано: {error.Message}"); }
         }
 
         public async Task RestartAsync(ServerConfig config, string javaPath)
@@ -88,7 +93,8 @@ namespace CustomLauncher.Core
         public void ForceKillProcess()
         {
             var process = _serverProcess;
-            try { process?.Kill(entireProcessTree: true); } catch { }
+            try { process?.Kill(entireProcessTree: true); }
+            catch (Exception error) { LauncherLog.Write($"[WARN] Процесс сервера не снят: {error.Message}"); }
             _serverInput = null;
             _serverProcess = null;
             SetState(ServerState.Stopped);
@@ -132,7 +138,19 @@ namespace CustomLauncher.Core
             _serverProcess.OutputDataReceived += OnDataReceived;
             _serverProcess.ErrorDataReceived += OnDataReceived;
 
-            _serverProcess.Start();
+            try
+            {
+                _serverProcess.Start();
+            }
+            catch (Exception error)
+            {
+                LauncherLog.Write($"[ERR] Процесс сервера не запустился ({javaPath}): {error.Message}");
+                _serverProcess.Dispose();
+                _serverProcess = null;
+                SetState(ServerState.Stopped);
+                throw;
+            }
+            LauncherLog.Write($"[SERVER] Процесс сервера запущен, PID {_serverProcess.Id}, аргументы {_serverProcess.StartInfo.Arguments}");
             _serverInput = _serverProcess.StandardInput;
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
@@ -149,9 +167,10 @@ namespace CustomLauncher.Core
             {
                 await process.WaitForExitAsync();
             }
-            catch { }
+            catch (Exception error) { LauncherLog.Write($"[WARN] Слежение за процессом сервера прервано: {error.Message}"); }
             finally
             {
+                LogProcessExit(process);
                 if (_serverProcess == process)
                 {
                     _serverInput = null;
@@ -159,6 +178,21 @@ namespace CustomLauncher.Core
                     SetState(ServerState.Stopped);
                 }
             }
+        }
+
+        private void LogProcessExit(Process process)
+        {
+            int exitCode;
+            try { exitCode = process.ExitCode; }
+            catch (InvalidOperationException) { return; }
+
+            bool requested = _serverProcess != process || CurrentState == ServerState.Stopping;
+            if (requested)
+                LauncherLog.Write($"[SERVER] Процесс сервера завершился с кодом {exitCode}");
+            else if (exitCode == 0)
+                LauncherLog.Write($"[SERVER] Сервер завершил работу сам, код 0, состояние было {CurrentState}");
+            else
+                LauncherLog.Write($"[ERR] Сервер упал с кодом {exitCode}, состояние было {CurrentState}");
         }
 
         private Process CreateServerProcess(string javaPath, string serverDir)
@@ -234,7 +268,12 @@ namespace CustomLauncher.Core
 
             foreach (string lockFile in Directory.GetFiles(serverDir, "session.lock", SearchOption.AllDirectories))
             {
-                try { File.Delete(lockFile); } catch { }
+                try
+                {
+                    File.Delete(lockFile);
+                    LauncherLog.Write($"[SERVER] Снят зависший {lockFile}");
+                }
+                catch (Exception error) { LauncherLog.Write($"[WARN] {lockFile} не удалён, мир может не открыться: {error.Message}"); }
             }
         }
 
