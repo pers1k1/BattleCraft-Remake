@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace CustomLauncher.Core
 {
@@ -12,6 +13,7 @@ namespace CustomLauncher.Core
     {
         public const string FileName = "game-output.log";
         private const int KeptLines = 200;
+        private static readonly Regex AccessTokenArgument = new(@"(--accessToken\s+)(""[^""]*""|\S+)", RegexOptions.IgnoreCase);
 
         private readonly object _lock = new();
         private readonly Queue<string> _tail = new();
@@ -35,7 +37,8 @@ namespace CustomLauncher.Core
                 try
                 {
                     _writer = new StreamWriter(_path, false, new UTF8Encoding(false)) { AutoFlush = true };
-                    _writer.WriteLine($"[{DateTime.Now:HH:mm:ss}] {command}");
+                    _writer.WriteLine($"[{DateTime.Now:HH:mm:ss}] {HideAccessToken(command)}");
+                    LauncherLog.Write($"[PLAY] Вывод игры пишется в {_path}");
                 }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 {
@@ -55,9 +58,16 @@ namespace CustomLauncher.Core
                 while (_tail.Count > KeptLines) _tail.Dequeue();
 
                 try { _writer?.WriteLine(line); }
-                catch (IOException) { _writer = null; }
+                catch (IOException error)
+                {
+                    LauncherLog.Write($"[WARN] Запись вывода игры в файл прервана: {error.Message}");
+                    _writer = null;
+                }
             }
         }
+
+        private static string HideAccessToken(string command) =>
+            AccessTokenArgument.Replace(command, "$1***");
 
         public List<string> Tail(int lines)
         {
@@ -80,7 +90,7 @@ namespace CustomLauncher.Core
             lock (_lock)
             {
                 try { _writer?.Dispose(); }
-                catch (IOException) { }
+                catch (IOException error) { LauncherLog.Write($"[WARN] Файл вывода игры закрыт с ошибкой: {error.Message}"); }
                 _writer = null;
             }
         }
